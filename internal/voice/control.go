@@ -241,6 +241,37 @@ func joinRejectionReason(err error) string {
 	}
 }
 
+func HandleAudioStatePacket(conn *udp.ServerPacketConn, hub *Hub, cache *RequestCache, packet protocol.VoicePacket, addr *net.UDPAddr) error {
+	if err := ValidateSessionAddr(hub, packet.SessionID, addr); err != nil {
+		return err
+	}
+	if packet.RequestID == 0 {
+		return SendError(conn, addr, packet.SessionID, 0, "audio state request ID is required")
+	}
+	if response, ok := cache.Get(packet.SessionID, packet.RequestID); ok {
+		return conn.WritePacket(packet.SessionID, addr, response)
+	}
+	muted, deafened, err := protocol.DecodeAudioState(packet.Payload)
+	if err != nil {
+		return cacheAndSendSessionError(conn, cache, packet, addr, fmt.Sprintf("invalid audio state: %v", err))
+	}
+	if err := hub.SetAudioState(packet.SessionID, muted, deafened); err != nil {
+		return cacheAndSendSessionError(conn, cache, packet, addr, err.Error())
+	}
+	ack := protocol.VoicePacket{
+		Type:      protocol.PacketAudioStateAck,
+		SessionID: packet.SessionID,
+		RequestID: packet.RequestID,
+		Payload:   protocol.EncodeAudioState(muted, deafened),
+	}
+	cache.Put(packet.SessionID, packet.RequestID, ack)
+	session, ok := hub.Get(packet.SessionID)
+	if !ok {
+		return ErrSessionNotFound
+	}
+	return SendToSession(conn, session, ack)
+}
+
 func HandleMediaCredentialPacket(conn *udp.ServerPacketConn, hub *Hub, cache *RequestCache, packet protocol.VoicePacket, addr *net.UDPAddr) error {
 	if err := ValidateSessionAddr(hub, packet.SessionID, addr); err != nil {
 		return err

@@ -40,6 +40,8 @@ type ParticipantDTO struct {
 	DisplayName string `json:"displayName"`
 	ChannelID   string `json:"channelId"`
 	Speaking    bool   `json:"speaking"`
+	Muted       bool   `json:"muted"`
+	Deafened    bool   `json:"deafened"`
 	Local       bool   `json:"local"`
 }
 
@@ -138,11 +140,19 @@ func viewDTO(view voiceclient.ClientViewState, lastError string) ClientViewDTO {
 	}
 	participants := make([]ParticipantDTO, 0, len(view.Participants))
 	for _, participant := range view.Participants {
+		muted := participant.Muted
+		deafened := participant.Deafened
+		if participant.SessionID == view.SessionID {
+			muted = view.Muted
+			deafened = view.Deafened
+		}
 		participants = append(participants, ParticipantDTO{
 			SessionID:   formatUint64(participant.SessionID),
 			DisplayName: participant.DisplayName,
 			ChannelID:   formatUint64(uint64(participant.ChannelID)),
 			Speaking:    view.Speaking[participant.SessionID],
+			Muted:       muted,
+			Deafened:    deafened,
 			Local:       participant.SessionID == view.SessionID,
 		})
 	}

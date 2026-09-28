@@ -132,7 +132,10 @@ h2 { margin: 0; font-size: 20px; }
 .participant-row[tabindex="0"]:hover, .participant-row[tabindex="0"]:focus-visible { background: var(--card-strong); }
 .avatar { display: grid; flex: 0 0 auto; place-items: center; border-radius: 50%; color: #aab7cd; background: #34425a; font-weight: 800; }
 .avatar { width: 22px; height: 22px; font-size: 10px; }
-.speaking-ring { width: 7px; height: 7px; margin-left: auto; margin-right: 12px; border-radius: 50%; background: #3c4961; }
+.participant-status { display: flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 12px; }
+.participant-flag { display: inline-grid; width: 14px; height: 14px; color: #ffb4be; }
+.participant-flag svg { width: 14px; height: 14px; }
+.speaking-ring { width: 7px; height: 7px; border-radius: 50%; background: #3c4961; }
 .participant-row.speaking { color: #ddfff5; }
 .participant-row.speaking .avatar { outline: 2px solid var(--accent); }
 .participant-row.speaking .speaking-ring { background: var(--accent); box-shadow: 0 0 8px var(--accent); }

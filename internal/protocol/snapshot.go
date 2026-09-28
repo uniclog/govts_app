@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	SnapshotSchemaVersion      uint8  = 4
+	SnapshotSchemaVersion      uint8  = 5
 	SnapshotRequestSize               = 16
 	SnapshotResponseHeaderSize        = 18
 	MaxSnapshotPageItems       uint16 = 32
@@ -101,7 +101,7 @@ func validateSnapshotRequest(r SnapshotRequest) error {
 func EncodedChannelSize(c domain.Channel) int {
 	return 46 + len(c.Name) + len(c.Topic) + len(c.Description)
 }
-func EncodedParticipantSize(p domain.Participant) int { return 18 + len(p.DisplayName) }
+func EncodedParticipantSize(p domain.Participant) int { return 19 + len(p.DisplayName) }
 func EncodedScreenStreamSize(domain.ScreenStream) int { return 24 }
 
 func EncodeSnapshotResponse(r SnapshotResponse) ([]byte, error) {
@@ -370,7 +370,11 @@ func appendParticipant(dst []byte, p domain.Participant) ([]byte, error) {
 	}
 	dst = binary.BigEndian.AppendUint64(dst, p.SessionID)
 	dst = binary.BigEndian.AppendUint64(dst, uint64(p.ChannelID))
-	return appendString(dst, p.DisplayName, domain.MaxParticipantNameBytes)
+	dst, err := appendString(dst, p.DisplayName, domain.MaxParticipantNameBytes)
+	if err != nil {
+		return nil, err
+	}
+	return append(dst, audioStateFlags(p.Muted, p.Deafened)), nil
 }
 func takeParticipant(p []byte) (domain.Participant, []byte, error) {
 	if len(p) < 16 {
@@ -382,6 +386,13 @@ func takeParticipant(p []byte) (domain.Participant, []byte, error) {
 	}
 	var err error
 	v.DisplayName, p, err = takeString(p[16:], domain.MaxParticipantNameBytes)
+	if err == nil && len(p) < 1 {
+		err = errors.New("participant item too short")
+	}
+	if err == nil {
+		v.Muted, v.Deafened, err = audioStateFromFlags(p[0])
+		p = p[1:]
+	}
 	if err == nil {
 		err = validateSnapshotParticipant(v)
 	}

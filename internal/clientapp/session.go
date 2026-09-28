@@ -174,6 +174,9 @@ func runSession(parent context.Context, conn *udp.ClientPacketConn, state *voice
 		return networkLoop("voice send", func() error { return voiceclient.SendLoopWithStats(ctx, conn, sessionID, audioCh, state.Audio, state) })
 	})
 	supervisor.Go(func(ctx context.Context) error {
+		return networkLoop("audio state", func() error { return voiceclient.AudioStateLoop(ctx, conn, state) })
+	})
+	supervisor.Go(func(ctx context.Context) error {
 		changed, unsubscribe := state.Subscribe(ctx)
 		defer unsubscribe()
 		channelID := state.ChannelID()

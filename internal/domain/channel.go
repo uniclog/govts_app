@@ -100,6 +100,8 @@ type Participant struct {
 	SessionID   uint64
 	DisplayName string
 	ChannelID   ChannelID
+	Muted       bool
+	Deafened    bool
 }
 
 type ServerInfo struct {

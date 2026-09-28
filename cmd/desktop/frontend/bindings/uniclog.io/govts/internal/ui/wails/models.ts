@@ -111,6 +111,8 @@ export interface ParticipantDTO {
     "displayName": string;
     "channelId": string;
     "speaking": boolean;
+    "muted": boolean;
+    "deafened": boolean;
     "local": boolean;
 }
 

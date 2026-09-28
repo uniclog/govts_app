@@ -39,7 +39,7 @@ type authRateWindow struct {
 }
 
 const maxNewHandshakesPerIPPerMinute = 60
-const minimumSecureClientVersion appversion.Number = 2<<16 | 1 // 0.2.1
+const minimumSecureClientVersion appversion.Number = 2<<16 | 5 // 0.2.5
 
 // Authenticator handles the signed, ephemeral-key handshake before any
 // ordinary session packet reaches the existing voice packet handlers.

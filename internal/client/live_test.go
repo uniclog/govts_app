@@ -268,3 +268,25 @@ func TestOwnJoinAckBeforeMoveDoesNotForceResync(t *testing.T) {
 		t.Fatalf("view after move = %+v", view)
 	}
 }
+
+func TestAudioStateEventUpdatesParticipant(t *testing.T) {
+	s := liveTestState()
+	s.ObserveSpeaking(2, []int16{1000}, time.Now())
+	event := domain.StateEvent{Kind: domain.ParticipantAudio, Revision: 11, SessionID: 2, Muted: true, Deafened: true}
+	if !s.ApplyEvent(s.Generation(), event) {
+		t.Fatal("audio event rejected")
+	}
+	view := s.SnapshotView()
+	var bob domain.Participant
+	for _, participant := range view.Participants {
+		if participant.SessionID == 2 {
+			bob = participant
+		}
+	}
+	if !bob.Muted || !bob.Deafened || view.Speaking[2] {
+		t.Fatalf("participant = %+v, speaking = %v", bob, view.Speaking)
+	}
+	if view.Participants[0].Muted || view.Participants[0].Deafened {
+		t.Fatal("audio event changed another participant")
+	}
+}
