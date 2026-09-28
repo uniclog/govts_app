@@ -52,6 +52,7 @@ type ScreenStreamDTO struct {
 type AudioStateDTO struct {
 	Muted              bool    `json:"muted"`
 	Deafened           bool    `json:"deafened"`
+	CaptureAvailable   bool    `json:"captureAvailable"`
 	RNNoiseEnabled     bool    `json:"rnnoiseEnabled"`
 	RNNoiseSensitivity float32 `json:"rnnoiseSensitivity"`
 	VADEnabled         bool    `json:"vadEnabled"`
@@ -166,6 +167,7 @@ func viewDTO(view voiceclient.ClientViewState, lastError string) ClientViewDTO {
 		Audio: AudioStateDTO{
 			Muted:              view.Muted,
 			Deafened:           view.Deafened,
+			CaptureAvailable:   view.CaptureAvailable,
 			RNNoiseEnabled:     view.RNNoiseEnabled,
 			RNNoiseSensitivity: view.RNNoiseSensitivity,
 			VADEnabled:         view.VADEnabled,

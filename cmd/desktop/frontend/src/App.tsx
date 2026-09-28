@@ -17,6 +17,7 @@ const emptyView: ClientViewDTO = {
     audio: {
         muted: false,
         deafened: false,
+        captureAvailable: true,
         rnnoiseEnabled: true,
         rnnoiseSensitivity: 1,
         vadEnabled: false,
@@ -398,6 +399,7 @@ function SettingsPage({view, invoke, theme, setTheme}: {
                                                                           value={devices?.selectedCapture ?? ""}
                                                                           disabled={!devices || devicePending}
                                                                           onChange={(id) => selectDevice("capture", id)}/>
+            {!view.audio.captureAvailable && <p className="device-hint">Микрофон не найден. Выберите устройство, когда оно появится. Пока его нет, вы остаётесь в канале без передачи голоса.</p>}
             <SettingToggle title="Шумоподавление"
                            description="Убирает постоянный фоновый шум до анализа голосовой активности."
                            checked={view.audio.rnnoiseEnabled}

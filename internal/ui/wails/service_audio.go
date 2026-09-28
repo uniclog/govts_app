@@ -2,7 +2,7 @@ package wailsui
 
 import "strings"
 
-func (s *Service) SetMuted(value bool) { s.client.SetMuted(value) }
+func (s *Service) SetMuted(value bool) { _ = s.client.SetMuted(value) }
 
 func (s *Service) SetDeafened(value bool) error {
 	if err := s.client.SetDeafened(value); err != nil {

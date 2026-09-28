@@ -288,7 +288,8 @@ h2 { margin: 0; font-size: 20px; }
 .theme-setting { display: grid; gap: 8px; }
 .theme-setting select { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--text); background: var(--card-strong); }
 .theme-setting small { color: var(--muted); font-size: 11px; }
-.voice-control { min-width: 96px; padding: 9px 11px; border-radius: 9px; color: #9eadc5; background: #22304a; font-size: 11px; }.voice-control:hover { color: white; }.voice-control.active { color: #ffd4d8; background: #58303b; }
+.voice-control { min-width: 96px; padding: 9px 11px; border-radius: 9px; color: #9eadc5; background: #22304a; font-size: 11px; }.voice-control:hover { color: white; }.voice-control.active { color: #ffd4d8; background: #58303b; }.voice-control:disabled { cursor: default; }.voice-control:disabled:hover { color: #ffd4d8; background: #58303b; }
+.device-hint { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 
 @media (max-width: 980px) {
   .app-shell { --main-gutter: 14px; }

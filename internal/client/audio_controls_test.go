@@ -266,3 +266,27 @@ func TestDecodeWhileDeafenedStillUpdatesSpeaking(t *testing.T) {
 		t.Fatal("deafen disabled speaking detection")
 	}
 }
+
+func TestUnmuteRejectedWithoutCaptureDevice(t *testing.T) {
+	controls := NewAudioControlState(nil)
+	controls.SetCaptureAvailable(false)
+	if muted, _, _ := controls.Snapshot(); !muted {
+		t.Fatal("missing microphone left capture unmuted")
+	}
+	if err := controls.SetMuted(false); err == nil {
+		t.Fatal("unmute allowed without a microphone")
+	}
+	if muted, _, _ := controls.Snapshot(); !muted {
+		t.Fatal("rejected unmute changed mute")
+	}
+	controls.SetCaptureAvailable(true)
+	if muted, _, _ := controls.Snapshot(); !muted {
+		t.Fatal("restoring capture unmuted the microphone")
+	}
+	if err := controls.SetMuted(false); err != nil {
+		t.Fatal(err)
+	}
+	if muted, _, _ := controls.Snapshot(); muted {
+		t.Fatal("unmute failed after capture returned")
+	}
+}
