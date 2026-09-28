@@ -52,7 +52,7 @@ func TestSnapshotPayloadRoundTrip(t *testing.T) {
 		}
 	}
 	channel := domain.Channel{ID: 2, ParentID: 1, Name: "music", Topic: "topic", Description: "description", Position: 4, MaxUsers: 8, Type: domain.ChannelTypePermanent, Audio: domain.DefaultAudioProfile()}
-	participant := domain.Participant{SessionID: 11, DisplayName: "alice", ChannelID: 2}
+	participant := domain.Participant{SessionID: 11, DisplayName: "alice", ChannelID: 2, Muted: true, Deafened: true}
 	responses := []SnapshotResponse{
 		{Kind: SnapshotKindMetadata, Status: SnapshotStatusOK, Revision: 9, ServerInfo: domain.ServerInfo{Name: "Server", DefaultChannelID: 2}, ChannelCount: 2, ParticipantCount: 1},
 		{Kind: SnapshotKindChannels, Status: SnapshotStatusOK, Revision: 9, Channels: []domain.Channel{channel}},

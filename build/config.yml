@@ -6,7 +6,7 @@ info:
   productIdentifier: "app.govts.desktop"
   description: "Голосовой desktop-клиент Govts"
   copyright: "(c) 2026 Govts contributors"
-  version: "0.2.14"
+  version: "0.2.18"
 
 dev_mode:
   root_path: .

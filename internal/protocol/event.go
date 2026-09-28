@@ -27,6 +27,9 @@ func EncodeStateEvent(e domain.StateEvent) ([]byte, error) {
 		b = appendScreenStream(b, e.ScreenStream)
 	case domain.ScreenStreamStopped:
 		b = binary.BigEndian.AppendUint64(b, uint64(e.ScreenStream.ID))
+	case domain.ParticipantAudio:
+		b = binary.BigEndian.AppendUint64(b, e.SessionID)
+		b = append(b, audioStateFlags(e.Muted, e.Deafened))
 	}
 	return b, nil
 }
@@ -69,6 +72,17 @@ func DecodeStateEvent(b []byte) (domain.StateEvent, error) {
 			return e, errors.New("invalid screen stream stopped payload")
 		}
 		e.ScreenStream.ID = domain.StreamID(binary.BigEndian.Uint64(b))
+		b = nil
+	case domain.ParticipantAudio:
+		if len(b) != 9 {
+			return e, errors.New("invalid audio payload")
+		}
+		e.SessionID = binary.BigEndian.Uint64(b[:8])
+		var err error
+		e.Muted, e.Deafened, err = audioStateFromFlags(b[8])
+		if err != nil {
+			return e, err
+		}
 		b = nil
 	default:
 		return e, errors.New("unknown event kind")

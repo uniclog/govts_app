@@ -5,6 +5,26 @@ import {desktopAPI} from "../../api";
 
 type MenuState = {x: number; y: number; volume: number; channelID: string} | null;
 
+function MicOffIcon() {
+    return <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/>
+        <path d="M19 11a7 7 0 0 1-7 7 7 7 0 0 1-7-7"/>
+        <path d="M12 18v3"/>
+        <path d="m3 3 18 18"/>
+    </svg>;
+}
+
+function SoundOffIcon() {
+    return <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 13v-1a8 8 0 0 1 16 0v1"/>
+        <path d="M4 13a2 2 0 0 0 2 2h1v-5H6a2 2 0 0 0-2 2Z"/>
+        <path d="M20 13a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2Z"/>
+        <path d="m3 3 18 18"/>
+    </svg>;
+}
+
 function SpeakerIcon({muted = false}: {muted?: boolean}) {
     return <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true" fill="none"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -104,7 +124,11 @@ export function ParticipantRow({participant, channels, canKick, canBan, canDrag,
                 }
              }}><span className="avatar">{participant.displayName.slice(0, 1).toUpperCase()}</span>
             <span>{participant.displayName}{participant.local ? " (вы)" : ""}</span>
-            <span className="speaking-ring" aria-label={participant.speaking ? "Говорит" : "Не говорит"}/>
+            <span className="participant-status">
+                {participant.muted && <span className="participant-flag" aria-label="Микрофон выключен"><MicOffIcon/></span>}
+                {participant.deafened && <span className="participant-flag" aria-label="Звук выключен"><SoundOffIcon/></span>}
+                <span className="speaking-ring" aria-label={participant.speaking ? "Говорит" : "Не говорит"}/>
+            </span>
         </div>
         {menu && createPortal(<div ref={menuRef} className="participant-menu" role="menu" style={position}
                                    aria-label={`Управление пользователем ${participant.displayName}`}>

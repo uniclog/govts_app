@@ -250,6 +250,33 @@ func (h *Hub) JoinChannel(id uint64, channelID domain.ChannelID) error {
 	return err
 }
 
+func (h *Hub) SetAudioState(id uint64, muted, deafened bool) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	session, ok := h.sessions[id]
+	if !ok {
+		return ErrSessionNotFound
+	}
+	if session.Muted == muted && session.Deafened == deafened {
+		return nil
+	}
+	session.Muted = muted
+	session.Deafened = deafened
+	h.revision++
+	h.emitLocked(domain.StateEvent{Kind: domain.ParticipantAudio, SessionID: id, Muted: muted, Deafened: deafened})
+	return nil
+}
+
+func participantFromSession(session *Session) domain.Participant {
+	return domain.Participant{
+		SessionID:   session.ID,
+		DisplayName: session.Name,
+		ChannelID:   session.ChannelID,
+		Muted:       session.Muted,
+		Deafened:    session.Deafened,
+	}
+}
+
 func (h *Hub) JoinChannelWithRevision(id uint64, channelID domain.ChannelID) (domain.StateRevision, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -493,7 +520,7 @@ func (h *Hub) ClientSnapshot() domain.ServerSnapshot {
 	defer h.mu.RUnlock()
 	participants := make([]domain.Participant, 0, len(h.sessions))
 	for _, session := range h.sessions {
-		participants = append(participants, domain.Participant{SessionID: session.ID, DisplayName: session.Name, ChannelID: session.ChannelID})
+		participants = append(participants, participantFromSession(session))
 	}
 	sort.Slice(participants, func(i, j int) bool { return participants[i].SessionID < participants[j].SessionID })
 	streams := h.screenStreamsSnapshotLocked()
@@ -506,11 +533,7 @@ func (h *Hub) Participants() []domain.Participant {
 
 	participants := make([]domain.Participant, 0, len(h.sessions))
 	for _, session := range h.sessions {
-		participants = append(participants, domain.Participant{
-			SessionID:   session.ID,
-			DisplayName: session.Name,
-			ChannelID:   session.ChannelID,
-		})
+		participants = append(participants, participantFromSession(session))
 	}
 	sort.Slice(participants, func(i int, j int) bool {
 		return participants[i].SessionID < participants[j].SessionID

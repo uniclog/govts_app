@@ -128,3 +128,36 @@ func TestDispatcherContinuesAfterRecipientErrorAndStops(t *testing.T) {
 		t.Fatal("dispatcher leaked")
 	}
 }
+
+func TestSetAudioStatePublishesParticipantFlagsOnce(t *testing.T) {
+	hub := NewHub()
+	session, _, err := hub.CreateSessionReplacingEndpoint("alice", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 9})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := hub.JoinChannel(session.ID, DefaultChannelID); err != nil {
+		t.Fatal(err)
+	}
+	_ = hub.takeEvents()
+	revision := hub.Revision()
+	if err := hub.SetAudioState(session.ID, true, true); err != nil {
+		t.Fatal(err)
+	}
+	if hub.Revision() != revision+1 {
+		t.Fatalf("revision = %d, want %d", hub.Revision(), revision+1)
+	}
+	if err := hub.SetAudioState(session.ID, true, true); err != nil {
+		t.Fatal(err)
+	}
+	if hub.Revision() != revision+1 {
+		t.Fatal("unchanged audio state advanced the revision")
+	}
+	events := hub.takeEvents()
+	if len(events) != 1 || events[0].Kind != domain.ParticipantAudio || events[0].SessionID != session.ID || !events[0].Muted || !events[0].Deafened {
+		t.Fatalf("events = %+v", events)
+	}
+	snapshot := hub.ClientSnapshot()
+	if len(snapshot.Participants) != 1 || !snapshot.Participants[0].Muted || !snapshot.Participants[0].Deafened {
+		t.Fatalf("snapshot participants = %+v", snapshot.Participants)
+	}
+}

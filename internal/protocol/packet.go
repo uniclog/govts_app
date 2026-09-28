@@ -40,6 +40,8 @@ const (
 	PacketDrag
 	PacketModerationAck
 	PacketAccountPrivileges
+	PacketAudioState
+	PacketAudioStateAck
 
 	PacketEnd
 )

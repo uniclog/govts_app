@@ -294,6 +294,24 @@ func (s *State) ApplyEvent(generation uint64, e domain.StateEvent) bool {
 		ownerID := next.ScreenStreams[streamIndex].OwnerSessionID
 		next.ScreenStreams = append(next.ScreenStreams[:streamIndex], next.ScreenStreams[streamIndex+1:]...)
 		line = fmt.Sprintf("%d stopped screen sharing", ownerID)
+	case domain.ParticipantAudio:
+		if index < 0 {
+			s.requestResyncLocked()
+			return false
+		}
+		next.Participants[index].Muted = e.Muted
+		next.Participants[index].Deafened = e.Deafened
+		name := terminalText(next.Participants[index].DisplayName)
+		switch {
+		case e.Muted && e.Deafened:
+			line = fmt.Sprintf("%s turned microphone and sound off", name)
+		case e.Muted:
+			line = fmt.Sprintf("%s turned microphone off", name)
+		case e.Deafened:
+			line = fmt.Sprintf("%s turned sound off", name)
+		default:
+			line = fmt.Sprintf("%s turned microphone and sound on", name)
+		}
 	}
 	next.Revision = e.Revision
 	if err := validateServerSnapshot(next); err != nil {
@@ -307,7 +325,11 @@ func (s *State) ApplyEvent(generation uint64, e domain.StateEvent) bool {
 	if notification != 0 {
 		s.queueNotificationSoundLocked(notification)
 	}
-	if id == s.sessionID {
+	if e.Kind == domain.ParticipantAudio {
+		if e.Muted {
+			delete(s.speaking, id)
+		}
+	} else if id == s.sessionID {
 		if e.Kind == domain.ParticipantMoved {
 			if s.channelID != e.ChannelID {
 				s.measurements.resetIncoming()

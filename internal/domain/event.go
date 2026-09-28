@@ -15,9 +15,11 @@ const (
 	ParticipantMoved
 	ScreenStreamStarted
 	ScreenStreamStopped
+	ParticipantAudio
 )
 
-// Participant is populated only for Joined; SessionID/ChannelID only for Left/Moved.
+// Participant is populated only for Joined. SessionID/ChannelID are used for
+// Left/Moved. Muted and Deafened are used only for ParticipantAudio.
 type StateEvent struct {
 	Kind         StateEventKind
 	Revision     StateRevision
@@ -25,11 +27,16 @@ type StateEvent struct {
 	SessionID    uint64
 	ChannelID    ChannelID
 	ScreenStream ScreenStream
+	Muted        bool
+	Deafened     bool
 }
 
 func (e StateEvent) Validate() error {
 	if e.Revision == 0 {
 		return errors.New("zero event revision")
+	}
+	if e.Kind != ParticipantAudio && (e.Muted || e.Deafened) {
+		return errors.New("audio flags on non-audio event")
 	}
 	switch e.Kind {
 	case ParticipantJoined:
@@ -49,6 +56,10 @@ func (e StateEvent) Validate() error {
 	case ScreenStreamStopped:
 		if e.Participant != (Participant{}) || e.SessionID != 0 || e.ChannelID != 0 || e.ScreenStream.ID == 0 || e.ScreenStream.OwnerSessionID != 0 || e.ScreenStream.ChannelID != 0 {
 			return errors.New("invalid screen stream stopped event")
+		}
+	case ParticipantAudio:
+		if e.Participant != (Participant{}) || e.SessionID == 0 || e.ChannelID != 0 || e.ScreenStream != (ScreenStream{}) {
+			return errors.New("invalid audio event")
 		}
 	default:
 		return errors.New("unknown event kind")

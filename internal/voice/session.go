@@ -15,6 +15,8 @@ type Session struct {
 	Owner           bool
 	Name            string
 	ChannelID       domain.ChannelID
+	Muted           bool
+	Deafened        bool
 	Addr            *net.UDPAddr
 	LastSeen        time.Time
 	MediaCredential [32]byte
