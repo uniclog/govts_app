@@ -164,6 +164,9 @@ func runSession(parent context.Context, conn *udp.ClientPacketConn, state *voice
 		}
 		state.Audio.SetCaptureAvailable(available)
 	})
+	// AudioControlState survives reconnects. Restore availability explicitly
+	// when a new session opens the recorder after an earlier device failure.
+	state.Audio.SetCaptureAvailable(recorder.Available())
 	supervisor.Go(func(ctx context.Context) error {
 		return voiceclient.EncodeLoopWithPipeline(ctx, encoder, filter, detector, gate, pcmCh, audioCh, state)
 	})

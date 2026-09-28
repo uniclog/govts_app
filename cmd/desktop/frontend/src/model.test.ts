@@ -39,7 +39,10 @@ describe("mergeEventTail", () => {
 });
 
 describe("canMoveParticipant", () => {
-  const participant: ParticipantDTO = {sessionId: "17", displayName: "Alice", channelId: "1", speaking: false, local: false};
+  const participant: ParticipantDTO = {
+    sessionId: "17", displayName: "Alice", channelId: "1", speaking: false,
+    muted: false, deafened: false, local: false,
+  };
 
   it("allows a moderator to move another participant to a different channel", () => {
     expect(canMoveParticipant(participant, "2", true)).toBe(true);
