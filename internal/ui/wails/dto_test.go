@@ -36,8 +36,10 @@ func TestViewDTOKeepsUint64IdentifiersExact(t *testing.T) {
 	if dto.ChannelID != "9007199254740992" || dto.Channels[0].ID != "18446744073709551615" {
 		t.Fatalf("channel identifiers lost precision: %#v", dto.Channels[0])
 	}
-	if !dto.Participants[0].Speaking || !dto.Participants[0].Local {
-		t.Fatalf("participant flags = %#v", dto.Participants[0])
+	view.CaptureAvailable = false
+	dto = viewDTO(view, "")
+	if !dto.Participants[0].Speaking || !dto.Participants[0].Local || dto.Audio.CaptureAvailable {
+		t.Fatalf("participant flags = %#v, audio = %#v", dto.Participants[0], dto.Audio)
 	}
 }
 

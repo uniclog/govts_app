@@ -152,8 +152,18 @@ func runSession(parent context.Context, conn *udp.ClientPacketConn, state *voice
 	state.SetConnectionStatus(voiceclient.ConnectionConnected)
 	recorder, err := audio.NewSwitchableRecorder(codecConfig, devices.CaptureID)
 	if err != nil {
-		return finish(fmt.Errorf("create audio recorder: %w", err))
+		logger.Printf("capture unavailable: %v", err)
+		if recorder == nil {
+			return finish(fmt.Errorf("create audio recorder: %w", err))
+		}
+		state.Audio.SetCaptureAvailable(false)
 	}
+	recorder.SetAvailabilityHandler(func(available bool) {
+		if !available {
+			logger.Printf("capture unavailable")
+		}
+		state.Audio.SetCaptureAvailable(available)
+	})
 	supervisor.Go(func(ctx context.Context) error {
 		return voiceclient.EncodeLoopWithPipeline(ctx, encoder, filter, detector, gate, pcmCh, audioCh, state)
 	})
@@ -193,7 +203,7 @@ func runSession(parent context.Context, conn *udp.ClientPacketConn, state *voice
 				return ctx.Err()
 			case request := <-audioDeviceChanges:
 				var changeErr error
-				if request.selection.CaptureID != current.CaptureID {
+				if request.selection.CaptureID != current.CaptureID || !recorder.Available() {
 					changeErr = recorder.Switch(request.selection.CaptureID)
 				}
 				if changeErr == nil && request.selection.PlaybackID != current.PlaybackID {

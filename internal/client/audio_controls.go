@@ -19,6 +19,7 @@ type AudioControlState struct {
 	meterMu            sync.RWMutex
 	sendMu             sync.Mutex
 	muted, deafened    bool
+	captureAvailable   bool
 	rnnoiseEnabled     bool
 	rnnoiseSensitivity float32
 	vadEnabled         bool
@@ -46,6 +47,7 @@ type AudioMeterSample struct {
 func NewAudioControlState(onChange func()) *AudioControlState {
 	return &AudioControlState{
 		onChange:           onChange,
+		captureAvailable:   true,
 		rnnoiseEnabled:     true,
 		rnnoiseSensitivity: 1,
 		vadMode:            voicegate.ModeHybrid,
@@ -242,9 +244,36 @@ func (a *AudioControlState) Snapshot() (bool, bool, uint64) {
 	defer a.mu.Unlock()
 	return a.muted, a.deafened, a.epoch
 }
-func (a *AudioControlState) SetMuted(value bool) {
+func (a *AudioControlState) CaptureAvailable() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.captureAvailable
+}
+func (a *AudioControlState) SetCaptureAvailable(available bool) {
 	a.sendMu.Lock()
 	a.mu.Lock()
+	changed := a.captureAvailable != available
+	a.captureAvailable = available
+	if !available && !a.muted {
+		a.muted = true
+		a.epoch++
+		a.vadOpen = false
+		changed = true
+	}
+	a.mu.Unlock()
+	a.sendMu.Unlock()
+	if changed && a.onChange != nil {
+		a.onChange()
+	}
+}
+func (a *AudioControlState) SetMuted(value bool) error {
+	a.sendMu.Lock()
+	a.mu.Lock()
+	if !value && !a.captureAvailable {
+		a.mu.Unlock()
+		a.sendMu.Unlock()
+		return errors.New("microphone is unavailable")
+	}
 	if a.muted != value {
 		a.muted = value
 		a.epoch++
@@ -257,6 +286,7 @@ func (a *AudioControlState) SetMuted(value bool) {
 	if a.onChange != nil {
 		a.onChange()
 	}
+	return nil
 }
 func (a *AudioControlState) SetDeafened(value bool) error {
 	a.mu.Lock()

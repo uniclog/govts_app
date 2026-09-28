@@ -352,8 +352,10 @@ func (a *App) setAudioDevice(id string, capture bool) error {
 	selection := AudioDeviceSelection{CaptureID: a.captureDeviceID, PlaybackID: a.playbackDeviceID}
 	changed := (capture && selection.CaptureID != id) || (!capture && selection.PlaybackID != id)
 	active := a.active
+	connected := a.state.ConnectionStatus() == voiceclient.ConnectionConnected
 	a.mu.Unlock()
-	if !changed {
+	retryCapture := capture && active && connected && !a.state.Audio.CaptureAvailable()
+	if !changed && !retryCapture {
 		return nil
 	}
 	if capture {
@@ -362,7 +364,7 @@ func (a *App) setAudioDevice(id string, capture bool) error {
 		selection.PlaybackID = id
 	}
 
-	if active && a.state.ConnectionStatus() == voiceclient.ConnectionConnected {
+	if active && connected {
 		request := audioDeviceChange{selection: selection, done: make(chan error, 1)}
 		timer := time.NewTimer(audioDeviceChangeTimeout)
 		defer timer.Stop()
@@ -388,7 +390,9 @@ func (a *App) setAudioDevice(id string, capture bool) error {
 	a.captureDeviceID = selection.CaptureID
 	a.playbackDeviceID = selection.PlaybackID
 	a.mu.Unlock()
-	a.events.append("audio", "Аудиоустройство изменено", 0)
+	if changed {
+		a.events.append("audio", "Аудиоустройство изменено", 0)
+	}
 	return nil
 }
 
@@ -534,7 +538,7 @@ func (a *App) LastError() string {
 	return a.lastError
 }
 
-func (a *App) SetMuted(value bool) { a.state.Audio.SetMuted(value) }
+func (a *App) SetMuted(value bool) error { return a.state.Audio.SetMuted(value) }
 
 func (a *App) SetDeafened(value bool) error { return a.state.Audio.SetDeafened(value) }
 

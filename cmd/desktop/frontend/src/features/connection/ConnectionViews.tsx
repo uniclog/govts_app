@@ -86,8 +86,9 @@ export function StatusBar({view, page, onPageChange, invoke}: {
         </button>
         <div className="server-summary"><p className="eyebrow">СЕРВЕР</p><h1>{view.server.name || "Govts"}</h1></div>
         <div className="audio-control-island" role="group" aria-label="Управление звуком">
-            <button className={`voice-control ${view.audio.muted ? "active" : ""}`} aria-pressed={view.audio.muted}
-                onClick={() => void invoke(() => desktopAPI.setMuted(!view.audio.muted))}>{view.audio.muted ? "Микрофон выкл." : "Микрофон"}</button>
+            <button className={`voice-control ${view.audio.muted || !view.audio.captureAvailable ? "active" : ""}`}
+                aria-pressed={view.audio.muted} disabled={!view.audio.captureAvailable}
+                onClick={() => void invoke(() => desktopAPI.setMuted(!view.audio.muted))}>{!view.audio.captureAvailable ? "Нет микрофона" : view.audio.muted ? "Микрофон выкл." : "Микрофон"}</button>
             <button className={`voice-control ${view.audio.deafened ? "active" : ""}`} aria-pressed={view.audio.deafened}
                 onClick={() => void invoke(() => desktopAPI.setDeafened(!view.audio.deafened))}>{view.audio.deafened ? "Звук выкл." : "Звук"}</button>
         </div>

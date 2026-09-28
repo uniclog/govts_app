@@ -2,30 +2,65 @@ package audio
 
 import (
 	"io"
+	"log"
 	"sync"
 )
+
+type captureDevice interface {
+	Read(samples []int16) (int, error)
+	Close() error
+}
 
 type SwitchableRecorder struct {
 	config CodecConfig
 
-	mu         sync.Mutex
-	recorder   *MalgoRecorder
-	deviceID   string
-	generation uint64
-	closed     bool
+	mu             sync.Mutex
+	cond           *sync.Cond
+	recorder       captureDevice
+	deviceID       string
+	generation     uint64
+	closed         bool
+	open           func(CodecConfig, string) (captureDevice, error)
+	onAvailability func(bool)
 }
 
 func NewSwitchableRecorder(config CodecConfig, deviceID string) (*SwitchableRecorder, error) {
-	recorder, err := NewMalgoRecorderForDevice(config, deviceID)
+	return newSwitchableRecorder(config, deviceID, openMalgoCapture)
+}
+
+func openMalgoCapture(config CodecConfig, deviceID string) (captureDevice, error) {
+	return NewMalgoRecorderForDevice(config, deviceID)
+}
+
+func newSwitchableRecorder(config CodecConfig, deviceID string, open func(CodecConfig, string) (captureDevice, error)) (*SwitchableRecorder, error) {
+	recorder := &SwitchableRecorder{config: config, deviceID: deviceID, open: open}
+	recorder.cond = sync.NewCond(&recorder.mu)
+	device, err := open(config, deviceID)
 	if err != nil {
-		return nil, err
+		return recorder, err
 	}
-	return &SwitchableRecorder{config: config, recorder: recorder, deviceID: deviceID}, nil
+	recorder.recorder = device
+	return recorder, nil
+}
+
+func (r *SwitchableRecorder) Available() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return !r.closed && r.recorder != nil
+}
+
+func (r *SwitchableRecorder) SetAvailabilityHandler(handler func(bool)) {
+	r.mu.Lock()
+	r.onAvailability = handler
+	r.mu.Unlock()
 }
 
 func (r *SwitchableRecorder) Read(samples []int16) (int, error) {
 	for {
 		r.mu.Lock()
+		for !r.closed && r.recorder == nil {
+			r.cond.Wait()
+		}
 		if r.closed || r.recorder == nil {
 			r.mu.Unlock()
 			return 0, io.EOF
@@ -41,9 +76,24 @@ func (r *SwitchableRecorder) Read(samples []int16) (int, error) {
 
 		r.mu.Lock()
 		replaced := !r.closed && generation != r.generation
+		if replaced {
+			r.mu.Unlock()
+			continue
+		}
+		if r.closed {
+			r.mu.Unlock()
+			return 0, io.EOF
+		}
+		failed := r.recorder
+		r.recorder = nil
+		handler := r.onAvailability
 		r.mu.Unlock()
-		if !replaced {
-			return n, err
+		if failed != nil {
+			_ = failed.Close()
+		}
+		log.Printf("capture device failed: %v", err)
+		if handler != nil {
+			handler(false)
 		}
 	}
 }
@@ -54,14 +104,15 @@ func (r *SwitchableRecorder) Switch(deviceID string) error {
 		r.mu.Unlock()
 		return io.ErrClosedPipe
 	}
-	if r.deviceID == deviceID {
+	if r.deviceID == deviceID && r.recorder != nil {
 		r.mu.Unlock()
 		return nil
 	}
 	config := r.config
+	open := r.open
 	r.mu.Unlock()
 
-	next, err := NewMalgoRecorderForDevice(config, deviceID)
+	next, err := open(config, deviceID)
 	if err != nil {
 		return err
 	}
@@ -75,8 +126,15 @@ func (r *SwitchableRecorder) Switch(deviceID string) error {
 	r.recorder = next
 	r.deviceID = deviceID
 	r.generation++
+	handler := r.onAvailability
+	r.cond.Broadcast()
 	r.mu.Unlock()
-	_ = previous.Close()
+	if previous != nil {
+		_ = previous.Close()
+	}
+	if handler != nil {
+		handler(true)
+	}
 	return nil
 }
 
@@ -90,6 +148,7 @@ func (r *SwitchableRecorder) Close() error {
 	r.generation++
 	recorder := r.recorder
 	r.recorder = nil
+	r.cond.Broadcast()
 	r.mu.Unlock()
 	if recorder == nil {
 		return nil

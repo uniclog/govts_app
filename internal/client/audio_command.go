@@ -64,7 +64,10 @@ func HandleAudioCommand(command Command, state *State, output io.Writer) bool {
 		value = !value
 	}
 	if command.Name == "/mute" {
-		state.Audio.SetMuted(value)
+		if err := state.Audio.SetMuted(value); err != nil {
+			fmt.Fprintf(output, "mute failed: %v\n", err)
+			return true
+		}
 	} else if command.Name == "/rnnoise" {
 		state.Audio.SetRNNoiseEnabled(value)
 	} else if command.Name == "/vad" {

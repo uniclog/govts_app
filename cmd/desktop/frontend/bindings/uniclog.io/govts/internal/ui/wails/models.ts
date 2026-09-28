@@ -32,6 +32,7 @@ export interface AudioProfileDTO {
 export interface AudioStateDTO {
     "muted": boolean;
     "deafened": boolean;
+    "captureAvailable": boolean;
     "rnnoiseEnabled": boolean;
     "rnnoiseSensitivity": number;
     "vadEnabled": boolean;

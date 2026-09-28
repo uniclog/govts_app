@@ -23,6 +23,7 @@ type ClientViewState struct {
 	ChannelID          domain.ChannelID
 	SnapshotFresh      bool
 	Muted, Deafened    bool
+	CaptureAvailable   bool
 	RNNoiseEnabled     bool
 	RNNoiseSensitivity float32
 	VADEnabled         bool
@@ -99,13 +100,14 @@ func (s *State) SnapshotView() ClientViewState {
 	defer s.mu.RUnlock()
 	snapshot := s.snapshot.Clone()
 	muted, deafened, _ := s.Audio.Snapshot()
+	captureAvailable := s.Audio.CaptureAvailable()
 	rnnoiseEnabled := s.Audio.RNNoiseEnabled()
 	rnnoiseSensitivity := s.Audio.RNNoiseSensitivity()
 	vadSettings := s.Audio.VADSnapshot()
 	v := ClientViewState{ConnectionStatus: s.status, ServerInfo: snapshot.Info, Revision: snapshot.Revision,
 		Channels: snapshot.Channels, Participants: snapshot.Participants, ScreenStreams: snapshot.ScreenStreams, SessionID: s.sessionID, ChannelID: s.channelID,
 		JoinLevel: s.joinLevel, Permissions: s.permissions,
-		SnapshotFresh: s.snapshotFresh, Muted: muted, Deafened: deafened, RNNoiseEnabled: rnnoiseEnabled, RNNoiseSensitivity: rnnoiseSensitivity,
+		SnapshotFresh: s.snapshotFresh, Muted: muted, Deafened: deafened, CaptureAvailable: captureAvailable, RNNoiseEnabled: rnnoiseEnabled, RNNoiseSensitivity: rnnoiseSensitivity,
 		VADEnabled: vadSettings.Enabled, VADMode: string(vadSettings.Mode), VADSensitivity: vadSettings.Sensitivity,
 		VADOpen: vadSettings.Open, Speaking: make(map[uint64]bool)}
 	// The view's local channel belongs to the same snapshot as its participants.
