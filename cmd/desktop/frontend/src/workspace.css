@@ -60,9 +60,15 @@
 .servers-scroll[hidden] { display: none; }
 .recent-server { display: flex; align-items: center; min-width: 0; border-radius: 7px; margin-top: 3px; }
 .recent-server:hover { background: var(--card-strong); }
+.recent-server.current { background: color-mix(in srgb, var(--accent-blue) 24%, transparent); box-shadow: inset 2px 0 0 var(--accent-blue); }
+.recent-server.current:hover { background: color-mix(in srgb, var(--accent-blue) 32%, transparent); }
 .recent-server-connect { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 8px 4px 8px 7px; border: 0; background: transparent; color: var(--muted); text-align: left; cursor: pointer; }
+.recent-server.current .recent-server-connect { color: var(--text); }
 .recent-server-label { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 11px; }
 .recent-server-label > span, .recent-server-label > small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-server-label > .recent-server-title { display: flex; align-items: baseline; gap: 6px; overflow: hidden; text-overflow: clip; }
+.recent-server-title > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.recent-server-current-mark { flex: none; color: var(--accent-blue); font-size: 9px; font-weight: 600; }
 .recent-server-label > small { color: var(--muted); font-size: 9px; }
 .server-alias-input { flex: 1; width: 0; min-width: 0; margin: 3px; padding: 5px; font-size: 11px; }
 .server-favorite { flex-shrink: 0; padding: 5px; border: 0; background: transparent; color: var(--muted); font-size: 17px; cursor: pointer; }

@@ -1,5 +1,19 @@
 import {useCallback, useEffect, useRef, useState} from "react";
-import {desktopAPI, type ClientViewDTO, type RecentServer} from "../../api";
+import {desktopAPI, type ClientViewDTO, type RecentServer, type ServerPopulation} from "../../api";
+
+function clientCountLabel(count: number): string {
+    const n = Math.abs(count) % 100;
+    const last = n % 10;
+    if (n > 10 && n < 20) return `${count} клиентов`;
+    if (last === 1) return `${count} клиент`;
+    if (last >= 2 && last <= 4) return `${count} клиента`;
+    return `${count} клиентов`;
+}
+
+function populationLabel(value: ServerPopulation | undefined): string {
+    if (!value) return "…";
+    return value.online ? clientCountLabel(value.clients) : "нет связи";
+}
 
 export function RecentServers({view, expanded, onToggle, onReconnect, onError, standalone = false, disabled = false, onSelect, onCountChange}: {
     onCountChange?: (count: number) => void;
@@ -13,7 +27,25 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, s
     onError: (message: string) => void;
 }) {
     const [servers, setServers] = useState<RecentServer[]>([]);
+    const [populations, setPopulations] = useState<Record<string, ServerPopulation>>({});
     useEffect(() => { onCountChange?.(servers.length); }, [servers.length, onCountChange]);
+    const addressKey = servers.map((server) => server.address).join("\n");
+    useEffect(() => {
+        if (!standalone || !addressKey) return;
+        let active = true;
+        const addresses = addressKey.split("\n");
+        const refresh = () => {
+            void desktopAPI.serverPopulations(addresses).then((result) => {
+                if (!active) return;
+                const next: Record<string, ServerPopulation> = {};
+                for (const item of result ?? []) next[item.address] = item;
+                setPopulations(next);
+            }).catch(() => undefined);
+        };
+        refresh();
+        const timer = window.setInterval(refresh, 10000);
+        return () => { active = false; window.clearInterval(timer); };
+    }, [standalone, addressKey]);
     const [pending, setPending] = useState(false);
     const [editing, setEditing] = useState<string | null>(null);
     const [alias, setAlias] = useState("");
@@ -74,7 +106,7 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, s
             <span className="servers-chevron" aria-hidden="true">{expanded ? "▾" : "▸"}</span><span>Серверы</span><span className="count-badge">{servers.length}</span>
         </button>}
         <div id="recent-servers-list" className="servers-scroll" hidden={!expanded}>
-            {servers.map((server) => <div key={server.address} className="recent-server">
+            {servers.map((server) => <div key={server.address} className={`recent-server ${!standalone && server.current ? "current" : ""}`}>
                 {editing === server.address ? <input className="server-alias-input" autoFocus maxLength={64} value={alias}
                     aria-label="Название сервера" placeholder={server.address} onChange={(event) => setAlias(event.target.value)}
                     onBlur={saveAlias} onKeyDown={(event) => {
@@ -82,8 +114,8 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, s
                         if (event.key === "Escape") { editingRef.current = null; setEditing(null); }
                     }}/> :
                 <button type="button" className="recent-server-connect" disabled={pending || disabled || (!standalone && view.connectionStatus !== "connected")}
-                        title={`${server.address}\nДвойной клик — подключиться; правая кнопка мыши — действия; F2 — задать имя`}
-                        aria-current={server.current ? "true" : undefined}
+                        title={`${server.address}${standalone ? `\n${populationLabel(populations[server.address])}` : ""}${!standalone && server.current ? "\nТекущий сервер" : ""}\nДвойной клик — подключиться; правая кнопка мыши — действия; F2 — задать имя`}
+                        aria-current={!standalone && server.current ? "true" : undefined}
                         onClick={() => onSelect?.(server.address)}
                         onContextMenu={(event) => {
                             event.preventDefault();
@@ -95,7 +127,11 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, s
                             if (event.key === "Delete") { event.preventDefault(); void run(() => desktopAPI.deleteRecentServer(server.address)); }
                             if (event.key === "Enter" && !event.repeat) { event.preventDefault(); reconnect(server); }
                         }}>
-                    <span className="recent-server-label"><span>{server.alias || server.address}</span>{server.alias && <small>{server.address}</small>}</span>
+                    <span className="recent-server-label">
+                        <span className="recent-server-title"><span>{server.alias || server.address}</span>{!standalone && server.current && <span className="recent-server-current-mark">Текущий</span>}</span>
+                        {server.alias && <small>{standalone ? `${server.address} · ${populationLabel(populations[server.address])}` : server.address}</small>}
+                        {standalone && !server.alias && <small>{populationLabel(populations[server.address])}</small>}
+                    </span>
                 </button>}
                 <button type="button" className="server-favorite" aria-pressed={server.favorite}
                         aria-label={`${server.favorite ? "Открепить" : "Закрепить"} сервер ${server.alias || server.address}`}

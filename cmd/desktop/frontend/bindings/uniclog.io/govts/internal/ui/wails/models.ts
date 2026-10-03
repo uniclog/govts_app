@@ -184,3 +184,9 @@ export interface ServerDTO {
     "name": string;
     "version"?: string;
 }
+
+export interface ServerPopulationDTO {
+    "address": string;
+    "clients": number;
+    "online": boolean;
+}

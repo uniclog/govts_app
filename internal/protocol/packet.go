@@ -48,6 +48,12 @@ const (
 	// PacketVoiceBundle carries the current and the previous voice frames of
 	// one sender; server → client only, for clients that support it.
 	PacketVoiceBundle
+	// PacketServerStatus asks how many clients are on the server. It is sent
+	// in plaintext, without a session, and its payload is empty.
+	PacketServerStatus
+	// PacketServerStatusAck answers PacketServerStatus. The payload is a
+	// big-endian uint32 client count.
+	PacketServerStatusAck
 
 	PacketEnd
 )

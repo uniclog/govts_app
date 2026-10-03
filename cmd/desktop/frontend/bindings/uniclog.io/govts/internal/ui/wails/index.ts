@@ -25,5 +25,6 @@ export type {
     ParticipantDTO,
     RecentServerDTO,
     ScreenStreamDTO,
-    ServerDTO
+    ServerDTO,
+    ServerPopulationDTO
 } from "./models.js";

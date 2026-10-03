@@ -100,6 +100,10 @@ export function SavedDisplayName(): $CancellablePromise<string> {
     return $Call.ByID(1402910199);
 }
 
+export function ServerPopulations(addresses: string[] | null): $CancellablePromise<$models.ServerPopulationDTO[] | null> {
+    return $Call.ByID(3954198852, addresses);
+}
+
 export function SetCaptureDevice(id: string): $CancellablePromise<void> {
     return $Call.ByID(3622601723, id);
 }
