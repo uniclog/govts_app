@@ -43,6 +43,14 @@ func requestStartupKeyframes(p *publisher, s *subscriber) {
 	}
 }
 
+func drainAudioRTCP(sender *webrtc.RTPSender) {
+	for {
+		if _, _, err := sender.ReadRTCP(); err != nil {
+			return
+		}
+	}
+}
+
 func drainRTCP(p *publisher, s *subscriber, sender *webrtc.RTPSender) {
 	for {
 		packets, _, err := sender.ReadRTCP()

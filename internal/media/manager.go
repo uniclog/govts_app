@@ -51,7 +51,10 @@ type publisher struct {
 	pc            *webrtc.PeerConnection
 	mu            sync.RWMutex
 	codec         webrtc.RTPCodecCapability
+	audioCodec    webrtc.RTPCodecCapability
 	ssrc          webrtc.SSRC
+	wantAudio     bool
+	audioReady    bool
 	ready         bool
 	starting      bool
 	subscribers   map[string]*subscriber
@@ -70,7 +73,9 @@ type subscriber struct {
 	sessionID       uint64
 	pc              *webrtc.PeerConnection
 	track           *webrtc.TrackLocalStaticRTP
+	audio           *webrtc.TrackLocalStaticRTP
 	packets         chan *rtp.Packet
+	audioPackets    chan *rtp.Packet
 	closed          chan struct{}
 	closeOnce       sync.Once
 	outBytes        atomic.Uint64
@@ -124,7 +129,21 @@ func (m *Manager) Publish(ctx context.Context, ownerID uint64, offer mediasignal
 			cleanup()
 		}
 	})
+	p.wantAudio = offerHasAudio(offer.SDP)
 	pc.OnTrack(func(remote *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
+		if remote.Kind() == webrtc.RTPCodecTypeAudio {
+			p.mu.Lock()
+			if p.audioReady {
+				p.mu.Unlock()
+				return
+			}
+			p.audioCodec = remote.Codec().RTPCodecCapability
+			p.audioReady = true
+			p.mu.Unlock()
+			log.Printf("screen publisher audio: stream=%d owner=%d codec=%s ssrc=%d", streamID, ownerID, remote.Codec().MimeType, remote.SSRC())
+			go m.forwardAudio(p, remote)
+			return
+		}
 		p.mu.Lock()
 		if p.ready || p.starting {
 			p.mu.Unlock()
@@ -148,6 +167,12 @@ func (m *Manager) Publish(ctx context.Context, ownerID uint64, offer mediasignal
 	if _, err = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}); err != nil {
 		cleanup()
 		return PublishResult{}, err
+	}
+	if p.wantAudio {
+		if _, err = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}); err != nil {
+			cleanup()
+			return PublishResult{}, err
+		}
 	}
 	answer, err := acceptOffer(ctx, pc, offer)
 	if err != nil {
@@ -196,10 +221,39 @@ func (m *Manager) Subscribe(ctx context.Context, sessionID uint64, streamID doma
 		_ = pc.Close()
 		return SubscribeResult{}, err
 	}
-	s := &subscriber{id: subscriberID, sessionID: sessionID, pc: pc, track: track, packets: make(chan *rtp.Packet, subscriberQueueSize), closed: make(chan struct{})}
+	var audioTrack *webrtc.TrackLocalStaticRTP
+	var audioSender *webrtc.RTPSender
+	if offerHasAudio(offer.SDP) {
+		if p.wantAudio {
+			codec := p.audioCodec
+			if codec.MimeType == "" {
+				codec = screenAudioCodec
+			}
+			audioTrack, err = webrtc.NewTrackLocalStaticRTP(codec, "screen-audio", fmt.Sprintf("screen-%d", streamID))
+			if err != nil {
+				p.mu.Unlock()
+				_ = pc.Close()
+				return SubscribeResult{}, err
+			}
+			audioSender, err = pc.AddTrack(audioTrack)
+			if err != nil {
+				p.mu.Unlock()
+				_ = pc.Close()
+				return SubscribeResult{}, err
+			}
+		} else if _, err = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionInactive}); err != nil {
+			p.mu.Unlock()
+			_ = pc.Close()
+			return SubscribeResult{}, err
+		}
+	}
+	s := &subscriber{id: subscriberID, sessionID: sessionID, pc: pc, track: track, audio: audioTrack, packets: make(chan *rtp.Packet, subscriberQueueSize), audioPackets: make(chan *rtp.Packet, subscriberQueueSize), closed: make(chan struct{})}
 	p.subscribers[subscriberID] = s
 	p.mu.Unlock()
 	go drainRTCP(p, s, sender)
+	if audioSender != nil {
+		go drainAudioRTCP(audioSender)
+	}
 	go m.runSubscriber(p, s)
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
 		log.Printf("screen subscriber state: stream=%d session=%d subscriber=%q state=%s", streamID, sessionID, subscriberID, state)

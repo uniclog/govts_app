@@ -206,6 +206,9 @@ h2 { margin: 0; font-size: 20px; }
 .screen-viewer-toolbar span { color: #7485a2; font-size: 10px; }
 .screen-viewer-toolbar button { padding: 7px 11px; border: 1px solid #3b4c6b; border-radius: 8px; color: #c4d1e7; background: #22304a; cursor: pointer; font-size: 11px; }
 .screen-viewer-toolbar button:hover { color: white; background: #2b3d5d; }
+.screen-audio-toggle { display: inline-flex; align-items: center; gap: 6px; }
+.screen-audio-toggle svg { width: 14px; height: 14px; }
+.screen-audio-toggle[aria-pressed="true"] { color: #ffd0d4; border-color: #8a4450; }
 .screen-viewer-window video { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; background: #000; }
 .screen-viewer-error { padding: 8px 12px; color: #ffd5da; border-bottom: 1px solid rgba(255, 108, 122, .35); background: rgba(255, 108, 122, .1); font-size: 11px; }
 .empty-state, .empty-event { display: grid; min-height: 120px; place-items: center; color: #667694; font-size: 13px; }
