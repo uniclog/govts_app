@@ -14,6 +14,8 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
     const [open, setOpen] = useState(false);
     const [pending, setPending] = useState(false);
     const [publishing, setPublishing] = useState(false);
+    const [audioAvailable, setAudioAvailable] = useState(false);
+    const [audioMuted, setAudioMuted] = useState(false);
     const [error, setError] = useState("");
     const [profileID, setProfileID] = useState<ScreenProfileID>(() => {
         try {
@@ -35,6 +37,8 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
         setOpen(false);
         setError("");
         setPublishing(false);
+        setAudioAvailable(false);
+        setAudioMuted(false);
         return () => {
             void controller.stopPublishing().catch((reason) => logDiagnostic("screen_context_cleanup", reason));
         };
@@ -54,7 +58,12 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
         const startedIn = context;
         try {
             await controller.publish(() => { if (currentContext.current === startedIn) setPublishing(false); }, profile, () => currentContext.current === startedIn);
-            if (currentContext.current === startedIn) { setPublishing(true); setOpen(false); }
+            if (currentContext.current === startedIn) {
+                setPublishing(true);
+                setAudioAvailable(controller.hasPublishAudio());
+                setAudioMuted(false);
+                setOpen(false);
+            }
         } catch (reason) {
             const cancelled = reason instanceof DOMException && ["NotAllowedError", "AbortError"].includes(reason.name)
                 || /permission denied by user|user cancel(?:led|ed)/i.test(String(reason));
@@ -70,9 +79,15 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
         busy.current = true; setPending(true);
         try { await controller.stopPublishing(); }
         catch (reason) { onError(reason instanceof Error ? reason.message : String(reason)); }
-        finally { setPublishing(false); busy.current = false; setPending(false); }
+        finally { setPublishing(false); setAudioAvailable(false); setAudioMuted(false); busy.current = false; setPending(false); }
     };
-    return {open, pending, active, available, profile, profileID, error, buttonRef, close, selectProfile, start, toggle};
+    const toggleAudio = () => {
+        if (!controller.hasPublishAudio()) return;
+        const next = !audioMuted;
+        controller.setPublishAudioMuted(next);
+        setAudioMuted(next);
+    };
+    return {open, pending, active, available, audioAvailable, audioMuted, profile, profileID, error, buttonRef, close, selectProfile, start, toggle, toggleAudio};
 }
 
 export type ScreenSharingState = ReturnType<typeof useScreenSharing>;
@@ -96,7 +111,7 @@ export function ScreenShareDialog({sharing}: {sharing: ScreenSharingState}) {
     return <dialog ref={dialogRef} className="screen-share-dialog" aria-labelledby="screen-share-title"
         onCancel={(event) => { event.preventDefault(); sharing.close(); }}>
         <h2 id="screen-share-title">Демонстрация экрана</h2>
-        <p>Выберите качество. Затем выберите экран или окно для показа.</p>
+        <p>Выберите качество, затем экран или окно. Звук окна передаётся с этого окна, звук всего экрана — со всей системы.</p>
         <fieldset disabled={sharing.pending}>
             <legend>Качество</legend>
             {screenProfiles.map((profile) => <label className="screen-quality-option" key={profile.id}>

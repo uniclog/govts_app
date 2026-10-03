@@ -47,28 +47,61 @@ function waitForConnected(pc: RTCPeerConnection, timeoutMs = 20_000): Promise<vo
     });
 }
 
-function waitForRemoteVideo(pc: RTCPeerConnection, timeoutMs = 20_000): Promise<MediaStream> {
+function attachRemoteStream(pc: RTCPeerConnection, timeoutMs = 20_000): Promise<MediaStream> {
+    const stream = new MediaStream();
     return new Promise((resolve, reject) => {
-        const timeout = window.setTimeout(() => finish(undefined, new Error("Не удалось получить видеотрек демонстрации")), timeoutMs);
+        let settled = false;
+        const timeout = window.setTimeout(() => finish(new Error("Не удалось получить видеотрек демонстрации")), timeoutMs);
         const onTrack = (event: RTCTrackEvent) => {
-            if (event.track.kind !== "video") return;
-            finish(event.streams[0] ?? new MediaStream([event.track]));
+            if (!stream.getTracks().some((track) => track.id === event.track.id)) stream.addTrack(event.track);
+            if (event.track.kind === "video") finish();
         };
         const onConnectionStateChanged = () => {
             if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-                finish(undefined, new Error("WebRTC media-соединение закрылось до получения видеотрека"));
+                finish(new Error("WebRTC media-соединение закрылось до получения видеотрека"));
             }
         };
-        const finish = (stream?: MediaStream, error?: Error) => {
+        const finish = (error?: Error) => {
+            if (settled) return;
+            if (error) {
+                settled = true;
+                window.clearTimeout(timeout);
+                pc.removeEventListener("track", onTrack);
+                pc.removeEventListener("connectionstatechange", onConnectionStateChanged);
+                reject(error);
+                return;
+            }
+            if (!stream.getVideoTracks().length) return;
+            settled = true;
             window.clearTimeout(timeout);
-            pc.removeEventListener("track", onTrack);
             pc.removeEventListener("connectionstatechange", onConnectionStateChanged);
-            if (error) reject(error);
-            else if (stream) resolve(stream);
+            resolve(stream);
         };
         pc.addEventListener("track", onTrack);
         pc.addEventListener("connectionstatechange", onConnectionStateChanged);
     });
+}
+
+type DisplayCaptureOptions = DisplayMediaStreamOptions & {
+    systemAudio?: "include" | "exclude";
+    windowAudio?: "system" | "window" | "exclude";
+};
+
+async function captureScreen(): Promise<MediaStream> {
+    const cancelled = (error: unknown) => error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "AbortError");
+    try {
+        return await navigator.mediaDevices.getDisplayMedia({video: true, audio: true, systemAudio: "include", windowAudio: "window"} as DisplayCaptureOptions);
+    } catch (error) {
+        if (cancelled(error)) throw error;
+        logDiagnostic("screen_audio_constraints", error);
+    }
+    try {
+        return await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
+    } catch (error) {
+        if (cancelled(error)) throw error;
+        logDiagnostic("screen_audio_request", error);
+    }
+    return navigator.mediaDevices.getDisplayMedia({video: true, audio: false});
 }
 
 async function ensureTrusted(): Promise<void> {
@@ -80,6 +113,7 @@ async function ensureTrusted(): Promise<void> {
 
 export class ScreenMediaController {
     private publisher?: {streamID: string; pc: RTCPeerConnection; capture: MediaStream};
+    private publishAudioSender?: RTCRtpSender;
     private pendingPublisher?: {pc: RTCPeerConnection; capture: MediaStream};
     private viewer?: {streamID: string; subscriberID: string; pc: RTCPeerConnection};
     private publisherStats = new ScreenStatsCollector();
@@ -99,8 +133,9 @@ export class ScreenMediaController {
         let capture: MediaStream;
         try {
             logDiagnostic("screen_picker_open", `generation=${generation}`);
-            capture = await navigator.mediaDevices.getDisplayMedia({video: true, audio: false});
-            logDiagnostic("screen_picker_selected", `generation=${generation}`);
+            capture = await captureScreen();
+            const surface = capture.getVideoTracks()[0]?.getSettings().displaySurface ?? "";
+            logDiagnostic("screen_picker_selected", `generation=${generation} surface=${surface} audio=${capture.getAudioTracks().length}`);
         } catch (error) {
             logDiagnostic("screen_picker_closed", error);
             throw error;
@@ -112,9 +147,11 @@ export class ScreenMediaController {
         const pending = {pc, capture};
         this.pendingPublisher = pending;
         let streamID = "";
+        const missingVideoTrack = (): never => { throw new Error("Источник не предоставил видеотрек"); };
+        const publishSuperseded = (): never => { throw new DOMException("Операция отменена", "AbortError"); };
         try {
             const captureTrack = capture.getVideoTracks()[0];
-            if (!captureTrack) throw new Error("Источник не предоставил видеотрек");
+            if (!captureTrack) missingVideoTrack();
             const checkCapture = () => {
                 if (captureTrack.readyState === "ended") throw new DOMException("Захват завершён", "AbortError");
             };
@@ -145,6 +182,11 @@ export class ScreenMediaController {
             const senderParameters = transceiver.sender.getParameters();
             senderParameters.degradationPreference = profile.degradationPreference;
             await transceiver.sender.setParameters(senderParameters).catch((error) => { logDiagnostic("screen_sender_parameters", error); });
+            const audioTrack = capture.getAudioTracks()[0];
+            if (audioTrack) {
+                audioTrack.contentHint = "music";
+                this.publishAudioSender = pc.addTransceiver(audioTrack, {direction: "sendonly", streams: [capture]}).sender;
+            }
             await ensureTrusted();
             checkCurrent();
             const offer = await localOffer(pc);
@@ -157,7 +199,7 @@ export class ScreenMediaController {
             await waitForConnected(pc);
             checkCurrent();
             checkCapture();
-            if (this.pendingPublisher !== pending) throw new DOMException("Операция отменена", "AbortError");
+            if (this.pendingPublisher !== pending) publishSuperseded();
             this.pendingPublisher = undefined;
             const active = {streamID, pc, capture};
             this.publisher = active;
@@ -180,6 +222,7 @@ export class ScreenMediaController {
                     !(disconnectExpired && pc.connectionState === "disconnected")) return;
                 if (this.publisher !== active) return;
                 this.publisher = undefined;
+                this.publishAudioSender = undefined;
                 this.publisherStats.reset();
                 capture.getTracks().forEach((track) => track.stop());
                 pc.removeEventListener("connectionstatechange", connectionChanged);
@@ -192,6 +235,7 @@ export class ScreenMediaController {
             return result.streamId;
         } catch (error) {
             logDiagnostic("screen_publish_failed", error);
+            this.publishAudioSender = undefined;
             if (this.pendingPublisher === pending) this.pendingPublisher = undefined;
             capture.getTracks().forEach((track) => track.stop());
             pc.close();
@@ -207,6 +251,7 @@ export class ScreenMediaController {
         const pending = this.pendingPublisher;
         this.publisher = undefined;
         this.pendingPublisher = undefined;
+        this.publishAudioSender = undefined;
         this.publisherStats.reset();
         if (pending) {
             pending.capture.getTracks().forEach((track) => track.stop());
@@ -218,6 +263,18 @@ export class ScreenMediaController {
         await desktopAPI.stopScreen(active.streamID);
     }
 
+    hasPublishAudio(): boolean {
+        return (this.publisher?.capture.getAudioTracks().length ?? 0) > 0;
+    }
+
+    setPublishAudioMuted(muted: boolean): void {
+        const track = this.publisher?.capture.getAudioTracks()[0];
+        const sender = this.publishAudioSender;
+        if (!track || !sender) return;
+        track.enabled = !muted;
+        void sender.replaceTrack(muted ? null : track).catch((error) => logDiagnostic("screen_audio_mute", error));
+    }
+
     async subscribe(streamID: string): Promise<MediaStream> {
         await this.unsubscribe();
         await ensureTrusted();
@@ -227,9 +284,10 @@ export class ScreenMediaController {
         });
         // Install the listener before applying the answer: WebRTC dispatches `track`
         // from setRemoteDescription, before the signaling call below returns.
-        const remoteVideo = waitForRemoteVideo(pc);
+        const remoteVideo = attachRemoteStream(pc);
         void remoteVideo.catch(() => undefined);
         pc.addTransceiver("video", {direction: "recvonly"});
+        pc.addTransceiver("audio", {direction: "recvonly"});
         const subscriberID = crypto.randomUUID();
         try {
             const result = await desktopAPI.subscribeScreen(streamID, subscriberID, await localOffer(pc));
@@ -266,6 +324,7 @@ export class ScreenMediaController {
         const viewer = this.viewer;
         this.pendingPublisher = undefined;
         this.publisher = undefined;
+        this.publishAudioSender = undefined;
         this.viewer = undefined;
         pending?.capture.getTracks().forEach((track) => track.stop());
         pending?.pc.close();

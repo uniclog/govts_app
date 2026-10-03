@@ -101,8 +101,12 @@ func isAuthPacket(packetType uint8) bool {
 	return packetType == PacketAuthInit || packetType == PacketAuthChallenge || packetType == PacketAuthFinish || packetType == PacketAuthAck || packetType == PacketServerVersionTooOld
 }
 
+func isPublicStatusPacket(packetType uint8) bool {
+	return packetType == PacketServerStatus || packetType == PacketServerStatusAck
+}
+
 func (c *SecureDatagramCodec) Encode(ctx DatagramContext, packet VoicePacket) ([]byte, error) {
-	if isAuthPacket(packet.Type) || (packet.Type == PacketError && packet.SessionID == 0) {
+	if isAuthPacket(packet.Type) || isPublicStatusPacket(packet.Type) || (packet.Type == PacketError && packet.SessionID == 0) {
 		return EncodePacket(packet)
 	}
 	ownerID := ctx.KeyOwnerID
@@ -141,7 +145,7 @@ func (c *SecureDatagramCodec) Decode(ctx DatagramContext, datagram []byte) (Voic
 		if err != nil {
 			return VoicePacket{}, err
 		}
-		if !isAuthPacket(packet.Type) && !(packet.Type == PacketError && packet.SessionID == 0) && !(c.server && packet.Type == PacketHello) {
+		if !isAuthPacket(packet.Type) && !isPublicStatusPacket(packet.Type) && !(packet.Type == PacketError && packet.SessionID == 0) && !(c.server && packet.Type == PacketHello) {
 			return VoicePacket{}, rejectDatagram(errors.New("unprotected session packet"))
 		}
 		return packet, nil
@@ -173,7 +177,7 @@ func (c *SecureDatagramCodec) Decode(ctx DatagramContext, datagram []byte) (Voic
 		return VoicePacket{}, rejectDatagram(fmt.Errorf("%w: %w", ErrSecureAuthentication, err))
 	}
 	packet, err := DecodePacket(plain)
-	if err != nil || isAuthPacket(packet.Type) || (c.server && packet.SessionID != id) || (!c.server && packet.Type != PacketVoice && packet.Type != PacketVoiceBundle && packet.SessionID != id) {
+	if err != nil || isAuthPacket(packet.Type) || isPublicStatusPacket(packet.Type) || (c.server && packet.SessionID != id) || (!c.server && packet.Type != PacketVoice && packet.Type != PacketVoiceBundle && packet.SessionID != id) {
 		return VoicePacket{}, rejectDatagram(errors.New("invalid secure packet"))
 	}
 	session.markReceived(counter)

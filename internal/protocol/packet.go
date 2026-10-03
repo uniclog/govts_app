@@ -48,6 +48,12 @@ const (
 	// PacketVoiceBundle carries the current and the previous voice frames of
 	// one sender; server → client only, for clients that support it.
 	PacketVoiceBundle
+	// PacketServerStatus asks how many clients are on the server. It is sent
+	// in plaintext, without a session, and its payload is empty.
+	PacketServerStatus
+	// PacketServerStatusAck answers PacketServerStatus. The payload is a
+	// big-endian uint32 client count.
+	PacketServerStatusAck
 
 	PacketEnd
 )
@@ -69,27 +75,6 @@ func NewVoicePacket(sessionID uint64, sequence uint32, payload []byte) VoicePack
 	}
 }
 
-func packetName(packetType uint8) string {
-	switch packetType {
-	case PacketHello:
-		return "hello"
-	case PacketVoice:
-		return "voice"
-	default:
-		return "unknown"
-	}
-}
-
-func makePayload(text string) []byte {
-	return []byte(text)
-}
-
-func encodeSessionID(id uint64) []byte {
-	data := make([]byte, 8)
-	binary.BigEndian.PutUint64(data, id)
-	return data
-}
-
 // index
 // 0        Type       1 byte
 // 1..8     SessionID  8 bytes
@@ -101,10 +86,6 @@ const (
 	HeaderSize          = 17
 	MaxPayloadSize      = 1200
 	MaxWireDatagramSize = HeaderSize + MaxPayloadSize + 33 // encrypted record header and GCM tag
-
-	// MaxDatagramSize is kept as a compatibility alias. New transport code
-	// must use MaxWireDatagramSize as the protocol-wide hard wire limit.
-	MaxDatagramSize = MaxWireDatagramSize
 )
 
 func encodeHeader(packet VoicePacket) []byte {

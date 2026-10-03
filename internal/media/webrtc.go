@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/mediasignal"
-	"uniclog.io/govts/internal/voice"
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/nack"
 	"github.com/pion/webrtc/v4"
+	"uniclog.io/govts/internal/domain"
+	"uniclog.io/govts/internal/mediasignal"
+	"uniclog.io/govts/internal/voice"
 )
+
+// screenAudioCodec is the system/window audio format Chromium captures for a display stream.
+var screenAudioCodec = webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: 48000, Channels: 2, SDPFmtpLine: "minptime=10;useinbandfec=1"}
 
 func NewManager(hub *voice.Hub) (*Manager, error) { return NewManagerWithConfig(hub, Config{}) }
 
@@ -21,6 +24,10 @@ func NewManagerWithConfig(hub *voice.Hub, config Config) (*Manager, error) {
 	mediaEngine := &webrtc.MediaEngine{}
 	codec := webrtc.RTPCodecParameters{RTPCodecCapability: webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8, ClockRate: 90000, RTCPFeedback: []webrtc.RTCPFeedback{{Type: "nack"}, {Type: "nack", Parameter: "pli"}, {Type: "goog-remb"}}}, PayloadType: 96}
 	if err := mediaEngine.RegisterCodec(codec, webrtc.RTPCodecTypeVideo); err != nil {
+		return nil, err
+	}
+	audio := webrtc.RTPCodecParameters{RTPCodecCapability: screenAudioCodec, PayloadType: 111}
+	if err := mediaEngine.RegisterCodec(audio, webrtc.RTPCodecTypeAudio); err != nil {
 		return nil, err
 	}
 	registry := &interceptor.Registry{}
@@ -37,7 +44,13 @@ func NewManagerWithConfig(hub *voice.Hub, config Config) (*Manager, error) {
 		}
 	}
 	if config.AdvertisedIP != "" {
-		settingEngine.SetNAT1To1IPs([]string{config.AdvertisedIP}, webrtc.ICECandidateTypeHost)
+		if err := settingEngine.SetICEAddressRewriteRules(webrtc.ICEAddressRewriteRule{
+			External:        []string{config.AdvertisedIP},
+			AsCandidateType: webrtc.ICECandidateTypeHost,
+			Mode:            webrtc.ICEAddressRewriteReplace,
+		}); err != nil {
+			return nil, err
+		}
 	}
 	m := &Manager{hub: hub, api: webrtc.NewAPI(webrtc.WithMediaEngine(mediaEngine), webrtc.WithInterceptorRegistry(registry), webrtc.WithSettingEngine(settingEngine)), publishers: make(map[domain.StreamID]*publisher), ownerStreams: make(map[uint64]domain.StreamID), done: make(chan struct{})}
 	go m.reconcileLoop()
