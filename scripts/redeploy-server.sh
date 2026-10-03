@@ -120,6 +120,16 @@ start_server() {
     fi
   fi
   : >>"$LOG_FILE"
+  printf 'Starting server command:'
+  printf ' %q' "$LIVE_BIN" \
+    -config "$CONFIG" \
+    -port "$VOICE_PORT" \
+    -media-port "$MEDIA_PORT" \
+    -media-min-port "$MEDIA_MIN_PORT" \
+    -media-max-port "$MEDIA_MAX_PORT" \
+    -media-advertised-ip "$PUBLIC_IP" \
+    ${extra_args[@]+"${extra_args[@]}"}
+  printf '\n'
   tmux new-session -d -s "$TMUX_SESSION" -c "$APP_DIR" \
     bash -c 'log_file="$1"; shift; exec > >(tee -a "$log_file") 2>&1; exec "$@"' \
     _ "$LOG_FILE" "$LIVE_BIN" \

@@ -28,7 +28,7 @@ param(
     [string]$TmuxSession = 'govts-server',
 
     # Repeat the previous voice frame in each server -> client datagram.
-    [switch]$VoiceRedundancy
+    [switch]$VoiceRedundancy = $true
 )
 
 $ErrorActionPreference = 'Stop'
@@ -66,6 +66,7 @@ if ($LASTEXITCODE -ne 0) {
 
 $voiceRedundancyValue = if ($VoiceRedundancy) { '1' } else { '0' }
 $remoteCommand = "chmod 0755 '$remoteScriptUpload' && mv -f '$remoteScriptUpload' '$remoteScript' && APP_DIR='$RemoteDir' CONFIG='$ConfigPath' PUBLIC_IP='$PublicIp' VOICE_PORT='$VoicePort' MEDIA_PORT='$MediaPort' MEDIA_MIN_PORT='$MediaMinPort' MEDIA_MAX_PORT='$MediaMaxPort' TMUX_SESSION='$TmuxSession' VOICE_REDUNDANCY='$voiceRedundancyValue' '$remoteScript' '$remoteBinary'"
+Write-Host "Remote command ($Target): $remoteCommand"
 & ssh -- $Target $remoteCommand
 if ($LASTEXITCODE -ne 0) {
     throw "remote redeploy failed with exit code $LASTEXITCODE"
