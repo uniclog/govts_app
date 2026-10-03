@@ -21,7 +21,7 @@ func ProbeServerPopulation(ctx context.Context, endpoint netip.AddrPort) (uint32
 	if err != nil {
 		return 0, err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	payload, err := protocol.EncodePacket(protocol.VoicePacket{Type: protocol.PacketServerStatus, RequestID: 1})
 	if err != nil {
 		return 0, err

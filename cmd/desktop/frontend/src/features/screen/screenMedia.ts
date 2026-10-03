@@ -147,9 +147,11 @@ export class ScreenMediaController {
         const pending = {pc, capture};
         this.pendingPublisher = pending;
         let streamID = "";
+        const missingVideoTrack = (): never => { throw new Error("Источник не предоставил видеотрек"); };
+        const publishSuperseded = (): never => { throw new DOMException("Операция отменена", "AbortError"); };
         try {
             const captureTrack = capture.getVideoTracks()[0];
-            if (!captureTrack) throw new Error("Источник не предоставил видеотрек");
+            if (!captureTrack) missingVideoTrack();
             const checkCapture = () => {
                 if (captureTrack.readyState === "ended") throw new DOMException("Захват завершён", "AbortError");
             };
@@ -183,8 +185,7 @@ export class ScreenMediaController {
             const audioTrack = capture.getAudioTracks()[0];
             if (audioTrack) {
                 audioTrack.contentHint = "music";
-                const audioSender = pc.addTransceiver(audioTrack, {direction: "sendonly", streams: [capture]}).sender;
-                this.publishAudioSender = audioSender;
+                this.publishAudioSender = pc.addTransceiver(audioTrack, {direction: "sendonly", streams: [capture]}).sender;
             }
             await ensureTrusted();
             checkCurrent();
@@ -198,7 +199,7 @@ export class ScreenMediaController {
             await waitForConnected(pc);
             checkCurrent();
             checkCapture();
-            if (this.pendingPublisher !== pending) throw new DOMException("Операция отменена", "AbortError");
+            if (this.pendingPublisher !== pending) publishSuperseded();
             this.pendingPublisher = undefined;
             const active = {streamID, pc, capture};
             this.publisher = active;
