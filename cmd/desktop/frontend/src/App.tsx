@@ -97,6 +97,9 @@ function MainApp({theme, setTheme}: {theme: string; setTheme: (value: string) =>
     const screenMedia = useRef<ScreenMediaController | null>(null);
     if (!screenMedia.current) screenMedia.current = new ScreenMediaController();
     const sharing = useScreenSharing(view, screenMedia.current, setActionError);
+    const sharingRef = useRef(sharing);
+    sharingRef.current = sharing;
+    useEffect(() => desktopAPI.onTrayScreenShare(() => { void sharingRef.current.toggle(); }), []);
     const updates = useUpdates(() => {
         if (sharing.pending) throw new Error("Завершите выбор источника демонстрации перед обновлением");
         chatStore?.prepareUpdate();

@@ -76,6 +76,7 @@ export const desktopAPI = {
     unsubscribeScreen: (streamID: string, subscriberID: string) => Service.UnsubscribeScreen(streamID, subscriberID),
     openScreenWindow: (streamID: string, ownerName: string) => Service.OpenScreenWindow(streamID, ownerName),
     onStateChanged: (listener: () => void) => Events.On("client-state-changed", listener),
+    onTrayScreenShare: (listener: () => void) => Events.On("tray-screen-share", () => listener()),
     onEventLogChanged: (listener: () => void) => Events.On("client-event-log-changed", listener),
     onAudioMeter: (listener: (sample: AudioMeterDTO) => void) =>
         Events.On("audio-meter", (event) => listener(event.data as AudioMeterDTO)),

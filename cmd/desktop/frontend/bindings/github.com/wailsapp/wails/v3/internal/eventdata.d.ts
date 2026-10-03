@@ -15,6 +15,7 @@ declare module "@wailsio/runtime" {
             "audio-meter": wailsui$0.AudioMeterDTO;
             "client-event-log-changed": boolean;
             "client-state-changed": boolean;
+            "tray-screen-share": boolean;
         }
     }
 }
