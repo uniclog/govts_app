@@ -76,6 +76,7 @@ export function ParticipantRow({participant, canKick, canBan, canDrag, depth, on
         if (immediate) commit();
         else timerRef.current = window.setTimeout(commit, 40);
     };
+    const setVolumeLevel = (level: number, immediate = false) => setVolume((level / 100) ** 2, immediate);
     const moderate = async (action: "kick" | "ban") => {
         if (!menu) return;
         if (action === "ban" && !window.confirm(`Заблокировать ${participant.displayName}?`)) return;
@@ -110,6 +111,7 @@ export function ParticipantRow({participant, canKick, canBan, canDrag, depth, on
         left: Math.max(8, Math.min(menu.x, window.innerWidth - 284)),
         top: Math.max(8, Math.min(menu.y, window.innerHeight - 320)),
     } : undefined;
+    const volumeLevel = menu ? Math.round(Math.sqrt(menu.volume) * 100) : 100;
     return <>
         <div ref={rowRef} className={`${variant === "stage" ? "stage-participant" : "participant-row"} participant-${variant} ${variant !== "list" && participant.speaking ? "speaking" : ""} ${variant !== "list" && participant.muted ? "muted" : ""} ${canDrag ? "draggable" : ""} ${participant.local ? "local" : ""}`}
              style={variant === "stage" ? undefined : {paddingLeft: variant === "list" ? 12 : 46 + depth * 18}} tabIndex={participant.local ? -1 : 0}
@@ -160,17 +162,17 @@ export function ParticipantRow({participant, canKick, canBan, canDrag, depth, on
             {!participant.local && <>
             <div className="participant-volume-heading">
                 <label htmlFor={`participant-volume-${participant.sessionId}`}>Громкость пользователя</label>
-                <output>{Math.round(menu.volume * 100)}%</output>
+                <output>{volumeLevel}pt.</output>
             </div>
             <div className="participant-volume-control">
                 <span className="participant-volume-icon" aria-hidden="true">
                     <SpeakerIcon muted={menu.volume === 0}/>
                 </span>
-                <input id={`participant-volume-${participant.sessionId}`} type="range" min="0" max="2" step="0.01"
-                       style={{"--participant-volume": `${menu.volume / 2 * 100}%`} as React.CSSProperties}
-                       value={menu.volume} onChange={(event) => setVolume(Number(event.target.value))}
-                       onPointerUp={(event) => setVolume(Number(event.currentTarget.value), true)}
-                       onKeyUp={(event) => setVolume(Number(event.currentTarget.value), true)}/>
+                <input id={`participant-volume-${participant.sessionId}`} type="range" min="0" max="300" step="1"
+                       style={{"--participant-volume": `${volumeLevel / 300 * 100}%`} as React.CSSProperties}
+                       value={volumeLevel} onChange={(event) => setVolumeLevel(Number(event.target.value))}
+                       onPointerUp={(event) => setVolumeLevel(Number(event.currentTarget.value), true)}
+                       onKeyUp={(event) => setVolumeLevel(Number(event.currentTarget.value), true)}/>
             </div>
             </>}
             <div className="participant-menu-actions">

@@ -58,7 +58,7 @@ func NewAudioControlState(onChange func()) *AudioControlState {
 
 const (
 	DefaultParticipantVolume = float32(1)
-	MaxParticipantVolume     = float32(2)
+	MaxParticipantVolume     = float32(9)
 )
 
 func (a *AudioControlState) ParticipantVolume(id uint64) float32 {
@@ -75,7 +75,7 @@ func (a *AudioControlState) SetParticipantVolume(id uint64, value float32) error
 		return errors.New("participant ID must not be zero")
 	}
 	if math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) || value < 0 || value > MaxParticipantVolume {
-		return fmt.Errorf("participant volume must be between 0 and 2, got %g", value)
+		return fmt.Errorf("participant volume must be between 0 and %g, got %g", MaxParticipantVolume, value)
 	}
 	a.mu.Lock()
 	if value == DefaultParticipantVolume {
