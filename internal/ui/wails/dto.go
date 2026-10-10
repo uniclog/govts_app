@@ -59,6 +59,7 @@ type AudioStateDTO struct {
 	CaptureAvailable   bool    `json:"captureAvailable"`
 	RNNoiseEnabled     bool    `json:"rnnoiseEnabled"`
 	RNNoiseSensitivity float32 `json:"rnnoiseSensitivity"`
+	MicrophoneGain     float32 `json:"microphoneGain"`
 	VADEnabled         bool    `json:"vadEnabled"`
 	VADMode            string  `json:"vadMode"`
 	VADSensitivity     float32 `json:"vadSensitivity"`
@@ -193,6 +194,7 @@ func viewDTO(view voiceclient.ClientViewState, lastError string) ClientViewDTO {
 			CaptureAvailable:   view.CaptureAvailable,
 			RNNoiseEnabled:     view.RNNoiseEnabled,
 			RNNoiseSensitivity: view.RNNoiseSensitivity,
+			MicrophoneGain:     view.MicrophoneGain,
 			VADEnabled:         view.VADEnabled,
 			VADMode:            view.VADMode,
 			VADSensitivity:     view.VADSensitivity,

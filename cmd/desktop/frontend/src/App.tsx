@@ -36,6 +36,7 @@ const emptyView: ClientViewDTO = {
         captureAvailable: true,
         rnnoiseEnabled: true,
         rnnoiseSensitivity: 1,
+        microphoneGain: 1,
         vadEnabled: false,
         vadMode: "hybrid",
         vadSensitivity: 0.5,
@@ -533,10 +534,12 @@ function SettingsPage({view, invoke, theme, setTheme, updates}: {
     useEffect(() => setSensitivity(view.audio.vadSensitivity), [view.audio.vadSensitivity]);
     const [rnnoiseSensitivity, setRNNoiseSensitivity] = useState(view.audio.rnnoiseSensitivity);
     useEffect(() => setRNNoiseSensitivity(view.audio.rnnoiseSensitivity), [view.audio.rnnoiseSensitivity]);
+    const [microphoneGain, setMicrophoneGain] = useState(view.audio.microphoneGain);
+    useEffect(() => setMicrophoneGain(view.audio.microphoneGain), [view.audio.microphoneGain]);
     const [devices, setDevices] = useState<AudioDevicesDTO | null>(null);
     const [devicesError, setDevicesError] = useState("");
     const [devicePending, setDevicePending] = useState(false);
-    const [section, setSection] = useState<"sound" | "interface" | "updates">("sound");
+    const [section, setSection] = useState<"microphone" | "playback" | "interface" | "updates">("microphone");
     const [closeToTray, setCloseToTrayState] = useState(false);
     useEffect(() => {
         let active = true;
@@ -561,6 +564,22 @@ function SettingsPage({view, invoke, theme, setTheme, updates}: {
     useEffect(() => {
         void loadDevices();
     }, [loadDevices]);
+    // Before joining a server nothing captures the microphone; the backend
+    // runs a preview pipeline for the meter while the microphone section is open.
+    useEffect(() => {
+        if (section !== "microphone") return;
+        void desktopAPI.setMicrophonePreview(true).catch(() => undefined);
+        return () => { void desktopAPI.setMicrophonePreview(false).catch(() => undefined); };
+    }, [section]);
+    // Disabling the preview also turns the monitor off on the backend.
+    const [monitor, setMonitor] = useState(false);
+    const monitorAvailable = view.connectionStatus === "disconnected";
+    useEffect(() => { if (section !== "microphone" || !monitorAvailable) setMonitor(false); }, [section, monitorAvailable]);
+    const toggleMonitor = () => {
+        const next = !monitor;
+        setMonitor(next);
+        void desktopAPI.setMicrophoneMonitor(next).catch(() => setMonitor(!next));
+    };
     const selectDevice = async (kind: "capture" | "playback", id: string) => {
         if (devicePending) return;
         setDevicePending(true);
@@ -579,15 +598,16 @@ function SettingsPage({view, invoke, theme, setTheme, updates}: {
         <div className="settings-heading"><p className="eyebrow">ПАРАМЕТРЫ КЛИЕНТА</p><h2>Настройки</h2></div>
         <div className="settings-layout">
             <nav className="settings-nav" aria-label="Разделы настроек">
-                <button type="button" aria-current={section === "sound" ? "page" : undefined} onClick={() => setSection("sound")}>Звук</button>
+                <button type="button" aria-current={section === "microphone" ? "page" : undefined} onClick={() => setSection("microphone")}>Микрофон</button>
+                <button type="button" aria-current={section === "playback" ? "page" : undefined} onClick={() => setSection("playback")}>Воспроизведение</button>
                 <button type="button" aria-current={section === "interface" ? "page" : undefined} onClick={() => setSection("interface")}>Интерфейс</button>
                 <button type="button" aria-current={section === "updates" ? "page" : undefined} onClick={() => setSection("updates")}>Обновления</button>
             </nav>
             <div className="settings-content">
-                {section === "sound" && <>
-                    {devicesError && <div className="device-error" role="alert">Не удалось получить аудиоустройства: {devicesError}
-                        <button className="text-button" onClick={() => void loadDevices()}>Повторить</button>
-                    </div>}
+                {(section === "microphone" || section === "playback") && devicesError && <div className="device-error" role="alert">Не удалось получить аудиоустройства: {devicesError}
+                    <button className="text-button" onClick={() => void loadDevices()}>Повторить</button>
+                </div>}
+                {section === "microphone" &&
                     <section className="settings-card"><h3>Микрофон</h3><Select id="capture-device"
                                                                                  label="Устройство захвата звука"
                                                                                  value={devices?.selectedCapture ?? ""}
@@ -595,6 +615,11 @@ function SettingsPage({view, invoke, theme, setTheme, updates}: {
                                                                                  options={deviceOptions(devices?.capture ?? [])}
                                                                                  onChange={(id) => void selectDevice("capture", id)}/>
                         {!view.audio.captureAvailable && <p className="device-hint">Микрофон не найден. Выберите устройство, когда оно появится. Пока его нет, вы остаётесь в канале без передачи голоса.</p>}
+                        <SensitivitySlider id="microphone-gain" max={2} label="Усиление микрофона"
+                                           description="Меньше 100% — тише, больше — громче. Применяется до шумоподавления и порога передачи."
+                                           value={microphoneGain} disabled={false}
+                                           onChange={setMicrophoneGain}
+                                           onCommit={(value) => invoke(() => desktopAPI.setMicrophoneGain(value))}/>
                         <SettingToggle title="Шумоподавление"
                                        description="Убирает постоянный фоновый шум до анализа голосовой активности."
                                        checked={view.audio.rnnoiseEnabled}
@@ -621,7 +646,17 @@ function SettingsPage({view, invoke, theme, setTheme, updates}: {
                         <AudioWaveform sensitivity={sensitivity} disabled={!view.audio.vadEnabled}
                                        onSensitivityChange={setSensitivity}
                                        onSensitivityCommit={(value) => invoke(() => desktopAPI.setVADSensitivity(value))}/>
-                    </section>
+                        <div className="monitor-setting">
+                            <button type="button" className={`monitor-button ${monitor ? "active" : ""}`} aria-pressed={monitor}
+                                    disabled={!monitorAvailable} onClick={toggleMonitor}>
+                                <Icon name="sound"/>{monitor ? "Остановить прослушивание" : "Прослушать микрофон"}
+                            </button>
+                            <p className="device-hint">{monitorAvailable
+                                ? "Воспроизводит то, что услышат другие участники: после шумоподавления и порога передачи. Используйте наушники, чтобы не было эха."
+                                : "Доступно до подключения к серверу."}</p>
+                        </div>
+                    </section>}
+                {section === "playback" &&
                     <section className="settings-card compact-card"><h3>Воспроизведение</h3><Select id="playback-device"
                                                                                                          label="Устройство вывода звука"
                                                                                                          value={devices?.selectedPlayback ?? ""}
@@ -629,8 +664,7 @@ function SettingsPage({view, invoke, theme, setTheme, updates}: {
                                                                                                          options={deviceOptions(devices?.playback ?? [])}
                                                                                                          onChange={(id) => void selectDevice("playback", id)}/><SettingToggle
                         title="Заглушить звук" description="Входящий голос продолжает обрабатываться, но не воспроизводится."
-                        checked={view.audio.deafened} onChange={(value) => invoke(() => desktopAPI.setDeafened(value))}/></section>
-                </>}
+                        checked={view.audio.deafened} onChange={(value) => invoke(() => desktopAPI.setDeafened(value))}/></section>}
                 {section === "interface" && <section className="settings-card"><h3>Интерфейс</h3>
                     <Select id="theme" label="Тема оформления" value={theme}
                             options={[{value: "system", label: "Системная"}, {value: "dark", label: "Тёмная"}, {value: "light", label: "Светлая"}]}
@@ -656,7 +690,9 @@ function SettingsPage({view, invoke, theme, setTheme, updates}: {
     </section>;
 }
 
-function SensitivitySlider({label, description, value, disabled, onChange, onCommit}: {
+function SensitivitySlider({id = "rnnoise-sensitivity", max = 1, label, description, value, disabled, onChange, onCommit}: {
+    id?: string;
+    max?: number;
     label: string;
     description: string;
     value: number;
@@ -666,11 +702,11 @@ function SensitivitySlider({label, description, value, disabled, onChange, onCom
 }) {
     const commit = (value: string) => void onCommit(Number(value));
     return <div className={`sensitivity-setting slider-setting ${disabled ? "disabled" : ""}`}>
-        <div><label className="setting-label" htmlFor="rnnoise-sensitivity">{label}</label>
-            <output htmlFor="rnnoise-sensitivity">{Math.round(value * 100)}%</output>
+        <div><label className="setting-label" htmlFor={id}>{label}</label>
+            <output htmlFor={id}>{Math.round(value * 100)}%</output>
         </div>
         <p>{description}</p>
-        <input id="rnnoise-sensitivity" aria-label={label} type="range" min="0" max="1" step="0.01"
+        <input id={id} aria-label={label} type="range" min="0" max={max} step="0.01"
                value={value} disabled={disabled}
                onChange={(event) => onChange(Number(event.target.value))}
                onPointerUp={(event) => commit(event.currentTarget.value)}

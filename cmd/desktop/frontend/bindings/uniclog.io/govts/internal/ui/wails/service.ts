@@ -116,6 +116,25 @@ export function SetDeafened(value: boolean): $CancellablePromise<void> {
     return $Call.ByID(3554619559, value);
 }
 
+export function SetMicrophoneGain(value: number): $CancellablePromise<void> {
+    return $Call.ByID(2067370678, value);
+}
+
+/**
+ * SetMicrophoneMonitor plays the preview's transmitted audio back to the user.
+ */
+export function SetMicrophoneMonitor(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(563032017, enabled);
+}
+
+/**
+ * SetMicrophonePreview runs the microphone pipeline for the settings meter
+ * while disconnected; a connected session already feeds the meter.
+ */
+export function SetMicrophonePreview(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(4214796911, enabled);
+}
+
 export function SetMuted(value: boolean): $CancellablePromise<void> {
     return $Call.ByID(3550928604, value);
 }

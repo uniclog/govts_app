@@ -286,3 +286,9 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   .channel-tabs button { padding: 0 6px; font-size: 10px; }
   .audio-control-island { justify-content: flex-start; max-width: 100%; overflow-x: auto; border-radius: 16px; }
 }
+.monitor-setting { margin-top: 14px; }
+.monitor-button { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: var(--card-strong); cursor: pointer; font-size: 13px; }
+.monitor-button svg { width: 15px; height: 15px; }
+.monitor-button:hover:not(:disabled) { border-color: var(--accent-blue); }
+.monitor-button.active { border-color: var(--accent); color: var(--accent); }
+.monitor-button:disabled { opacity: .55; cursor: default; }

@@ -40,6 +40,9 @@ func (s *Service) enableSettings(path string) error {
 	if err := s.client.SetRNNoiseSensitivity(settings.RNNoiseSensitivity); err != nil {
 		restoreErrors = append(restoreErrors, err)
 	}
+	if err := s.client.SetMicrophoneGain(settings.MicrophoneGain); err != nil {
+		restoreErrors = append(restoreErrors, err)
+	}
 	s.client.SetRNNoiseEnabled(settings.RNNoiseEnabled)
 	s.client.SetVADEnabled(settings.VADEnabled)
 	if err := s.client.SetDeafened(settings.Deafened); err != nil {
@@ -83,6 +86,7 @@ func (s *Service) saveSettings() (saveErr error) {
 		Deafened:           view.Deafened,
 		RNNoiseEnabled:     view.RNNoiseEnabled,
 		RNNoiseSensitivity: view.RNNoiseSensitivity,
+		MicrophoneGain:     view.MicrophoneGain,
 		VADEnabled:         view.VADEnabled,
 		VADMode:            view.VADMode,
 		VADSensitivity:     view.VADSensitivity,

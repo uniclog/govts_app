@@ -35,6 +35,7 @@ export interface AudioStateDTO {
     "captureAvailable": boolean;
     "rnnoiseEnabled": boolean;
     "rnnoiseSensitivity": number;
+    "microphoneGain": number;
     "vadEnabled": boolean;
     "vadMode": string;
     "vadSensitivity": number;

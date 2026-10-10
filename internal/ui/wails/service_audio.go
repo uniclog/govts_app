@@ -30,6 +30,13 @@ func (s *Service) SetRNNoiseSensitivity(value float32) error {
 	return s.saveSettings()
 }
 
+func (s *Service) SetMicrophoneGain(value float32) error {
+	if err := s.client.SetMicrophoneGain(value); err != nil {
+		return err
+	}
+	return s.saveSettings()
+}
+
 func (s *Service) SetVADEnabled(value bool) error {
 	s.client.SetVADEnabled(value)
 	return s.saveSettings()
@@ -48,6 +55,13 @@ func (s *Service) SetVADSensitivity(value float32) error {
 	}
 	return s.saveSettings()
 }
+
+// SetMicrophonePreview runs the microphone pipeline for the settings meter
+// while disconnected; a connected session already feeds the meter.
+func (s *Service) SetMicrophonePreview(enabled bool) { s.client.SetMicrophonePreview(enabled) }
+
+// SetMicrophoneMonitor plays the preview's transmitted audio back to the user.
+func (s *Service) SetMicrophoneMonitor(enabled bool) { s.client.SetMicrophoneMonitor(enabled) }
 
 func (s *Service) AudioDevices() (AudioDevicesDTO, error) {
 	devices, err := s.client.AudioDevices()

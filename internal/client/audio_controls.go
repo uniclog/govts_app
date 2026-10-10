@@ -22,6 +22,7 @@ type AudioControlState struct {
 	captureAvailable   bool
 	rnnoiseEnabled     bool
 	rnnoiseSensitivity float32
+	microphoneGain     float32
 	vadEnabled         bool
 	vadMode            voicegate.Mode
 	vadSensitivity     float32
@@ -50,6 +51,7 @@ func NewAudioControlState(onChange func()) *AudioControlState {
 		captureAvailable:   true,
 		rnnoiseEnabled:     true,
 		rnnoiseSensitivity: 1,
+		microphoneGain:     1,
 		vadMode:            voicegate.ModeHybrid,
 		vadSensitivity:     voicegate.DefaultSensitivity,
 		participantVolumes: make(map[uint64]float32),
@@ -122,6 +124,31 @@ func clampMeterLevel(value float32) float32 {
 		return 1
 	}
 	return value
+}
+
+// MaxMicrophoneGain caps the software microphone gain at +6 dB.
+const MaxMicrophoneGain = float32(2)
+
+// MicrophoneGain is a linear factor applied to captured PCM before filtering,
+// so the meter, RNNoise, VAD and the encoder all see the adjusted level.
+func (a *AudioControlState) MicrophoneGain() float32 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.microphoneGain
+}
+
+func (a *AudioControlState) SetMicrophoneGain(value float32) error {
+	if math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) || value < 0 || value > MaxMicrophoneGain {
+		return fmt.Errorf("microphone gain must be between 0 and %g, got %g", MaxMicrophoneGain, value)
+	}
+	a.mu.Lock()
+	changed := a.microphoneGain != value
+	a.microphoneGain = value
+	a.mu.Unlock()
+	if changed && a.onChange != nil {
+		a.onChange()
+	}
+	return nil
 }
 
 func (a *AudioControlState) RNNoiseEnabled() bool {
