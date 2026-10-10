@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func migrateChat(ctx context.Context, tx *sql.Tx) error {

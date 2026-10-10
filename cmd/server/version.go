@@ -1,5 +1,5 @@
 package main
 
-import "uniclog.io/govts/internal/appversion"
+import "uniclog.io/sonoryx/internal/appversion"
 
 func serverVersion() string { return appversion.ServerVersion }

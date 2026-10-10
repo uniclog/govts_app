@@ -1,4 +1,4 @@
-module uniclog.io/govts
+module uniclog.io/sonoryx
 
 go 1.27.1
 

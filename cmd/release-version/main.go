@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"uniclog.io/govts/internal/appversion"
+	"uniclog.io/sonoryx/internal/appversion"
 )
 
 func main() {

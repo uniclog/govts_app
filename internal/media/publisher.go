@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/pion/webrtc/v4"
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func (m *Manager) forward(p *publisher, remote *webrtc.TrackRemote) {

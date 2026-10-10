@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 func TestHTTPHandlerRequiresBoundSessionCredential(t *testing.T) {

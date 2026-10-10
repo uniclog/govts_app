@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/persist"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/persist"
 )
 
 func accountFingerprint(key [32]byte) string {

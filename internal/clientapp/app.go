@@ -15,14 +15,14 @@ import (
 	"sync"
 	"time"
 
-	"uniclog.io/govts/internal/appversion"
-	"uniclog.io/govts/internal/audio"
-	"uniclog.io/govts/internal/audio/voicegate"
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/identity"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/appversion"
+	"uniclog.io/sonoryx/internal/audio"
+	"uniclog.io/sonoryx/internal/audio/voicegate"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/identity"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 const (

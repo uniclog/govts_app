@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func chatTestStore(t *testing.T) (*Store, Account, Account, Account) {

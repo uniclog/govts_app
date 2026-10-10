@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestHubReturnsIndependentSessionSnapshots(t *testing.T) {

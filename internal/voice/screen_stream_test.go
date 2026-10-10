@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestScreenStreamsAllowMultipleAuthorsAndOnePerOwner(t *testing.T) {

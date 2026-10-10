@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"uniclog.io/govts/internal/clientapp"
+	"uniclog.io/sonoryx/internal/clientapp"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 

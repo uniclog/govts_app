@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 type ChannelLocator []string

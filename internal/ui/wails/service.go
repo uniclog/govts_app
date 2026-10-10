@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"uniclog.io/govts/internal/clientapp"
-	"uniclog.io/govts/internal/clientsettings"
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/mediasignal"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/serverstatus"
+	"uniclog.io/sonoryx/internal/clientapp"
+	"uniclog.io/sonoryx/internal/clientsettings"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/mediasignal"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/serverstatus"
 )
 
 const operationTimeout = 10 * time.Second

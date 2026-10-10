@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {Service, type Snapshot as UpdateSnapshot} from "../../../bindings/uniclog.io/govts/internal/clientupdate";
+import {Service, type Snapshot as UpdateSnapshot} from "../../../bindings/uniclog.io/sonoryx/internal/clientupdate";
 
 export function useUpdates(prepareRestart: () => void) {
     const [view, setView] = useState<UpdateSnapshot | null>(null);

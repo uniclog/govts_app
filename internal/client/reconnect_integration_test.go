@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/audio"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 func TestClientRecoversAfterServerHubRestart(t *testing.T) {

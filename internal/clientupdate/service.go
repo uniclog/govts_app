@@ -16,7 +16,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/updater"
-	"uniclog.io/govts/internal/appversion"
+	"uniclog.io/sonoryx/internal/appversion"
 )
 
 type Snapshot struct {

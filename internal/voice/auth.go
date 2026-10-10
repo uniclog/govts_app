@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"uniclog.io/govts/internal/appversion"
-	"uniclog.io/govts/internal/auth"
-	"uniclog.io/govts/internal/persist"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/appversion"
+	"uniclog.io/sonoryx/internal/auth"
+	"uniclog.io/sonoryx/internal/persist"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 type pendingAuth struct {

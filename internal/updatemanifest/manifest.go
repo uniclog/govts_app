@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"uniclog.io/govts/internal/appversion"
+	"uniclog.io/sonoryx/internal/appversion"
 )
 
 const Filename = "GTS64.exe"

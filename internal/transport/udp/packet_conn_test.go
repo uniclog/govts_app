@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/protocol"
+	"uniclog.io/sonoryx/internal/protocol"
 )
 
 type codecCall struct {

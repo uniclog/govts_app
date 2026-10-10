@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"uniclog.io/govts/internal/clientapp"
-	"uniclog.io/govts/internal/clientsettings"
+	"uniclog.io/sonoryx/internal/clientapp"
+	"uniclog.io/sonoryx/internal/clientsettings"
 )
 
 func TestServicePersistsAndRestoresAudioSettings(t *testing.T) {

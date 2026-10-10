@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/protocol"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/protocol"
 )
 
 func TestResolveChannelUsesIDAndRejectsAmbiguousName(t *testing.T) {

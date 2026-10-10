@@ -13,12 +13,12 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/updater"
-	"uniclog.io/govts/internal/audio"
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/clientapp"
-	"uniclog.io/govts/internal/clientupdate"
-	"uniclog.io/govts/internal/logging"
-	wailsui "uniclog.io/govts/internal/ui/wails"
+	"uniclog.io/sonoryx/internal/audio"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/clientapp"
+	"uniclog.io/sonoryx/internal/clientupdate"
+	"uniclog.io/sonoryx/internal/logging"
+	wailsui "uniclog.io/sonoryx/internal/ui/wails"
 )
 
 func init() {

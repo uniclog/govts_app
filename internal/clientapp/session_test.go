@@ -3,7 +3,7 @@ package clientapp
 import (
 	"testing"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestClientAudioConfigUsesDefaultAudioProfile(t *testing.T) {

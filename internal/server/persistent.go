@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/persist"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/persist"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 // BootstrapPersistentHub imports the JSON/builtin definition exactly once.

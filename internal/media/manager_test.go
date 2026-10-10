@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/mediasignal"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/mediasignal"
+	"uniclog.io/sonoryx/internal/voice"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 )

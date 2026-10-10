@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
-	voiceclient "uniclog.io/govts/internal/client"
+	"uniclog.io/sonoryx/internal/audio"
+	voiceclient "uniclog.io/sonoryx/internal/client"
 )
 
 func TestAppValidatesConnectAndClosesIdempotently(t *testing.T) {

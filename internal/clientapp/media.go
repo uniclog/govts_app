@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/mediasignal"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/mediasignal"
 )
 
 const maxMediaResponse = 256 * 1024

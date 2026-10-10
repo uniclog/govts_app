@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 type channelSourceFunc func(context.Context) (ServerDefinition, error)

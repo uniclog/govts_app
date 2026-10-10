@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/updater"
-	"uniclog.io/govts/internal/appversion"
-	"uniclog.io/govts/internal/updatemanifest"
+	"uniclog.io/sonoryx/internal/appversion"
+	"uniclog.io/sonoryx/internal/updatemanifest"
 )
 
 const repository = "uniclog/govts_app"

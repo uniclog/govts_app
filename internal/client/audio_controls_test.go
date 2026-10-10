@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
-	"uniclog.io/govts/internal/audio/voicegate"
-	"uniclog.io/govts/internal/protocol"
+	"uniclog.io/sonoryx/internal/audio"
+	"uniclog.io/sonoryx/internal/audio/voicegate"
+	"uniclog.io/sonoryx/internal/protocol"
 )
 
 func TestSpeakingDetectorBoundariesAndHangover(t *testing.T) {

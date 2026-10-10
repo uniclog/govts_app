@@ -13,15 +13,15 @@ import (
 	"syscall"
 	"time"
 
-	"uniclog.io/govts/internal/appversion"
-	"uniclog.io/govts/internal/identity"
-	"uniclog.io/govts/internal/logging"
-	"uniclog.io/govts/internal/media"
-	"uniclog.io/govts/internal/persist"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/server"
-	"uniclog.io/govts/internal/transport/udp"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/appversion"
+	"uniclog.io/sonoryx/internal/identity"
+	"uniclog.io/sonoryx/internal/logging"
+	"uniclog.io/sonoryx/internal/media"
+	"uniclog.io/sonoryx/internal/persist"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/server"
+	"uniclog.io/sonoryx/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 func main() {

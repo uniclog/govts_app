@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 const (

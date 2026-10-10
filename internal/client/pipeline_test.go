@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/audio"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 type joinTestPeer struct {

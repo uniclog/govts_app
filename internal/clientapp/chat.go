@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"sync"
 
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/protocol"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/protocol"
 )
 
 type chatSession struct {

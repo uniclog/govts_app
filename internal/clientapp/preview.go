@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"sync"
 
-	"uniclog.io/govts/internal/audio"
-	"uniclog.io/govts/internal/audio/voicegate"
-	voiceclient "uniclog.io/govts/internal/client"
+	"uniclog.io/sonoryx/internal/audio"
+	"uniclog.io/sonoryx/internal/audio/voicegate"
+	voiceclient "uniclog.io/sonoryx/internal/client"
 )
 
 // The microphone preview runs the capture pipeline (filter, VAD, voice gate)

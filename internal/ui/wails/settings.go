@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"uniclog.io/govts/internal/clientsettings"
+	"uniclog.io/sonoryx/internal/clientsettings"
 )
 
 func (s *Service) enableSettings(path string) error {

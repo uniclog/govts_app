@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/mediasignal"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/mediasignal"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 const maxSignalingBody = 256 * 1024

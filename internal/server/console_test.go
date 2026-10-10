@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 func TestConsoleCommandsShowDeterministicState(t *testing.T) {
