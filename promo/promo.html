@@ -138,13 +138,13 @@ footer{text-align:center;color:var(--muted);font-size:.82rem;padding:0 16px 40px
 <rect x="72" y="255" width="496" height="26" rx="4" fill="var(--srv)" opacity=".18"/><text x="210" y="273">далее только AES-256-GCM записи</text>
 </svg>
 <h3>Transcript T</h3>
-<pre>T = H("sonoryx-auth-v1" ‖ RequestID ‖ version ‖ AuthInit целиком ‖
+<pre>T = H("govts-auth-v1" ‖ RequestID ‖ version ‖ AuthInit целиком ‖
       serverEd25519Pub ‖ serverX25519Eph ‖ nonceS)</pre>
 <p>Обе подписи (сервера и клиента) — Ed25519 над T. Изменение любого поля — в том числе версии и RequestID — ломает проверку. Сервер требует версию клиента не ниже <code>0.2.5</code>.</p>
 <h3>Вывод ключей</h3>
 <pre>shared = X25519(eph_priv_own, eph_pub_peer)
 c2s ‖ s2c ‖ ack = HKDF-SHA256(ikm = shared, salt = T,
-                              info = "sonoryx-udp-v1 traffic and ack"), 3 × 32 B</pre>
+                              info = "govts-udp-v1 traffic and ack"), 3 × 32 B</pre>
 <ul>
 <li>Ключи направлений разные → свои счётчики, пара key+nonce не повторяется.</li>
 <li>Эфемерные X25519 новые на каждое подключение → forward secrecy для завершённых сессий.</li>
@@ -396,7 +396,7 @@ repeat frame_count:
 <section id="media"><h2><span class="n">12</span>Демонстрация экрана</h2>
 <pre>Клиент ── MediaCredentialRequest (UDP, защищённо) ──► Hub выдаёт 32 B credential
 Клиент ── HTTPS POST /media/publish|subscribe|stop|unsubscribe ──► media.HTTPHandler
-          Headers: X-Sonoryx-Session: &lt;id&gt;, Authorization: Bearer base64url(credential)
+          Headers: X-Govts-Session: &lt;id&gt;, Authorization: Bearer base64url(credential)
           Body: JSON (mediasignal), ≤ 256 KiB, неизвестные поля запрещены
 media.Manager (Pion SFU) ── SDP answer ──► клиент
 WebRTC DTLS-SRTP, VP8 (+ опциональное аудио), UDP 20000–20100</pre>
