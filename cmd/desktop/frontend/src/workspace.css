@@ -137,7 +137,6 @@
 .connection-stats-popup { max-height: calc(100vh - 80px); overflow-y: auto; }
 .header-update-button { flex-shrink: 0; padding: 4px 8px; border: 1px solid var(--accent-blue); border-radius: 7px; color: var(--accent-blue); background: var(--card-strong); font-size: 11px; white-space: nowrap; cursor: pointer; }
 .header-update-button:hover { background: var(--card); }
-.connection-app-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .update-actions button, .update-dialog > button { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: var(--card-strong); cursor: pointer; }
 .update-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .update-actions a { color: var(--accent-blue); }
@@ -254,7 +253,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .chat-new { align-self: center; margin-bottom: 6px; }
 .settings-page { margin: 0; padding: 24px 28px 22px; }
 .connection-card { color: var(--text); background: var(--card); border-color: var(--line); }
-.connection-page { height: 100%; overflow-y: auto; }
+.connection-page { grid-row: 3; height: 100%; min-height: 0; overflow-y: auto; }
 .connection-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 24px; width: min(1000px, 100%); }
 .connection-layout > .connection-card { width: 100%; min-width: 0; }
 .connection-layout.connection-layout-empty { grid-template-columns: minmax(0, 1fr); width: min(470px, 100%); }

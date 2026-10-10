@@ -7,7 +7,7 @@ import {buildChannelGroups, canMoveParticipant, mergeEventTail} from "./model";
 import {ScreenMediaController} from "./features/screen/screenMedia";
 import {ScreenSharing, ScreenStageTile, ScreenViewerWindow} from "./features/screen/ScreenViews";
 import {ScreenShareDialog, useScreenSharing, type ScreenSharingState} from "./features/screen/ScreenShareDialog";
-import {AudioControls, ConnectionPage, StatusBar, type Page} from "./features/connection/ConnectionViews";
+import {AudioControls, ConnectionPage, LobbyBar, StatusBar, type Page} from "./features/connection/ConnectionViews";
 import {ParticipantRow} from "./features/participants/ParticipantRow";
 import {RecentServers} from "./features/connection/RecentServers";
 import {rememberServerAddress} from "./features/connection/ConnectionViews";
@@ -189,6 +189,7 @@ function MainApp({theme, setTheme}: {theme: string; setTheme: (value: string) =>
         }
     }, [refresh]);
 
+    const lobby = view.connectionStatus === "disconnected";
     const mainRef = useRef<HTMLElement>(null);
     const settingsWasOpen = useRef(false);
     useEffect(() => {
@@ -201,25 +202,21 @@ function MainApp({theme, setTheme}: {theme: string; setTheme: (value: string) =>
     }, [page]);
     const closeSettings = () => setPage("channels");
 
-    if (view.connectionStatus === "disconnected") {
-        return (
-            <><ConnectionPage
-                updateAction={<UpdateButton updates={updates}/>}
-                currentVersion={updates.view?.current}
-                view={view}
-                error={actionError}
-                onError={setActionError}
-                onRefresh={refresh}
-                refreshingServers={refreshingServers}
-                onRefreshServers={refreshServers}
-                onClearEvents={clearEvents}
-                onConnected={() => setPage("channels")}
-            /><UpdateDialog updates={updates}/></>
-        );
-    }
-
     return <div className="app-shell">
         <main className="main-area" ref={mainRef}>
+            {lobby ? <>
+                <LobbyBar version={updates.view?.current} updateAction={<UpdateButton updates={updates}/>} onPageChange={setPage}/>
+                <ConnectionPage
+                    view={view}
+                    error={actionError}
+                    onError={setActionError}
+                    onRefresh={refresh}
+                    refreshingServers={refreshingServers}
+                    onRefreshServers={refreshServers}
+                    onClearEvents={clearEvents}
+                    onConnected={() => setPage("channels")}
+                />
+            </> : <>
             <StatusBar view={view} onPageChange={setPage} sharing={sharing} screenMedia={screenMedia.current} updateAction={<UpdateButton updates={updates}/>} invoke={invoke}/>
             {actionError && <div className="error-banner" role="alert">{actionError}</div>}
             <ChannelsPage view={view} events={events} invoke={invoke} refreshingServers={refreshingServers} onRefreshServers={refreshServers}
@@ -231,6 +228,7 @@ function MainApp({theme, setTheme}: {theme: string; setTheme: (value: string) =>
                               rememberServerAddress(address);
                           })}
                           sharing={sharing} onError={setActionError} contentTab={contentTab} setContentTab={setContentTab} directChats={directChats} setDirectChats={setDirectChats} chatStore={chatStore}/>
+            </>}
         </main>
         {page === "settings" && <SettingsOverlay onClose={closeSettings}>
             <SettingsPage view={view} invoke={invoke} theme={theme} setTheme={setTheme} updates={updates}/>
