@@ -13,13 +13,29 @@ const Filename = "GTS64.exe"
 const AssetName = "signature"
 const MaxSize int64 = 512 << 20
 
+// PackedFilename is the zstd-compressed copy of Filename. The plain
+// executable stays in the release for clients that predate compression.
+const PackedFilename = Filename + ".zst"
+
+// PackedWindow is the zstd window used to pack the executable; clients
+// refuse archives that need more decoder memory than this.
+const PackedWindow = 32 << 20
+
 type Manifest struct {
-	Version          string `json:"version"`
-	Filename         string `json:"filename"`
-	Size             int64  `json:"size"`
-	Digest           []byte `json:"sha256"`
-	Signature        []byte `json:"signature"`
-	MinServerVersion string `json:"minServerVersion,omitempty"`
+	Version          string  `json:"version"`
+	Filename         string  `json:"filename"`
+	Size             int64   `json:"size"`
+	Digest           []byte  `json:"sha256"`
+	Signature        []byte  `json:"signature"`
+	MinServerVersion string  `json:"minServerVersion,omitempty"`
+	Packed           *Packed `json:"packed,omitempty"`
+}
+
+// Packed describes PackedFilename; its content must decompress to the
+// executable described by Manifest.Size and Manifest.Digest.
+type Packed struct {
+	Size   int64  `json:"size"`
+	Digest []byte `json:"sha256"`
 }
 
 type Envelope struct {
@@ -27,7 +43,8 @@ type Envelope struct {
 	Signature []byte `json:"signature"`
 }
 
-func Sign(version string, binary []byte, key ed25519.PrivateKey) ([]byte, error) {
+// Sign signs binary and, when packed is not nil, its compressed copy.
+func Sign(version string, binary, packed []byte, key ed25519.PrivateKey) ([]byte, error) {
 	digest := sha256.Sum256(binary)
 	m := Manifest{
 		Version:          version,
@@ -36,6 +53,10 @@ func Sign(version string, binary []byte, key ed25519.PrivateKey) ([]byte, error)
 		Digest:           digest[:],
 		Signature:        ed25519.Sign(key, digest[:]),
 		MinServerVersion: appversion.MinimumServerVersion,
+	}
+	if packed != nil {
+		packedDigest := sha256.Sum256(packed)
+		m.Packed = &Packed{Size: int64(len(packed)), Digest: packedDigest[:]}
 	}
 	payload, err := json.Marshal(m)
 	if err != nil {
@@ -58,6 +79,9 @@ func Verify(data []byte, key ed25519.PublicKey) (Manifest, error) {
 	}
 	if m.Filename != Filename || m.Size <= 0 || m.Size > MaxSize || len(m.Digest) != sha256.Size || !ed25519.Verify(key, m.Digest, m.Signature) {
 		return m, errors.New("неверные параметры подписанного обновления")
+	}
+	if m.Packed != nil && (m.Packed.Size <= 0 || m.Packed.Size > MaxSize || len(m.Packed.Digest) != sha256.Size) {
+		return m, errors.New("неверные параметры сжатого обновления")
 	}
 	if m.MinServerVersion != "" {
 		if _, err := appversion.Parse(m.MinServerVersion); err != nil {

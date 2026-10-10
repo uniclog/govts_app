@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
@@ -8,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/klauspost/compress/zstd"
 	"uniclog.io/govts/internal/appversion"
 	"uniclog.io/govts/internal/updatemanifest"
 )
@@ -18,14 +21,15 @@ func main() {
 	binary := flag.String("binary", "", "desktop executable to sign")
 	version := flag.String("version", appversion.ClientVersion, "desktop version (defaults to version/release.json)")
 	out := flag.String("out", "", "signed manifest destination")
+	packed := flag.String("packed", "", "optional zstd-compressed executable destination, signed in the manifest")
 	flag.Parse()
-	if err := run(*generate, *public, *binary, *version, *out); err != nil {
+	if err := run(*generate, *public, *binary, *version, *out, *packed); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(generate, public, binary, version, out string) error {
+func run(generate, public, binary, version, out, packedOut string) error {
 	if generate != "" {
 		if public == "" {
 			return fmt.Errorf("public-key is required")
@@ -70,12 +74,50 @@ func run(generate, public, binary, version, out string) error {
 	if len(data) == 0 || int64(len(data)) > updatemanifest.MaxSize {
 		return fmt.Errorf("invalid executable size")
 	}
-	manifest, err := updatemanifest.Sign(version, data, key)
+	var packed []byte
+	if packedOut != "" {
+		if packed, err = compress(data); err != nil {
+			return err
+		}
+	}
+	manifest, err := updatemanifest.Sign(version, data, packed, key)
 	if err != nil {
 		return err
 	}
 	if _, err = updatemanifest.Verify(manifest, key.Public().(ed25519.PublicKey)); err != nil {
 		return fmt.Errorf("generated manifest failed verification: %w", err)
 	}
+	if packed != nil {
+		if err := os.WriteFile(packedOut, packed, 0644); err != nil {
+			return err
+		}
+	}
 	return os.WriteFile(out, manifest, 0644)
+}
+
+// compress packs the executable with zstd and checks the round trip, so a
+// broken archive is never published next to a valid signature.
+func compress(data []byte) ([]byte, error) {
+	encoder, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedBestCompression),
+		zstd.WithWindowSize(updatemanifest.PackedWindow))
+	if err != nil {
+		return nil, err
+	}
+	packed := encoder.EncodeAll(data, nil)
+	decoder, err := zstd.NewReader(nil, zstd.WithDecoderMaxWindow(updatemanifest.PackedWindow))
+	if err != nil {
+		return nil, err
+	}
+	defer decoder.Close()
+	unpacked, err := decoder.DecodeAll(packed, nil)
+	if err != nil {
+		return nil, fmt.Errorf("verify compressed executable: %w", err)
+	}
+	if !bytes.Equal(unpacked, data) {
+		return nil, fmt.Errorf("compressed executable does not match the original")
+	}
+	if int64(len(packed)) > updatemanifest.MaxSize {
+		return nil, fmt.Errorf("invalid compressed executable size")
+	}
+	return packed, nil
 }

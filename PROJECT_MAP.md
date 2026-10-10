@@ -31,7 +31,9 @@
   `assets_development.go` и `assets_production.go` выбирают способ
   доставки frontend; production-сборка встраивает собранные ресурсы.
   Версия клиента также хранится в `version/release.json`.
-- `cmd/update-sign/` подписывает desktop EXE и манифест релиза. Закрытый seed
+- `cmd/update-sign/` подписывает desktop EXE и манифест релиза, а с `-packed`
+  сжимает EXE в zstd (`GTS64.exe.zst`) и добавляет его размер и SHA-256 в
+  манифест. Закрытый seed
   получает из `UPDATE_SIGNING_KEY`; ключ не хранится в Git. Открытый ключ
   `cmd/desktop/update-public-key.txt` встроен через `update_key.go`.
 - `cmd/release-version/` проверяет соответствие тега версии клиента и
@@ -173,7 +175,9 @@ WebRTC требуется корректный `-media-advertised-ip`.
 - `internal/clientupdate/service.go` связывает UI с Wails updater, планирует
   проверки и сохраняет автоскачивание в `Govts/updates.json`. `provider.go`
   выбирает стабильный Windows amd64 asset и обязательно проверяет подписанный
-  манифест; `internal/updatemanifest/` задаёт формат и Ed25519-проверку.
+  манифест; если в манифесте и релизе есть сжатый `GTS64.exe.zst`, качает его
+  и распаковывает на лету, иначе — обычный `GTS64.exe`.
+  `internal/updatemanifest/` задаёт формат и Ed25519-проверку.
 - `internal/clientupdate/recovery.go` сохраняет прежний EXE и следит за
   подтверждением запуска нового интерфейса с пределом 90 секунд. Windows API
   запуска и проверки процессов — в `process_windows.go`. Helper и watcher
@@ -193,7 +197,7 @@ WebRTC требуется корректный `-media-advertised-ip`.
   `.github/workflows/release.yml` срабатывает на тег `vX.Y.Z`, сверяет
   его с `clientVersion` в `version/release.json`, собирает Windows desktop и Linux
   server, подписывает desktop через secret `UPDATE_SIGNING_KEY`, загружает
-  бинарники, `signature` и `SHA256SUMS` в draft и затем публикует релиз.
+  бинарники, `GTS64.exe.zst`, `signature` и `SHA256SUMS` в draft и затем публикует релиз.
   Уже опубликованный релиз под тем же тегом не заменяется.
 - `internal/appversion/` разбирает и сравнивает версии, проверяет параметры
   релиза из встроенного `version/release.json`. Минимальная версия сервера
