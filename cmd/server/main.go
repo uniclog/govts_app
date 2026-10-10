@@ -49,6 +49,17 @@ func main() {
 		log.Printf("file logging unavailable; continuing with console logging: %v", err)
 	}
 	log.Printf("server starting: version=%s", serverVersion())
+	explicit := make(map[string]bool)
+	flag.Visit(func(f *flag.Flag) { explicit[f.Name] = true })
+	if !explicit["db"] {
+		*databasePath = legacyPath(*databasePath, "govts.db", "")
+	}
+	if !explicit["voice-identity"] {
+		*voiceIdentity = legacyPath(*voiceIdentity, "govts-voice.seed", "")
+	}
+	if !explicit["media-identity"] {
+		*mediaIdentity = legacyPath(*mediaIdentity, "govts-media", ".key")
+	}
 	err = run(*configPath, *databasePath, *voiceIdentity, *port, *mediaPort, *mediaMinPort, *mediaMaxPort, *mediaAdvertisedIP, *mediaIdentity, *voiceRedundancy, *publicStatus)
 	if err != nil {
 		log.Printf("server stopped with error: %v", err)
@@ -57,6 +68,21 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
+}
+
+// legacyPath keeps a server deployed before the Sonoryx rename on its data:
+// when current+suffix is missing and legacy+suffix exists, it returns legacy.
+// A fresh database or identity would lose accounts and change the key that
+// clients pinned. suffix names the file checked for a path prefix.
+func legacyPath(current, legacy, suffix string) string {
+	if _, err := os.Stat(current + suffix); !errors.Is(err, os.ErrNotExist) {
+		return current
+	}
+	if _, err := os.Stat(legacy + suffix); err != nil {
+		return current
+	}
+	log.Printf("using pre-rename server file: %s", legacy)
+	return legacy
 }
 
 func run(configPath, databasePath, voiceIdentityPath string, port, mediaPort, mediaMinPort, mediaMaxPort int, mediaAdvertisedIP, mediaIdentity string, voiceRedundancy, publicStatus bool) error {

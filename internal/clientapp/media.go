@@ -124,7 +124,7 @@ func (a *App) mediaRequest(ctx context.Context, path string, requestBody any, pi
 		return err
 	}
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-Sonoryx-Session", strconv.FormatUint(a.state.SessionID(), 10))
+	request.Header.Set("X-Govts-Session", strconv.FormatUint(a.state.SessionID(), 10))
 	request.Header.Set("Authorization", "Bearer "+base64.RawURLEncoding.EncodeToString(credential[:]))
 	response, err := (&http.Client{Transport: transport, Timeout: 20 * time.Second}).Do(request)
 	if err != nil {
