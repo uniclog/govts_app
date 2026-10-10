@@ -22,14 +22,15 @@ func main() {
 	version := flag.String("version", appversion.ClientVersion, "desktop version (defaults to version/release.json)")
 	out := flag.String("out", "", "signed manifest destination")
 	packed := flag.String("packed", "", "optional zstd-compressed executable destination, signed in the manifest")
+	legacyOut := flag.String("legacy-out", "", "optional manifest for clients released before the Sonoryx rename")
 	flag.Parse()
-	if err := run(*generate, *public, *binary, *version, *out, *packed); err != nil {
+	if err := run(*generate, *public, *binary, *version, *out, *packed, *legacyOut); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(generate, public, binary, version, out, packedOut string) error {
+func run(generate, public, binary, version, out, packedOut, legacyOut string) error {
 	if generate != "" {
 		if public == "" {
 			return fmt.Errorf("public-key is required")
@@ -80,12 +81,25 @@ func run(generate, public, binary, version, out, packedOut string) error {
 			return err
 		}
 	}
-	manifest, err := updatemanifest.Sign(version, data, packed, key)
+	manifest, err := updatemanifest.Sign(version, updatemanifest.Filename, data, packed, key)
 	if err != nil {
 		return err
 	}
 	if _, err = updatemanifest.Verify(manifest, key.Public().(ed25519.PublicKey)); err != nil {
 		return fmt.Errorf("generated manifest failed verification: %w", err)
+	}
+	if legacyOut != "" {
+		// Older clients know neither the new asset names nor compression.
+		legacy, err := updatemanifest.Sign(version, updatemanifest.LegacyFilename, data, nil, key)
+		if err != nil {
+			return err
+		}
+		if _, err = updatemanifest.VerifyAs(legacy, key.Public().(ed25519.PublicKey), updatemanifest.LegacyFilename); err != nil {
+			return fmt.Errorf("generated legacy manifest failed verification: %w", err)
+		}
+		if err := os.WriteFile(legacyOut, legacy, 0644); err != nil {
+			return err
+		}
 	}
 	if packed != nil {
 		if err := os.WriteFile(packedOut, packed, 0644); err != nil {

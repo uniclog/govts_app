@@ -28,12 +28,30 @@ func recoveryPointer() (string, error) {
 	return filepath.Join(root, "Sonoryx", "pending-update.json"), nil
 }
 
+// startupPointers lists the plans a freshly started build may have to
+// confirm. Clients released before the Sonoryx rename keep their plan, and
+// the watchdog that rolls back an unconfirmed update, in the "Govts" profile.
+func startupPointers() []string {
+	root, err := os.UserConfigDir()
+	if err != nil {
+		return nil
+	}
+	return []string{
+		filepath.Join(root, "Sonoryx", "pending-update.json"),
+		filepath.Join(root, "Govts", "pending-update.json"),
+	}
+}
+
 func readRecovery() (recoveryPlan, error) {
-	var plan recoveryPlan
 	path, err := recoveryPointer()
 	if err != nil {
-		return plan, err
+		return recoveryPlan{}, err
 	}
+	return readRecoveryAt(path)
+}
+
+func readRecoveryAt(path string) (recoveryPlan, error) {
+	var plan recoveryPlan
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return plan, err
@@ -205,16 +223,18 @@ func runRecoveryWatchdog() (result int) {
 // A running Windows executable cannot remove itself. The next normal launch
 // or update attempt removes only copies explicitly retired by their watchdog.
 func cleanupRetiredRecovery() {
-	pointer, err := recoveryPointer()
-	if err != nil {
-		return
+	for _, pointer := range startupPointers() {
+		cleanupRetiredRecoveryAt(pointer)
 	}
+}
+
+func cleanupRetiredRecoveryAt(pointer string) {
 	root := filepath.Join(filepath.Dir(pointer), "update-recovery")
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return
 	}
-	active, _ := readRecovery()
+	active, _ := readRecoveryAt(pointer)
 	for _, entry := range entries {
 		if !entry.IsDir() || len(entry.Name()) != 32 {
 			continue
@@ -288,32 +308,35 @@ func restoreExecutable(old, target, nonce string) error {
 
 func RecordRecoveryStartup(version string) {
 	cleanupRetiredRecovery()
-	plan, err := readRecovery()
-	if err != nil {
-		return
+	for _, pointer := range startupPointers() {
+		plan, err := readRecoveryAt(pointer)
+		if err != nil {
+			continue
+		}
+		if _, err = os.Stat(filepath.Join(plan.Directory, "healthy")); err == nil {
+			os.Remove(pointer)
+			os.RemoveAll(plan.Directory)
+			continue
+		}
+		self, _ := os.Executable()
+		if !strings.EqualFold(self, plan.Target) || version != plan.Version {
+			continue
+		}
+		data, _ := json.Marshal(os.Getpid())
+		_ = os.WriteFile(filepath.Join(plan.Directory, "new-process.json"), data, 0600)
 	}
-	if _, err = os.Stat(filepath.Join(plan.Directory, "healthy")); err == nil {
-		pointer, _ := recoveryPointer()
-		os.Remove(pointer)
-		os.RemoveAll(plan.Directory)
-		return
-	}
-	self, _ := os.Executable()
-	if !strings.EqualFold(self, plan.Target) || version != plan.Version {
-		return
-	}
-	data, _ := json.Marshal(os.Getpid())
-	_ = os.WriteFile(filepath.Join(plan.Directory, "new-process.json"), data, 0600)
 }
 
 func ConfirmRecoveryStartup(version string) {
-	plan, err := readRecovery()
-	if err != nil {
-		return
+	for _, pointer := range startupPointers() {
+		plan, err := readRecoveryAt(pointer)
+		if err != nil {
+			continue
+		}
+		self, _ := os.Executable()
+		if !strings.EqualFold(self, plan.Target) || version != plan.Version {
+			continue
+		}
+		_ = os.WriteFile(filepath.Join(plan.Directory, "healthy"), nil, 0600)
 	}
-	self, _ := os.Executable()
-	if !strings.EqualFold(self, plan.Target) || version != plan.Version {
-		return
-	}
-	_ = os.WriteFile(filepath.Join(plan.Directory, "healthy"), nil, 0600)
 }

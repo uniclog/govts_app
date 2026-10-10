@@ -16,6 +16,7 @@ import (
 	"uniclog.io/sonoryx/internal/audio"
 	voiceclient "uniclog.io/sonoryx/internal/client"
 	"uniclog.io/sonoryx/internal/clientapp"
+	"uniclog.io/sonoryx/internal/clientsettings"
 	"uniclog.io/sonoryx/internal/clientupdate"
 	"uniclog.io/sonoryx/internal/logging"
 	wailsui "uniclog.io/sonoryx/internal/ui/wails"
@@ -43,6 +44,9 @@ func main() {
 	}
 	defer stopLogging()
 	log.Printf("client starting: version=%s", applicationVersion())
+	if err := clientsettings.MigrateLegacyProfile(configDir); err != nil {
+		log.Printf("migrate legacy profile: %v", err)
+	}
 
 	client := clientapp.New(clientapp.Options{Logger: log.Default(), Secure: true})
 	service := wailsui.NewService(client)
