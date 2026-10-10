@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/domain"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestReconnectBackoff(t *testing.T) {

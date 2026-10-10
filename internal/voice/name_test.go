@@ -3,7 +3,7 @@ package voice
 import (
 	"testing"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestHubRejectsControlCharactersInNames(t *testing.T) {

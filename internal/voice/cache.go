@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"uniclog.io/govts/internal/protocol"
+	"uniclog.io/sonoryx/internal/protocol"
 )
 
 const (

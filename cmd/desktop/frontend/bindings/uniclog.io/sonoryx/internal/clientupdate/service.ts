@@ -10,25 +10,25 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as $models from "./models.js";
 
 export function Cancel(): $CancellablePromise<void> {
-    return $Call.ByID(3303922594);
+    return $Call.ByID(3285178305);
 }
 
 export function Check(): $CancellablePromise<void> {
-    return $Call.ByID(1617665808);
+    return $Call.ByID(3617400105);
 }
 
 export function ConfirmStartup(): $CancellablePromise<void> {
-    return $Call.ByID(3151328313);
+    return $Call.ByID(806825094);
 }
 
 export function Download(): $CancellablePromise<void> {
-    return $Call.ByID(763313144);
+    return $Call.ByID(4089170227);
 }
 
 export function Restart(): $CancellablePromise<void> {
-    return $Call.ByID(4211883811);
+    return $Call.ByID(2797828238);
 }
 
 export function Snapshot(): $CancellablePromise<$models.Snapshot> {
-    return $Call.ByID(3221952908);
+    return $Call.ByID(3140586591);
 }

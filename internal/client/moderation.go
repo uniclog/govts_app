@@ -6,9 +6,9 @@ import (
 	"errors"
 	"time"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 func Moderate(ctx context.Context, conn *udp.ClientPacketConn, state *State, action uint8, targetID uint64, channelID domain.ChannelID) error {

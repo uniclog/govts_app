@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
+	"uniclog.io/sonoryx/internal/audio"
 )
 
 const DefaultJitterDepth = 3

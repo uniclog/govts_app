@@ -8,11 +8,11 @@ import (
 	"math"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
-	"uniclog.io/govts/internal/audio/vad"
-	"uniclog.io/govts/internal/audio/voicegate"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/audio"
+	"uniclog.io/sonoryx/internal/audio/vad"
+	"uniclog.io/sonoryx/internal/audio/voicegate"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 const frameDuration = 20 * time.Millisecond

@@ -9,14 +9,14 @@ import (
 	"sync"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
-	audiornnoise "uniclog.io/govts/internal/audio/rnnoise"
-	audiovad "uniclog.io/govts/internal/audio/vad"
-	"uniclog.io/govts/internal/audio/voicegate"
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/audio"
+	audiornnoise "uniclog.io/sonoryx/internal/audio/rnnoise"
+	audiovad "uniclog.io/sonoryx/internal/audio/vad"
+	"uniclog.io/sonoryx/internal/audio/voicegate"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 func runSession(parent context.Context, conn *udp.ClientPacketConn, state *voiceclient.State, devices AudioDeviceSelection, audioDeviceChanges <-chan audioDeviceChange, name string, commands <-chan voiceclient.Command, output, noticeOutput io.Writer, cancelApp context.CancelFunc, logger *log.Logger, firstConnection bool, onReady func(), onStop ...func()) (runErr error) {

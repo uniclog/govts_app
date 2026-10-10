@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 
-	"uniclog.io/govts/internal/appversion"
+	"uniclog.io/sonoryx/internal/appversion"
 )
 
-const Filename = "GTS64.exe"
+const Filename = "SRX64.exe"
 const AssetName = "signature"
 const MaxSize int64 = 512 << 20
 

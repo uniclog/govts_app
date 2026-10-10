@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"uniclog.io/govts/internal/clientapp"
-	"uniclog.io/govts/internal/clientsettings"
-	"uniclog.io/govts/internal/serverstatus"
+	"uniclog.io/sonoryx/internal/clientapp"
+	"uniclog.io/sonoryx/internal/clientsettings"
+	"uniclog.io/sonoryx/internal/serverstatus"
 )
 
 type RecentServerDTO struct {

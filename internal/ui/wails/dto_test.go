@@ -6,8 +6,8 @@ import (
 	"math"
 	"testing"
 
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/domain"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestViewDTOKeepsUint64IdentifiersExact(t *testing.T) {

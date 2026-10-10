@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/protocol"
+	"uniclog.io/sonoryx/internal/protocol"
 )
 
 func TestReadVoicePacketRejectsOversizedDatagram(t *testing.T) {

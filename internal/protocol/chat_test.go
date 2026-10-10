@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestChatRequestRoundTripAndMalformedPayloads(t *testing.T) {

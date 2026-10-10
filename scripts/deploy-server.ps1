@@ -4,7 +4,7 @@ param(
     [string]$Target = 'admin@82.25.190.126',
 
     [ValidatePattern('^/[A-Za-z0-9._/-]+$')]
-    [string]$RemoteDir = '/opt/govts',
+    [string]$RemoteDir = '/opt/sonoryx',
 
     [ValidatePattern('^$|^/[A-Za-z0-9._/-]+$')]
     [string]$ConfigPath = '',
@@ -25,7 +25,7 @@ param(
     [int]$MediaMaxPort = 20100,
 
     [ValidatePattern('^[A-Za-z0-9_-]+$')]
-    [string]$TmuxSession = 'govts-server',
+    [string]$TmuxSession = 'sonoryx-server',
 
     # Repeat the previous voice frame in each server -> client datagram.
     [switch]$VoiceRedundancy = $true,
@@ -39,8 +39,8 @@ Set-StrictMode -Version Latest
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $outputDir = Join-Path $repoRoot 'bin'
-$binary = Join-Path $outputDir 'govts-server'
-$remoteBinary = "$RemoteDir/govts-server.upload"
+$binary = Join-Path $outputDir 'sonoryx-server'
+$remoteBinary = "$RemoteDir/sonoryx-server.upload"
 $remoteScriptUpload = "$RemoteDir/redeploy-server.sh.upload"
 $remoteScript = "$RemoteDir/redeploy-server.sh"
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {

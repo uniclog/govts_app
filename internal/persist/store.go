@@ -11,7 +11,7 @@ import (
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 const (

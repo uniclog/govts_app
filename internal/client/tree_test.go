@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestChannelLocatorSurvivesRuntimeIDChanges(t *testing.T) {

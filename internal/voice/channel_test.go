@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestHubStartsWithDefaultChannel(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 const (

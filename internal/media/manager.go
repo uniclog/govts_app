@@ -11,9 +11,9 @@ import (
 
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/mediasignal"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/mediasignal"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 var (

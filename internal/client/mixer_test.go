@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
+	"uniclog.io/sonoryx/internal/audio"
 )
 
 func TestMixPCMFramesSumsAndClampsSamples(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"uniclog.io/govts/internal/protocol"
+	"uniclog.io/sonoryx/internal/protocol"
 )
 
 type packetConn struct {

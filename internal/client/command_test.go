@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 func TestReadCommandLoopParsesCommands(t *testing.T) {

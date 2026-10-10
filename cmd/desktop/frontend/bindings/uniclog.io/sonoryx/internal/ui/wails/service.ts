@@ -17,51 +17,51 @@ import * as mediasignal$0 from "../../mediasignal/models.js";
 import * as $models from "./models.js";
 
 export function AudioDevices(): $CancellablePromise<$models.AudioDevicesDTO> {
-    return $Call.ByID(4163031362);
+    return $Call.ByID(1722200645);
 }
 
 export function Ban(sessionID: string): $CancellablePromise<void> {
-    return $Call.ByID(2103541416, sessionID);
+    return $Call.ByID(3635103385, sessionID);
 }
 
 export function Chat(request: $models.ChatRequestDTO): $CancellablePromise<$models.ChatPageDTO> {
-    return $Call.ByID(1571062045, request);
+    return $Call.ByID(1704521838, request);
 }
 
 export function CloseToTray(): $CancellablePromise<boolean> {
-    return $Call.ByID(846043856);
+    return $Call.ByID(3850746813);
 }
 
 export function Connect(request: $models.ConnectRequest): $CancellablePromise<void> {
-    return $Call.ByID(1135091607, request);
+    return $Call.ByID(1253078334, request);
 }
 
 export function ConnectionStats(): $CancellablePromise<$models.ConnectionStatsDTO> {
-    return $Call.ByID(166964494);
+    return $Call.ByID(129735955);
 }
 
 export function DeleteRecentServer(address: string): $CancellablePromise<void> {
-    return $Call.ByID(1322328776, address);
+    return $Call.ByID(784976091, address);
 }
 
 export function Disconnect(): $CancellablePromise<void> {
-    return $Call.ByID(2989955305);
+    return $Call.ByID(2067060514);
 }
 
 export function Drag(sessionID: string, channelID: string): $CancellablePromise<void> {
-    return $Call.ByID(3258615617, sessionID, channelID);
+    return $Call.ByID(908136698, sessionID, channelID);
 }
 
 export function EventsAfter(sequence: string): $CancellablePromise<$models.ClientEventDTO[] | null> {
-    return $Call.ByID(1061099244, sequence);
+    return $Call.ByID(1957710509, sequence);
 }
 
 export function JoinChannel(channelID: string): $CancellablePromise<void> {
-    return $Call.ByID(734772938, channelID);
+    return $Call.ByID(1791394643, channelID);
 }
 
 export function Kick(sessionID: string): $CancellablePromise<void> {
-    return $Call.ByID(2906324561, sessionID);
+    return $Call.ByID(2418434406, sessionID);
 }
 
 /**
@@ -69,62 +69,62 @@ export function Kick(sessionID: string): $CancellablePromise<void> {
  * bounded text only; callers must not pass SDP, credentials or media content.
  */
 export function LogDiagnostic(operation: string, message: string): $CancellablePromise<void> {
-    return $Call.ByID(2427776576, operation, message);
+    return $Call.ByID(4080892533, operation, message);
 }
 
 export function MediaServerIdentity(): $CancellablePromise<$models.MediaTrustDTO> {
-    return $Call.ByID(869671352);
+    return $Call.ByID(2250923377);
 }
 
 export function OpenScreenWindow(streamID: string, ownerName: string): $CancellablePromise<void> {
-    return $Call.ByID(3243961435, streamID, ownerName);
+    return $Call.ByID(1190706568, streamID, ownerName);
 }
 
 export function ParticipantVolume(sessionID: string): $CancellablePromise<number> {
-    return $Call.ByID(2374739398, sessionID);
+    return $Call.ByID(1368900975, sessionID);
 }
 
 export function PublishScreen(offer: mediasignal$0.SessionDescription): $CancellablePromise<clientapp$0.MediaPublishResult> {
-    return $Call.ByID(1165940958, offer);
+    return $Call.ByID(790848911, offer);
 }
 
 export function RecentServers(): $CancellablePromise<$models.RecentServerDTO[] | null> {
-    return $Call.ByID(3357885992);
+    return $Call.ByID(2237178089);
 }
 
 export function ReconnectServer(address: string): $CancellablePromise<void> {
-    return $Call.ByID(1012485691, address);
+    return $Call.ByID(3498673970, address);
 }
 
 export function RefreshServerStatuses(): $CancellablePromise<void> {
-    return $Call.ByID(1470301523);
+    return $Call.ByID(82973650);
 }
 
 export function SavedDisplayName(): $CancellablePromise<string> {
-    return $Call.ByID(1402910199);
+    return $Call.ByID(2450449032);
 }
 
 export function SetCaptureDevice(id: string): $CancellablePromise<void> {
-    return $Call.ByID(3622601723, id);
+    return $Call.ByID(1942344652, id);
 }
 
 export function SetCloseToTray(value: boolean): $CancellablePromise<void> {
-    return $Call.ByID(2664460774, value);
+    return $Call.ByID(3620368573, value);
 }
 
 export function SetDeafened(value: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3554619559, value);
+    return $Call.ByID(56765554, value);
 }
 
 export function SetMicrophoneGain(value: number): $CancellablePromise<void> {
-    return $Call.ByID(2067370678, value);
+    return $Call.ByID(3727884051, value);
 }
 
 /**
  * SetMicrophoneMonitor plays the preview's transmitted audio back to the user.
  */
 export function SetMicrophoneMonitor(enabled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(563032017, enabled);
+    return $Call.ByID(4113868774, enabled);
 }
 
 /**
@@ -132,73 +132,73 @@ export function SetMicrophoneMonitor(enabled: boolean): $CancellablePromise<void
  * while disconnected; a connected session already feeds the meter.
  */
 export function SetMicrophonePreview(enabled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(4214796911, enabled);
+    return $Call.ByID(3930367540, enabled);
 }
 
 export function SetMuted(value: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3550928604, value);
+    return $Call.ByID(1678878239, value);
 }
 
 export function SetParticipantVolume(sessionID: string, value: number): $CancellablePromise<void> {
-    return $Call.ByID(974686508, sessionID, value);
+    return $Call.ByID(1510920815, sessionID, value);
 }
 
 export function SetPlaybackDevice(id: string): $CancellablePromise<void> {
-    return $Call.ByID(3783657834, id);
+    return $Call.ByID(1676246935, id);
 }
 
 export function SetRNNoiseEnabled(value: boolean): $CancellablePromise<void> {
-    return $Call.ByID(115474106, value);
+    return $Call.ByID(3996911903, value);
 }
 
 export function SetRNNoiseSensitivity(value: number): $CancellablePromise<void> {
-    return $Call.ByID(2007323576, value);
+    return $Call.ByID(1461232921, value);
 }
 
 export function SetServerAlias(address: string, alias: string): $CancellablePromise<void> {
-    return $Call.ByID(259081090, address, alias);
+    return $Call.ByID(1998430413, address, alias);
 }
 
 export function SetServerFavorite(address: string, favorite: boolean): $CancellablePromise<void> {
-    return $Call.ByID(1793569962, address, favorite);
+    return $Call.ByID(4043695515, address, favorite);
 }
 
 export function SetTheme(value: string): $CancellablePromise<void> {
-    return $Call.ByID(338374198, value);
+    return $Call.ByID(3280371613, value);
 }
 
 export function SetVADEnabled(value: boolean): $CancellablePromise<void> {
-    return $Call.ByID(141342905, value);
+    return $Call.ByID(248721316, value);
 }
 
 export function SetVADMode(value: string): $CancellablePromise<void> {
-    return $Call.ByID(3672257083, value);
+    return $Call.ByID(1419913304, value);
 }
 
 export function SetVADSensitivity(value: number): $CancellablePromise<void> {
-    return $Call.ByID(766836891, value);
+    return $Call.ByID(767766858, value);
 }
 
 export function Snapshot(): $CancellablePromise<$models.ClientViewDTO> {
-    return $Call.ByID(1939529571);
+    return $Call.ByID(1721442252);
 }
 
 export function StopScreen(streamID: string): $CancellablePromise<void> {
-    return $Call.ByID(4041861463, streamID);
+    return $Call.ByID(1212345940, streamID);
 }
 
 export function SubscribeScreen(streamID: string, subscriberID: string, offer: mediasignal$0.SessionDescription): $CancellablePromise<clientapp$0.MediaSubscribeResult> {
-    return $Call.ByID(3370288729, streamID, subscriberID, offer);
+    return $Call.ByID(125868852, streamID, subscriberID, offer);
 }
 
 export function Theme(): $CancellablePromise<string> {
-    return $Call.ByID(3211887612);
+    return $Call.ByID(2056053405);
 }
 
 export function TrustMediaServer(fingerprint: string): $CancellablePromise<void> {
-    return $Call.ByID(2472361038, fingerprint);
+    return $Call.ByID(417103957, fingerprint);
 }
 
 export function UnsubscribeScreen(streamID: string, subscriberID: string): $CancellablePromise<void> {
-    return $Call.ByID(3899704880, streamID, subscriberID);
+    return $Call.ByID(283352305, streamID, subscriberID);
 }

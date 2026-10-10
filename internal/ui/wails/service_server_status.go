@@ -4,7 +4,7 @@ import (
 	"net/netip"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"uniclog.io/govts/internal/clientapp"
+	"uniclog.io/sonoryx/internal/clientapp"
 )
 
 // ConfigureServerStatuses installs the completion event without starting a worker.

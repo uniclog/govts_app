@@ -8,9 +8,9 @@ import (
 	"net"
 	"time"
 
-	"uniclog.io/govts/internal/logging"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/logging"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 func HandlePacket(

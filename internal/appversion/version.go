@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	releaseversion "uniclog.io/govts/version"
+	releaseversion "uniclog.io/sonoryx/version"
 )
 
 var release = mustReadRelease()

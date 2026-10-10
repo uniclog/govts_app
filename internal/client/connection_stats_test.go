@@ -1,7 +1,7 @@
 package client
 
 import (
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 	"testing"
 	"time"
 )

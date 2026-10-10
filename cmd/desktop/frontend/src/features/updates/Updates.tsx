@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {Service, type Snapshot as UpdateSnapshot} from "../../../bindings/uniclog.io/govts/internal/clientupdate";
+import {Service, type Snapshot as UpdateSnapshot} from "../../../bindings/uniclog.io/sonoryx/internal/clientupdate";
 
 export function useUpdates(prepareRestart: () => void) {
     const [view, setView] = useState<UpdateSnapshot | null>(null);
@@ -38,12 +38,12 @@ export type UpdatesState = ReturnType<typeof useUpdates>;
 
 function currentClientLine(version: string, minServer: string) {
     if (!version || !minServer) return "Получение версии клиента…";
-    return `Эта сборка клиента Govts ${version} подключается к серверу версии ${minServer} и новее.`;
+    return `Эта сборка клиента Sonoryx ${version} подключается к серверу версии ${minServer} и новее.`;
 }
 
 function availableClientLine(version: string, minServer: string) {
-    if (!minServer) return `Доступна новая сборка клиента Govts ${version}. Минимальная версия сервера для неё в подписи релиза не указана.`;
-    return `Доступна новая сборка клиента Govts ${version}. Она подключается к серверу версии ${minServer} и новее.`;
+    if (!minServer) return `Доступна новая сборка клиента Sonoryx ${version}. Минимальная версия сервера для неё в подписи релиза не указана.`;
+    return `Доступна новая сборка клиента Sonoryx ${version}. Она подключается к серверу версии ${minServer} и новее.`;
 }
 
 export function UpdatesPanel({updates}: {updates: UpdatesState}) {
@@ -59,7 +59,7 @@ export function UpdatesPanel({updates}: {updates: UpdatesState}) {
         {view?.available && <p>{availableClientLine(view.available, view.availableMinServer)}</p>}
         {view?.status === "downloading" && <p role="status">Загрузка и проверка обновления…</p>}
         {view?.status === "downloading" && <><progress max={view.total || 1} value={view.written}/><small>{(view.written / 1048576).toFixed(1)} / {(view.total / 1048576).toFixed(1)} МБ</small></>}
-        {view?.status === "ready" && <p>Обновление загружено и проверено. Установка перезапустит Govts и завершит текущий разговор и демонстрацию.</p>}
+        {view?.status === "ready" && <p>Обновление загружено и проверено. Установка перезапустит Sonoryx и завершит текущий разговор и демонстрацию.</p>}
         {view?.status === "restarting" && <p role="status">Перезапуск…</p>}
         {view?.status === "error" && <p className="screen-error" role="alert">Не удалось завершить обновление.</p>}
         {detail && <p className="screen-error" role="alert">{detail}</p>}

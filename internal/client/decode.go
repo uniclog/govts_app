@@ -7,8 +7,8 @@ import (
 	"math"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
-	"uniclog.io/govts/internal/logging"
+	"uniclog.io/sonoryx/internal/audio"
+	"uniclog.io/sonoryx/internal/logging"
 )
 
 type DecoderFactory func() (audio.Decoder, error)

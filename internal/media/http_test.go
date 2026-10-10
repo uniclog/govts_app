@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 func TestHTTPHandlerRequiresBoundSessionCredential(t *testing.T) {
@@ -39,7 +39,7 @@ func TestHTTPHandlerRequiresBoundSessionCredential(t *testing.T) {
 		t.Fatal(err)
 	}
 	request = httptest.NewRequest(http.MethodPost, "/media/publish", strings.NewReader(`{"offer":{"type":"offer","sdp":"bad"}}`))
-	request.Header.Set("X-Govts-Session", strconv.FormatUint(session.ID, 10))
+	request.Header.Set("X-Sonoryx-Session", strconv.FormatUint(session.ID, 10))
 	request.Header.Set("Authorization", "Bearer "+base64.RawURLEncoding.EncodeToString(credential[:]))
 	response = httptest.NewRecorder()
 	handler.ServeHTTP(response, request)

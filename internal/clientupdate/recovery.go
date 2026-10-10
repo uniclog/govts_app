@@ -25,7 +25,7 @@ func recoveryPointer() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(root, "Govts", "pending-update.json"), nil
+	return filepath.Join(root, "Sonoryx", "pending-update.json"), nil
 }
 
 func readRecovery() (recoveryPlan, error) {
@@ -81,7 +81,7 @@ func PrepareRecovery(version string) (func(), error) {
 		cleanup()
 		return nil, err
 	}
-	if err = startDetached(watcher, append(os.Environ(), "GOVTS_UPDATE_WATCHER=1")); err != nil {
+	if err = startDetached(watcher, append(os.Environ(), "SONORYX_UPDATE_WATCHER=1")); err != nil {
 		cleanup()
 		return nil, err
 	}
@@ -115,10 +115,10 @@ func copyExecutable(from, to string) error {
 }
 
 func HandleRecoveryMode() {
-	if os.Getenv("GOVTS_UPDATE_WATCHER") != "1" {
+	if os.Getenv("SONORYX_UPDATE_WATCHER") != "1" {
 		return
 	}
-	os.Unsetenv("GOVTS_UPDATE_WATCHER")
+	os.Unsetenv("SONORYX_UPDATE_WATCHER")
 	os.Exit(runRecoveryWatchdog())
 }
 
