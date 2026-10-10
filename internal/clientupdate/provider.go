@@ -27,7 +27,7 @@ type provider struct {
 	cached *updater.Release
 }
 
-func (p *provider) Name() string { return "govts-github-signed" }
+func (p *provider) Name() string { return "sonoryx-github-signed" }
 
 func (p *provider) get(ctx context.Context, address string) (*http.Response, error) {
 	u, err := url.Parse(address)
@@ -38,7 +38,7 @@ func (p *provider) get(ctx context.Context, address string) (*http.Response, err
 	if err != nil {
 		return nil, err
 	}
-	r.Header.Set("User-Agent", "Govts-updater")
+	r.Header.Set("User-Agent", "Sonoryx-updater")
 	r.Header.Set("Accept", "application/vnd.github+json")
 	if strings.Contains(address, "/releases/latest") && p.etag != "" {
 		r.Header.Set("If-None-Match", p.etag)
@@ -128,7 +128,7 @@ func (p *provider) Check(ctx context.Context, req updater.CheckRequest) (*update
 	if m.Version != version || m.Size != size {
 		return nil, errors.New("подписанные данные не совпадают с релизом")
 	}
-	r := &updater.Release{Version: version, Name: "Govts " + version, Notes: release.Body,
+	r := &updater.Release{Version: version, Name: "Sonoryx " + version, Notes: release.Body,
 		Artifact:     updater.Artifact{Filename: m.Filename, Filetype: "exe", Size: m.Size, Platform: "windows", Arch: "amd64"},
 		Verification: &updater.Verification{DigestAlgo: "sha256", Digest: m.Digest, SignatureAlgo: "ed25519", Signature: m.Signature},
 		Metadata:     map[string]any{"url": binaryURL, "minServerVersion": m.MinServerVersion}}

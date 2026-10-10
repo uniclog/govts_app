@@ -57,7 +57,7 @@ jobs:
           Remove-Item -Force build/windows/icon.icns -ErrorAction SilentlyContinue
           go run github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -out cmd/desktop/rsrc_windows_amd64.syso
           if ($LASTEXITCODE -ne 0) { throw 'windows resource generation failed' }
-          go build -tags production -trimpath -ldflags="-w -s -H windowsgui" -o dist/GTS64.exe ./cmd/desktop
+          go build -tags production -trimpath -ldflags="-w -s -H windowsgui" -o dist/SRX64.exe ./cmd/desktop
           if ($LASTEXITCODE -ne 0) { throw 'desktop build failed' }
 
       - name: Build Linux server
@@ -66,17 +66,17 @@ jobs:
           GOARCH: amd64
           CGO_ENABLED: '0'
         run: |
-          go build -trimpath -ldflags="-w -s" -o dist/govts-server-linux-amd64 ./cmd/server
+          go build -trimpath -ldflags="-w -s" -o dist/sonoryx-server-linux-amd64 ./cmd/server
           if ($LASTEXITCODE -ne 0) { throw 'server build failed' }
 
       - name: Sign desktop update
         env:
           UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: |
-          go run ./cmd/update-sign -binary dist/GTS64.exe -public-key cmd/desktop/update-public-key.txt -out dist/signature
+          go run ./cmd/update-sign -binary dist/SRX64.exe -public-key cmd/desktop/update-public-key.txt -out dist/signature
           if ($LASTEXITCODE -ne 0) { throw 'update signing failed' }
-          $hash = (Get-FileHash -Algorithm SHA256 dist/GTS64.exe).Hash.ToLowerInvariant()
-          "$hash  GTS64.exe" | Set-Content -Encoding ascii dist/SHA256SUMS
+          $hash = (Get-FileHash -Algorithm SHA256 dist/SRX64.exe).Hash.ToLowerInvariant()
+          "$hash  SRX64.exe" | Set-Content -Encoding ascii dist/SHA256SUMS
 
       - name: Publish GitHub release
         env:
@@ -90,7 +90,7 @@ jobs:
             gh release create $tag --title $tag --draft --generate-notes --verify-tag
             if ($LASTEXITCODE -ne 0) { throw 'release creation failed' }
           }
-          gh release upload $tag dist/GTS64.exe dist/govts-server-linux-amd64 dist/signature dist/SHA256SUMS --clobber
+          gh release upload $tag dist/SRX64.exe dist/sonoryx-server-linux-amd64 dist/signature dist/SHA256SUMS --clobber
           if ($LASTEXITCODE -ne 0) { throw 'release asset upload failed' }
           gh release edit $tag --title $tag --draft=false
           if ($LASTEXITCODE -ne 0) { throw 'release publication failed' }

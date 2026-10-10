@@ -10,7 +10,7 @@ import (
 )
 
 func TestServicePersistsAndRestoresAudioSettings(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "Govts", "settings.json")
+	path := filepath.Join(t.TempDir(), "Sonoryx", "settings.json")
 	firstClient := clientapp.New(clientapp.Options{})
 	first := NewService(firstClient)
 	if err := first.enableSettings(path); err != nil {
@@ -59,7 +59,7 @@ func TestServicePersistsAndRestoresAudioSettings(t *testing.T) {
 }
 
 func TestSettingsCanRecoverAfterMalformedFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "Govts", "settings.json")
+	path := filepath.Join(t.TempDir(), "Sonoryx", "settings.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
 	}

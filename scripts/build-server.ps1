@@ -6,7 +6,7 @@ Set-StrictMode -Version Latest
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $outputDir = Join-Path $repoRoot 'bin'
-$binary = Join-Path $outputDir 'govts-server'
+$binary = Join-Path $outputDir 'sonoryx-server'
 
 New-Item -ItemType Directory -Force $outputDir | Out-Null
 

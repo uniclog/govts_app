@@ -1,11 +1,11 @@
 version: '3'
 
 info:
-  companyName: "Govts"
-  productName: "Govts"
-  productIdentifier: "app.govts.desktop"
-  description: "Голосовой desktop-клиент Govts"
-  copyright: "(c) 2026 Govts contributors"
+  companyName: "Sonoryx"
+  productName: "Sonoryx"
+  productIdentifier: "app.sonoryx.desktop"
+  description: "Голосовой desktop-клиент Sonoryx"
+  copyright: "(c) 2026 Sonoryx contributors"
   version: "{{.ClientVersion}}"
 
 dev_mode:

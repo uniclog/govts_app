@@ -209,7 +209,7 @@ func (a *App) runConnection(ctx context.Context, endpoint netip.AddrPort, name, 
 		}
 		seedPath := a.identityPath
 		if seedPath == "" {
-			seedPath = filepath.Join(configDir, "Govts", "client.seed")
+			seedPath = filepath.Join(configDir, "Sonoryx", "client.seed")
 		}
 		private, err = identity.LoadOrCreate(seedPath)
 		if err != nil {
@@ -219,7 +219,7 @@ func (a *App) runConnection(ctx context.Context, endpoint netip.AddrPort, name, 
 		a.chatClientIdentity = fmt.Sprintf("%x", private.Public())
 		a.mu.Unlock()
 		if a.pinsPath == "" {
-			a.pinsPath = filepath.Join(configDir, "Govts", "voice-pins.json")
+			a.pinsPath = filepath.Join(configDir, "Sonoryx", "voice-pins.json")
 		}
 	}
 	open := func() (*udp.ClientPacketConn, *protocol.SecureDatagramCodec, error) {

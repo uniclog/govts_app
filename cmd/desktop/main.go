@@ -36,8 +36,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("resolve application data directory: %v", err)
 	}
-	webviewDataPath := filepath.Join(configDir, "Govts", "WebView2")
-	stopLogging, err := logging.Start(filepath.Join(configDir, "Govts", "logs", "client.log"))
+	webviewDataPath := filepath.Join(configDir, "Sonoryx", "WebView2")
+	stopLogging, err := logging.Start(filepath.Join(configDir, "Sonoryx", "logs", "client.log"))
 	if err != nil {
 		log.Printf("file logging unavailable; continuing with console logging: %v", err)
 	}
@@ -46,18 +46,18 @@ func main() {
 
 	client := clientapp.New(clientapp.Options{Logger: log.Default(), Secure: true})
 	service := wailsui.NewService(client)
-	updates := clientupdate.New(filepath.Join(configDir, "Govts"), func() bool { return string(client.Snapshot().ConnectionStatus) == "connected" })
+	updates := clientupdate.New(filepath.Join(configDir, "Sonoryx"), func() bool { return string(client.Snapshot().ConnectionStatus) == "connected" })
 	if err := wailsui.EnableDefaultSettings(service); err != nil {
 		log.Printf("load settings: %v", err)
 	}
 	var mainWindow *application.WebviewWindow
 	var quitting atomic.Bool
 	app := application.New(application.Options{
-		Name:        "Govts",
-		Description: "Голосовой клиент Govts",
+		Name:        "Sonoryx",
+		Description: "Голосовой клиент Sonoryx",
 		Icon:        applicationIcon,
 		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID: "app.govts.desktop",
+			UniqueID: "app.sonoryx.desktop",
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
 				if mainWindow != nil {
 					showMainWindow(mainWindow)
@@ -103,7 +103,7 @@ func main() {
 	app.OnShutdown(shutdown)
 
 	mainWindow = app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            fmt.Sprintf("GTS %s", applicationVersion()),
+		Title:            fmt.Sprintf("SRX %s", applicationVersion()),
 		Width:            1180,
 		Height:           760,
 		MinWidth:         900,
@@ -212,7 +212,7 @@ func installTray(app *application.App, window *application.WebviewWindow, client
 
 	tray := app.SystemTray.New()
 	tray.SetIcon(applicationIcon)
-	tray.SetTooltip("Govts")
+	tray.SetTooltip("Sonoryx")
 	tray.SetMenu(menu)
 	tray.OnClick(func() { showMainWindow(window) })
 }

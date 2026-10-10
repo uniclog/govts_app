@@ -9,7 +9,7 @@ import type {ScreenSharingState} from "../screen/ScreenShareDialog";
 import type {ScreenMediaController} from "../screen/screenMedia";
 
 export type Page = "channels" | "settings";
-const serverAddressStorageKey = "govts.serverAddress";
+const serverAddressStorageKey = "sonoryx.serverAddress";
 
 function savedServerAddress(): string {
     try { return localStorage.getItem(serverAddressStorageKey) || "127.0.0.1:9000"; }
@@ -76,7 +76,7 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
                 onSelect={selectServer} onReconnect={connect} onError={onError} onCountChange={setServerCount}/>
         </section>
         <section className="connection-card">
-        <div className="connection-logo">GTS</div>
+        <div className="connection-logo">SRX</div>
         <h1>Подключение к серверу</h1>
         <p className="lead">Введите адрес голосового сервера и имя, под которым вас увидят другие участники.</p>
         <form onSubmit={(event) => { event.preventDefault(); void connect(server); }}>
@@ -100,7 +100,7 @@ export function LobbyBar({version, updateAction, onPageChange}: {
     onPageChange: (page: Page) => void;
 }) {
     return <header className="status-bar">
-        <div className="app-brand"><span className="brand-mark"><Icon name="server"/></span><strong>Govts</strong>{version && <span className="server-version" aria-label={`Версия клиента: ${version}`}>{version}</span>}{updateAction}</div>
+        <div className="app-brand"><span className="brand-mark"><Icon name="server"/></span><strong>Sonoryx</strong>{version && <span className="server-version" aria-label={`Версия клиента: ${version}`}>{version}</span>}{updateAction}</div>
         <button id="open-settings" className="status-pill settings-pill" type="button" onClick={() => onPageChange("settings")}>
             <Icon name="settings"/><span>Настройки</span>
         </button>

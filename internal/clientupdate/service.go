@@ -221,7 +221,7 @@ func (s *Service) Restart() error {
 	self, err := os.Executable()
 	if err == nil {
 		var f *os.File
-		f, err = os.CreateTemp(filepath.Dir(self), ".govts-update-permission-*")
+		f, err = os.CreateTemp(filepath.Dir(self), ".sonoryx-update-permission-*")
 		if err == nil {
 			path := f.Name()
 			err = f.Close()

@@ -157,7 +157,7 @@ func (h *HTTPHandler) unsubscribe(w http.ResponseWriter, r *http.Request, sessio
 }
 
 func (h *HTTPHandler) authenticate(r *http.Request) (uint64, bool) {
-	sessionID, err := strconv.ParseUint(r.Header.Get("X-Govts-Session"), 10, 64)
+	sessionID, err := strconv.ParseUint(r.Header.Get("X-Sonoryx-Session"), 10, 64)
 	if err != nil || sessionID == 0 {
 		return 0, false
 	}
