@@ -29,10 +29,6 @@ export function Restart(): $CancellablePromise<void> {
     return $Call.ByID(4211883811);
 }
 
-export function SetAutoDownload(enabled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3905263627, enabled);
-}
-
 export function Snapshot(): $CancellablePromise<$models.Snapshot> {
     return $Call.ByID(3221952908);
 }

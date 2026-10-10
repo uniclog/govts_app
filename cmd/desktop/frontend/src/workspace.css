@@ -141,7 +141,6 @@
 .update-actions button, .update-dialog > button { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: var(--card-strong); cursor: pointer; }
 .update-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .update-actions a { color: var(--accent-blue); }
-.update-preference { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 12px; }
 .updates-panel p { margin: 0 0 12px; font-size: 13px; line-height: 1.45; }
 .updates-panel progress { display: block; width: 100%; margin: 0 0 8px; accent-color: var(--accent); }
 .updates-panel small { display: block; margin: 0 0 12px; color: var(--muted); font-size: 12px; }
