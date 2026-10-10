@@ -1,4 +1,4 @@
-# Карта проекта Govts
+# Карта проекта Sonoryx
 
 Карта описывает текущую рабочую копию проекта. Go-модуль — `uniclog.io/sonoryx`.
 Описание продукта приведено в [README](README.md). Сценарии запуска,
@@ -165,13 +165,13 @@ WebRTC требуется корректный `-media-advertised-ip`.
   пересоздавать после изменения публичных методов или DTO Wails-сервиса,
   а не редактировать вручную.
 - `internal/clientsettings/store.go` сохраняет версионированные настройки
-  в каталоге конфигурации пользователя `Govts/settings.json`: имя,
+  в каталоге конфигурации пользователя `Sonoryx/settings.json`: имя,
   аудиоустройства, параметры шумоподавления/VAD, тему и доверенные
   media-ключи. Адрес сервера UI хранит в browser localStorage. Отдельный
-  `Govts/client.seed` хранит приватный seed пользователя, а
-  `Govts/voice-pins.json` — доверенные голосовые серверы (TOFU).
+  `Sonoryx/client.seed` хранит приватный seed пользователя, а
+  `Sonoryx/voice-pins.json` — доверенные голосовые серверы (TOFU).
 - `internal/clientupdate/service.go` связывает UI с Wails updater, планирует
-  проверки и сохраняет автоскачивание в `Govts/updates.json`. `provider.go`
+  проверки и сохраняет автоскачивание в `Sonoryx/updates.json`. `provider.go`
   выбирает стабильный Windows amd64 asset и обязательно проверяет подписанный
   манифест; `internal/updatemanifest/` задаёт формат и Ed25519-проверку.
 - `internal/clientupdate/recovery.go` сохраняет прежний EXE и следит за
@@ -179,8 +179,8 @@ WebRTC требуется корректный `-media-advertised-ip`.
   запуска и проверки процессов — в `process_windows.go`. Helper и watcher
   обрабатываются до логирования и SingleInstance; PID нового обычного клиента
   записывается после SingleInstance. Профиль при откате EXE не откатывается.
-- `Govts/pending-update.json` и `Govts/update-recovery/` — план и копии
-  восстановления; `Govts/update-recovery-result.txt` — результат отката.
+- `Sonoryx/pending-update.json` и `Sonoryx/update-recovery/` — план и копии
+  восстановления; `Sonoryx/update-recovery-result.txt` — результат отката.
   Черновики чата перед обновлением сохраняются в frontend `localStorage`.
 
 ## Проверки, версии и релизы
