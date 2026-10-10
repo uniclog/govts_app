@@ -29,7 +29,7 @@ func TestParticipantVolumeValidationAndCleanup(t *testing.T) {
 	if got := audio.ParticipantVolume(7); got != 1.5 {
 		t.Fatalf("volume = %v", got)
 	}
-	for _, value := range []float32{-0.1, 2.1, float32(math.NaN()), float32(math.Inf(1))} {
+	for _, value := range []float32{-0.1, MaxParticipantVolume + 0.1, float32(math.NaN()), float32(math.Inf(1))} {
 		if err := audio.SetParticipantVolume(7, value); err == nil {
 			t.Fatalf("accepted invalid volume %v", value)
 		}
