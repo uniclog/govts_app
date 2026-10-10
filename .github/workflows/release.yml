@@ -73,10 +73,13 @@ jobs:
         env:
           UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: |
-          go run ./cmd/update-sign -binary dist/GTS64.exe -public-key cmd/desktop/update-public-key.txt -out dist/signature
+          go run ./cmd/update-sign -binary dist/GTS64.exe -public-key cmd/desktop/update-public-key.txt -out dist/signature -packed dist/GTS64.exe.zst
           if ($LASTEXITCODE -ne 0) { throw 'update signing failed' }
-          $hash = (Get-FileHash -Algorithm SHA256 dist/GTS64.exe).Hash.ToLowerInvariant()
-          "$hash  GTS64.exe" | Set-Content -Encoding ascii dist/SHA256SUMS
+          $sums = foreach ($name in 'GTS64.exe', 'GTS64.exe.zst') {
+            $hash = (Get-FileHash -Algorithm SHA256 "dist/$name").Hash.ToLowerInvariant()
+            "$hash  $name"
+          }
+          $sums | Set-Content -Encoding ascii dist/SHA256SUMS
 
       - name: Publish GitHub release
         env:
@@ -90,7 +93,7 @@ jobs:
             gh release create $tag --title $tag --draft --generate-notes --verify-tag
             if ($LASTEXITCODE -ne 0) { throw 'release creation failed' }
           }
-          gh release upload $tag dist/GTS64.exe dist/govts-server-linux-amd64 dist/signature dist/SHA256SUMS --clobber
+          gh release upload $tag dist/GTS64.exe dist/GTS64.exe.zst dist/govts-server-linux-amd64 dist/signature dist/SHA256SUMS --clobber
           if ($LASTEXITCODE -ne 0) { throw 'release asset upload failed' }
           gh release edit $tag --title $tag --draft=false
           if ($LASTEXITCODE -ne 0) { throw 'release publication failed' }

@@ -1,8 +1,10 @@
 package clientupdate
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/wailsapp/wails/v3/pkg/updater"
 	"uniclog.io/govts/internal/appversion"
 	"uniclog.io/govts/internal/updatemanifest"
@@ -92,8 +95,8 @@ func (p *provider) Check(ctx context.Context, req updater.CheckRequest) (*update
 		p.etag = response.Header.Get("ETag")
 		return nil, nil
 	}
-	var manifestURL, binaryURL string
-	var size int64
+	var manifestURL, binaryURL, packedURL string
+	var size, packedSize int64
 	prefix := "https://github.com/" + repository + "/releases/download/" + release.Tag + "/"
 	for _, asset := range release.Assets {
 		if !strings.HasPrefix(asset.URL, prefix) {
@@ -102,6 +105,8 @@ func (p *provider) Check(ctx context.Context, req updater.CheckRequest) (*update
 		switch asset.Name {
 		case updatemanifest.Filename:
 			binaryURL, size = asset.URL, asset.Size
+		case updatemanifest.PackedFilename:
+			packedURL, packedSize = asset.URL, asset.Size
 		case updatemanifest.AssetName:
 			manifestURL = asset.URL
 		}
@@ -132,29 +137,88 @@ func (p *provider) Check(ctx context.Context, req updater.CheckRequest) (*update
 		Artifact:     updater.Artifact{Filename: m.Filename, Filetype: "exe", Size: m.Size, Platform: "windows", Arch: "amd64"},
 		Verification: &updater.Verification{DigestAlgo: "sha256", Digest: m.Digest, SignatureAlgo: "ed25519", Signature: m.Signature},
 		Metadata:     map[string]any{"url": binaryURL, "minServerVersion": m.MinServerVersion}}
+	if m.Packed != nil && packedURL != "" && packedSize == m.Packed.Size {
+		r.Metadata["packed"] = packedAsset{url: packedURL, size: m.Packed.Size, digest: m.Packed.Digest}
+	}
 	p.cached, p.etag = r, response.Header.Get("ETag")
 	return r, nil
 }
 
+// packedAsset is the signed compressed executable selected by Check.
+type packedAsset struct {
+	url    string
+	size   int64
+	digest []byte
+}
+
 func (p *provider) Download(ctx context.Context, r *updater.Release, dst io.Writer, progress func(int64, int64)) error {
+	if packed, ok := r.Metadata["packed"].(packedAsset); ok {
+		return p.downloadPacked(ctx, r, packed, dst, progress)
+	}
 	address, _ := r.Metadata["url"].(string)
-	response, err := p.get(ctx, address)
+	body, err := p.open(ctx, address, r.Artifact.Size)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = response.Body.Close() }()
+	defer func() { _ = body.Close() }()
+	return copyArtifact(dst, &throttledReader{ctx: ctx, r: body, busy: p.busy}, r.Artifact.Size, progress)
+}
+
+// downloadPacked streams the compressed executable through the zstd decoder.
+// The updater hashes what reaches dst, so the executable signature is still
+// checked; the archive digest additionally rejects a substituted archive.
+func (p *provider) downloadPacked(ctx context.Context, r *updater.Release, packed packedAsset, dst io.Writer, progress func(int64, int64)) error {
+	body, err := p.open(ctx, packed.url, packed.size)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = body.Close() }()
+	hash := sha256.New()
+	limited := &io.LimitedReader{R: io.TeeReader(&throttledReader{ctx: ctx, r: body, busy: p.busy}, hash), N: packed.size + 1}
+	decoder, err := zstd.NewReader(limited, zstd.WithDecoderMaxWindow(updatemanifest.PackedWindow), zstd.WithDecoderConcurrency(1))
+	if err != nil {
+		return err
+	}
+	err = copyArtifact(dst, decoder, r.Artifact.Size, progress)
+	// Close stops the decoder's reader before the rest of the archive is
+	// drained into the digest.
+	decoder.Close()
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(io.Discard, limited); err != nil {
+		return err
+	}
+	if packed.size+1-limited.N != packed.size || !bytes.Equal(hash.Sum(nil), packed.digest) {
+		return errors.New("сжатое обновление не совпадает с подписью")
+	}
+	return nil
+}
+
+// open requests address and checks the response against the signed size.
+func (p *provider) open(ctx context.Context, address string, size int64) (io.ReadCloser, error) {
+	response, err := p.get(ctx, address)
+	if err != nil {
+		return nil, err
+	}
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("загрузка: HTTP %d", response.StatusCode)
+		_ = response.Body.Close()
+		return nil, fmt.Errorf("загрузка: HTTP %d", response.StatusCode)
 	}
-	if response.ContentLength > updatemanifest.MaxSize || (response.ContentLength >= 0 && response.ContentLength != r.Artifact.Size) {
-		return errors.New("размер загрузки не совпадает с подписью")
+	if response.ContentLength >= 0 && response.ContentLength != size {
+		_ = response.Body.Close()
+		return nil, errors.New("размер загрузки не совпадает с подписью")
 	}
+	return response.Body, nil
+}
+
+// copyArtifact writes exactly size bytes of the executable to dst.
+func copyArtifact(dst io.Writer, src io.Reader, size int64, progress func(int64, int64)) error {
 	var written int64
 	buffer := make([]byte, 64<<10)
 	for {
-		started := time.Now()
-		n, readErr := response.Body.Read(buffer)
-		if written+int64(n) > r.Artifact.Size {
+		n, readErr := src.Read(buffer)
+		if written+int64(n) > size {
 			return errors.New("обновление превышает объявленный размер")
 		}
 		if n > 0 {
@@ -166,19 +230,7 @@ func (p *provider) Download(ctx context.Context, r *updater.Release, dst io.Writ
 			if count != n {
 				return io.ErrShortWrite
 			}
-			progress(written, r.Artifact.Size)
-			if p.busy() {
-				delay := time.Duration(n)*time.Second/(512<<10) - time.Since(started)
-				if delay > 0 {
-					timer := time.NewTimer(delay)
-					select {
-					case <-ctx.Done():
-						timer.Stop()
-						return ctx.Err()
-					case <-timer.C:
-					}
-				}
-			}
+			progress(written, size)
 		}
 		if readErr == io.EOF {
 			break
@@ -187,8 +239,34 @@ func (p *provider) Download(ctx context.Context, r *updater.Release, dst io.Writ
 			return readErr
 		}
 	}
-	if written != r.Artifact.Size {
+	if written != size {
 		return errors.New("обновление загружено не полностью")
 	}
 	return nil
+}
+
+// throttledReader limits the download to 512 KiB/s while busy reports an
+// active voice session, so the update does not compete with voice traffic.
+type throttledReader struct {
+	ctx  context.Context
+	r    io.Reader
+	busy func() bool
+}
+
+func (t *throttledReader) Read(b []byte) (int, error) {
+	started := time.Now()
+	n, err := t.r.Read(b)
+	if n > 0 && t.busy() {
+		delay := time.Duration(n)*time.Second/(512<<10) - time.Since(started)
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-t.ctx.Done():
+				timer.Stop()
+				return n, t.ctx.Err()
+			case <-timer.C:
+			}
+		}
+	}
+	return n, err
 }
