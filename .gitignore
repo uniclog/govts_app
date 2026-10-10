@@ -29,11 +29,11 @@ node_modules/
 *.log
 
 # Locally generated default media identity
-/govts-media.crt
-/govts-media.key
+/sonoryx-media.crt
+/sonoryx-media.key
 
 # Local server state
-/govts.db
-/govts.db-wal
-/govts.db-shm
-/govts-voice.seed
+/sonoryx.db
+/sonoryx.db-wal
+/sonoryx.db-shm
+/sonoryx-voice.seed

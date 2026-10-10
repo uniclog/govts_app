@@ -3,7 +3,7 @@ package protocol
 import (
 	"encoding/binary"
 	"errors"
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 const ChatSchemaVersion = 1

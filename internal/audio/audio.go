@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"time"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 type Frame struct {

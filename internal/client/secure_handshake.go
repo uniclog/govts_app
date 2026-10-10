@@ -11,12 +11,12 @@ import (
 	"net"
 	"time"
 
-	"uniclog.io/govts/internal/appversion"
-	"uniclog.io/govts/internal/auth"
-	"uniclog.io/govts/internal/identity"
-	"uniclog.io/govts/internal/logging"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/appversion"
+	"uniclog.io/sonoryx/internal/auth"
+	"uniclog.io/sonoryx/internal/identity"
+	"uniclog.io/sonoryx/internal/logging"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 type SecureHandshakeResult struct {

@@ -114,7 +114,7 @@ func DecodeChallenge(payload []byte) (Challenge, error) {
 
 func Transcript(init Init, challenge Challenge, requestID, version uint32) [32]byte {
 	hash := sha256.New()
-	hash.Write([]byte("govts-auth-v1"))
+	hash.Write([]byte("sonoryx-auth-v1"))
 	var numbers [8]byte
 	binary.BigEndian.PutUint32(numbers[:4], requestID)
 	binary.BigEndian.PutUint32(numbers[4:], version)
@@ -129,10 +129,10 @@ func Transcript(init Init, challenge Challenge, requestID, version uint32) [32]b
 }
 
 func serverMessage(digest [32]byte) []byte {
-	return append([]byte("govts-server-auth-v1"), digest[:]...)
+	return append([]byte("sonoryx-server-auth-v1"), digest[:]...)
 }
 func clientMessage(digest [32]byte) []byte {
-	return append([]byte("govts-client-auth-v1"), digest[:]...)
+	return append([]byte("sonoryx-client-auth-v1"), digest[:]...)
 }
 
 func VerifyChallenge(init Init, challenge Challenge, requestID, version uint32) error {
@@ -163,7 +163,7 @@ func DeriveKeys(ephemeral *ecdh.PrivateKey, peer [32]byte, digest [32]byte) (cli
 	if err != nil {
 		return clientToServer, serverToClient, acknowledge, err
 	}
-	reader := hkdf.New(sha256.New, shared, digest[:], []byte("govts-udp-v1 traffic and ack"))
+	reader := hkdf.New(sha256.New, shared, digest[:], []byte("sonoryx-udp-v1 traffic and ack"))
 	for _, key := range []*[32]byte{&clientToServer, &serverToClient, &acknowledge} {
 		if _, err := io.ReadFull(reader, key[:]); err != nil {
 			return clientToServer, serverToClient, acknowledge, fmt.Errorf("derive session key: %w", err)
@@ -174,7 +174,7 @@ func DeriveKeys(ephemeral *ecdh.PrivateKey, peer [32]byte, digest [32]byte) (cli
 
 func AckMAC(key [32]byte, digest [32]byte, sessionID uint64, joinLevel uint16, permissions uint8) [32]byte {
 	mac := hmac.New(sha256.New, key[:])
-	mac.Write([]byte("govts-auth-ack-v1"))
+	mac.Write([]byte("sonoryx-auth-ack-v1"))
 	mac.Write(digest[:])
 	var id [8]byte
 	binary.BigEndian.PutUint64(id[:], sessionID)

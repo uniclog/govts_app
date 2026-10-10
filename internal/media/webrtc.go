@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/mediasignal"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/mediasignal"
+	"uniclog.io/sonoryx/internal/voice"
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/nack"
 	"github.com/pion/webrtc/v4"

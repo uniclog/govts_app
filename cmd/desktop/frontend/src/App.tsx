@@ -22,7 +22,7 @@ const contentTabs = ["chat", "screens", "events"] as const;
 type ContentTab = typeof contentTabs[number] | `direct:${string}`;
 type DirectChat = {userId: string; displayName: string};
 
-const participantDragType = "application/x-govts-participant";
+const participantDragType = "application/x-sonoryx-participant";
 
 const emptyView: ClientViewDTO = {
     chatContext: "", userId: "0", chatRevision: "0",
@@ -49,7 +49,7 @@ function errorText(error: unknown): string {
 }
 
 function App() {
-    const [theme, setThemeState] = useState(localStorage.getItem("govts-theme") || "system");
+    const [theme, setThemeState] = useState(localStorage.getItem("sonoryx-theme") || "system");
     useEffect(() => {
         let active = true;
         void desktopAPI.theme().then((value) => {
@@ -59,7 +59,7 @@ function App() {
     }, []);
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
-        localStorage.setItem("govts-theme", theme);
+        localStorage.setItem("sonoryx-theme", theme);
     }, [theme]);
     const setTheme = async (value: string) => {
         const previous = theme;
@@ -671,7 +671,7 @@ function SettingsPage({view, invoke, theme, setTheme, updates}: {
                             hint="Системная тема следует настройкам Windows."
                             onChange={(value) => void invoke(() => setTheme(value))}/>
                     <SettingToggle title="Сворачивать в трей при закрытии"
-                                   description="Крестик прячет окно в трей, приложение и голос продолжают работать. Без этой настройки крестик завершает Govts."
+                                   description="Крестик прячет окно в трей, приложение и голос продолжают работать. Без этой настройки крестик завершает Sonoryx."
                                    checked={closeToTray}
                                    onChange={(value) => invoke(async () => {
                                        const previous = closeToTray;

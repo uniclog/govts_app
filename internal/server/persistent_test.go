@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/persist"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/persist"
 )
 
 func TestPersistentBootstrapKeepsChannelsAndLevels(t *testing.T) {

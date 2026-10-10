@@ -5,7 +5,7 @@ import (
 	"io"
 	"strconv"
 
-	"uniclog.io/govts/internal/audio/voicegate"
+	"uniclog.io/sonoryx/internal/audio/voicegate"
 )
 
 func HandleAudioCommand(command Command, state *State, output io.Writer) bool {

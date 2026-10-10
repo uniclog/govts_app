@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 const StateEventVersion = 2

@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 
-	"uniclog.io/govts/internal/audio"
+	"uniclog.io/sonoryx/internal/audio"
 )
 
 func PlaybackLoop(

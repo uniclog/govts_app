@@ -80,7 +80,7 @@ func createIdentity(certPath, keyPath string) error {
 		return err
 	}
 	now := time.Now()
-	template := &x509.Certificate{SerialNumber: serial, Subject: pkix.Name{CommonName: "Govts media server"}, NotBefore: now.Add(-time.Hour), NotAfter: now.AddDate(10, 0, 0), KeyUsage: x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, BasicConstraintsValid: true}
+	template := &x509.Certificate{SerialNumber: serial, Subject: pkix.Name{CommonName: "Sonoryx media server"}, NotBefore: now.Add(-time.Hour), NotAfter: now.AddDate(10, 0, 0), KeyUsage: x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, BasicConstraintsValid: true}
 	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func atomicWritePrivate(path string, data []byte) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	temp, err := os.CreateTemp(dir, ".govts-identity-*")
+	temp, err := os.CreateTemp(dir, ".sonoryx-identity-*")
 	if err != nil {
 		return err
 	}

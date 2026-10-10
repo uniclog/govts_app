@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sort"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 // StartScreenShare publishes channel-visible metadata after the media path is

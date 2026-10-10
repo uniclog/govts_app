@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
+	"uniclog.io/sonoryx/internal/audio"
 )
 
 // At the fixed 20 ms audio profile, keep at most 100 ms per sender.

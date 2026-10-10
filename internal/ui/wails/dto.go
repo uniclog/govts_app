@@ -4,10 +4,10 @@ import (
 	"strconv"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/clientapp"
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/audio"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/clientapp"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 type ServerDTO struct {

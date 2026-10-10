@@ -112,5 +112,5 @@ func DefaultPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve application data directory: %w", err)
 	}
-	return filepath.Join(configPath, "Govts", "settings.json"), nil
+	return filepath.Join(configPath, "Sonoryx", "settings.json"), nil
 }

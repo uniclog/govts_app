@@ -1,5 +1,5 @@
 import {Call, Events} from "@wailsio/runtime";
-import {Service} from "../bindings/uniclog.io/govts/internal/ui/wails";
+import {Service} from "../bindings/uniclog.io/sonoryx/internal/ui/wails";
 
 export type {
     AudioDeviceDTO,
@@ -17,9 +17,9 @@ export type {
     ChatPageDTO,
     ChatMessageDTO,
     ChatDialogDTO,
-} from "../bindings/uniclog.io/govts/internal/ui/wails";
+} from "../bindings/uniclog.io/sonoryx/internal/ui/wails";
 
-import type {AudioMeterDTO, ConnectRequest, ChatRequestDTO} from "../bindings/uniclog.io/govts/internal/ui/wails";
+import type {AudioMeterDTO, ConnectRequest, ChatRequestDTO} from "../bindings/uniclog.io/sonoryx/internal/ui/wails";
 
 let diagnosticsInFlight = 0;
 export type RecentServer = {address: string; alias?: string; favorite: boolean; lastVisited: number; current: boolean;
@@ -28,19 +28,19 @@ export function logDiagnostic(operation: string, message: unknown): void {
     if (diagnosticsInFlight >= 16) return;
     diagnosticsInFlight++;
     const text = message instanceof Error ? `${message.name}: ${message.message}` : String(message);
-    void Call.ByName("uniclog.io/govts/internal/ui/wails.Service.LogDiagnostic", operation.slice(0, 128), text.slice(0, 2048))
+    void Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.LogDiagnostic", operation.slice(0, 128), text.slice(0, 2048))
         .catch(() => undefined)
         .finally(() => { diagnosticsInFlight--; });
 }
 
 export const desktopAPI = {
-    recentServers: (): Promise<RecentServer[]> => Call.ByName("uniclog.io/govts/internal/ui/wails.Service.RecentServers"),
+    recentServers: (): Promise<RecentServer[]> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.RecentServers"),
     refreshServerStatuses: (): Promise<void> => Service.RefreshServerStatuses(),
     onServerStatusChanged: (listener: () => void) => Events.On("server-status-changed", listener),
-    setServerAlias: (address: string, alias: string): Promise<void> => Call.ByName("uniclog.io/govts/internal/ui/wails.Service.SetServerAlias", address, alias),
-    deleteRecentServer: (address: string): Promise<void> => Call.ByName("uniclog.io/govts/internal/ui/wails.Service.DeleteRecentServer", address),
-    setServerFavorite: (address: string, favorite: boolean): Promise<void> => Call.ByName("uniclog.io/govts/internal/ui/wails.Service.SetServerFavorite", address, favorite),
-    reconnectServer: (address: string): Promise<void> => Call.ByName("uniclog.io/govts/internal/ui/wails.Service.ReconnectServer", address),
+    setServerAlias: (address: string, alias: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetServerAlias", address, alias),
+    deleteRecentServer: (address: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.DeleteRecentServer", address),
+    setServerFavorite: (address: string, favorite: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetServerFavorite", address, favorite),
+    reconnectServer: (address: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.ReconnectServer", address),
     chat: (request: ChatRequestDTO) => Service.Chat(request),
     snapshot: () => Service.Snapshot(),
     connectionStats: () => Service.ConnectionStats(),
@@ -69,8 +69,8 @@ export const desktopAPI = {
     setParticipantVolume: (sessionID: string, value: number) => Service.SetParticipantVolume(sessionID, value),
     theme: () => Service.Theme(),
     setTheme: (value: string) => Service.SetTheme(value),
-    closeToTray: (): Promise<boolean> => Call.ByName("uniclog.io/govts/internal/ui/wails.Service.CloseToTray"),
-    setCloseToTray: (value: boolean): Promise<void> => Call.ByName("uniclog.io/govts/internal/ui/wails.Service.SetCloseToTray", value),
+    closeToTray: (): Promise<boolean> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.CloseToTray"),
+    setCloseToTray: (value: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetCloseToTray", value),
     mediaServerIdentity: () => Service.MediaServerIdentity(),
     trustMediaServer: (fingerprint: string) => Service.TrustMediaServer(fingerprint),
     publishScreen: (offer: {type: string; sdp: string}) => Service.PublishScreen(offer),

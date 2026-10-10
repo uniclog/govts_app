@@ -1,6 +1,6 @@
-# Карта проекта Govts
+# Карта проекта Sonoryx
 
-Карта описывает текущую рабочую копию проекта. Go-модуль — `uniclog.io/govts`.
+Карта описывает текущую рабочую копию проекта. Go-модуль — `uniclog.io/sonoryx`.
 Описание продукта приведено в [README](README.md). Сценарии запуска,
 ограничения и протокол перенесены в локальное
 [техническое руководство](readme_docs/technical-guide.md).
@@ -32,7 +32,7 @@
   доставки frontend; production-сборка встраивает собранные ресурсы.
   Версия клиента также хранится в `version/release.json`.
 - `cmd/update-sign/` подписывает desktop EXE и манифест релиза, а с `-packed`
-  сжимает EXE в zstd (`GTS64.exe.zst`) и добавляет его размер и SHA-256 в
+  сжимает EXE в zstd (`SRX64.exe.zst`) и добавляет его размер и SHA-256 в
   манифест. Закрытый seed
   получает из `UPDATE_SIGNING_KEY`; ключ не хранится в Git. Открытый ключ
   `cmd/desktop/update-public-key.txt` встроен через `update_key.go`.
@@ -163,28 +163,28 @@ WebRTC требуется корректный `-media-advertised-ip`.
 - `features/updates/` — кнопка доступного обновления в шапке и модальное окно
   загрузки/установки. Раздела обновлений на странице настроек нет.
 - Сгенерированные Wails bindings находятся в
-  `cmd/desktop/frontend/bindings/uniclog.io/govts/`. Их следует
+  `cmd/desktop/frontend/bindings/uniclog.io/sonoryx/`. Их следует
   пересоздавать после изменения публичных методов или DTO Wails-сервиса,
   а не редактировать вручную.
 - `internal/clientsettings/store.go` сохраняет версионированные настройки
-  в каталоге конфигурации пользователя `Govts/settings.json`: имя,
+  в каталоге конфигурации пользователя `Sonoryx/settings.json`: имя,
   аудиоустройства, параметры шумоподавления/VAD, тему и доверенные
   media-ключи. Адрес сервера UI хранит в browser localStorage. Отдельный
-  `Govts/client.seed` хранит приватный seed пользователя, а
-  `Govts/voice-pins.json` — доверенные голосовые серверы (TOFU).
+  `Sonoryx/client.seed` хранит приватный seed пользователя, а
+  `Sonoryx/voice-pins.json` — доверенные голосовые серверы (TOFU).
 - `internal/clientupdate/service.go` связывает UI с Wails updater, планирует
-  проверки и сохраняет автоскачивание в `Govts/updates.json`. `provider.go`
+  проверки и сохраняет автоскачивание в `Sonoryx/updates.json`. `provider.go`
   выбирает стабильный Windows amd64 asset и обязательно проверяет подписанный
-  манифест; если в манифесте и релизе есть сжатый `GTS64.exe.zst`, качает его
-  и распаковывает на лету, иначе — обычный `GTS64.exe`.
+  манифест; если в манифесте и релизе есть сжатый `SRX64.exe.zst`, качает его
+  и распаковывает на лету, иначе — обычный `SRX64.exe`.
   `internal/updatemanifest/` задаёт формат и Ed25519-проверку.
 - `internal/clientupdate/recovery.go` сохраняет прежний EXE и следит за
   подтверждением запуска нового интерфейса с пределом 90 секунд. Windows API
   запуска и проверки процессов — в `process_windows.go`. Helper и watcher
   обрабатываются до логирования и SingleInstance; PID нового обычного клиента
   записывается после SingleInstance. Профиль при откате EXE не откатывается.
-- `Govts/pending-update.json` и `Govts/update-recovery/` — план и копии
-  восстановления; `Govts/update-recovery-result.txt` — результат отката.
+- `Sonoryx/pending-update.json` и `Sonoryx/update-recovery/` — план и копии
+  восстановления; `Sonoryx/update-recovery-result.txt` — результат отката.
   Черновики чата перед обновлением сохраняются в frontend `localStorage`.
 
 ## Проверки, версии и релизы
@@ -197,7 +197,7 @@ WebRTC требуется корректный `-media-advertised-ip`.
   `.github/workflows/release.yml` срабатывает на тег `vX.Y.Z`, сверяет
   его с `clientVersion` в `version/release.json`, собирает Windows desktop и Linux
   server, подписывает desktop через secret `UPDATE_SIGNING_KEY`, загружает
-  бинарники, `GTS64.exe.zst`, `signature` и `SHA256SUMS` в draft и затем публикует релиз.
+  бинарники, `SRX64.exe.zst`, `signature` и `SHA256SUMS` в draft и затем публикует релиз.
   Уже опубликованный релиз под тем же тегом не заменяется.
 - `internal/appversion/` разбирает и сравнивает версии, проверяет параметры
   релиза из встроенного `version/release.json`. Минимальная версия сервера

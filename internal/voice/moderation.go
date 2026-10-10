@@ -6,8 +6,8 @@ import (
 	"log"
 	"sort"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/persist"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/persist"
 )
 
 var ErrPermissionDenied = errors.New("permission denied")

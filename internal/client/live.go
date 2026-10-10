@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 type ClientViewState struct {

@@ -5,8 +5,8 @@ import (
 	"math"
 	"time"
 
-	"uniclog.io/govts/internal/audio"
-	"uniclog.io/govts/internal/audio/vad"
+	"uniclog.io/sonoryx/internal/audio"
+	"uniclog.io/sonoryx/internal/audio/vad"
 )
 
 type Mode string

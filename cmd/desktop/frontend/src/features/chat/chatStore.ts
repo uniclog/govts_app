@@ -52,11 +52,11 @@ export class ChatStore {
     constructor(context: string, userId: string) {
         this.context = context; this.userId = userId;
         try {
-            const saved = JSON.parse(localStorage.getItem(`govts.updateDrafts:${context}`) ?? "{}");
+            const saved = JSON.parse(localStorage.getItem(`sonoryx.updateDrafts:${context}`) ?? "{}");
             if (saved && typeof saved === "object") for (const [key,text] of Object.entries(saved).slice(0,32)) {
                 if (typeof text === "string") this.restoredDrafts[key] = limitDraft(text);
             }
-            localStorage.removeItem(`govts.updateDrafts:${context}`);
+            localStorage.removeItem(`sonoryx.updateDrafts:${context}`);
         } catch { /* A corrupt backup does not block chat startup. */ }
         this.timer = window.setInterval(() => void this.reconcile(), 1000);
     }
@@ -65,7 +65,7 @@ export class ChatStore {
         if ([...this.conversations.values()].some((c) => c.pending.length > 0)) throw new Error("В чате есть неподтверждённые сообщения. Отправьте или удалите их перед обновлением.");
         const drafts: Record<string,string> = {...this.restoredDrafts};
         for (const [key,c] of this.conversations) { if (c.draft) drafts[key]=c.draft; else delete drafts[key]; }
-        localStorage.setItem(`govts.updateDrafts:${this.context}`, JSON.stringify(drafts));
+        localStorage.setItem(`sonoryx.updateDrafts:${this.context}`, JSON.stringify(drafts));
     }
     setConnected(connected: boolean) {
         if (connected === this.connected) return;

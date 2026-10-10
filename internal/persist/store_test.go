@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestMigrateVersionOneAndPreserveAccount(t *testing.T) {

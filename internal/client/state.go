@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 type State struct {

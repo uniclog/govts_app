@@ -6,9 +6,9 @@ import (
 	"net"
 	"testing"
 	"time"
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 func TestChatRequestsAreCancelledAndDrainedWithSession(t *testing.T) {

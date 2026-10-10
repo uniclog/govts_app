@@ -7,10 +7,10 @@ import (
 	"net"
 	"time"
 
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/persist"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/persist"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 func (a *Authenticator) HandleModeration(conn *udp.ServerPacketConn, hub *Hub, cache *RequestCache, packet protocol.VoicePacket, addr *net.UDPAddr) error {

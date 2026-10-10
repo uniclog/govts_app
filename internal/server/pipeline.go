@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 const (

@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/klauspost/compress/zstd"
-	"uniclog.io/govts/internal/appversion"
-	"uniclog.io/govts/internal/updatemanifest"
+	"uniclog.io/sonoryx/internal/appversion"
+	"uniclog.io/sonoryx/internal/updatemanifest"
 )
 
 func main() {

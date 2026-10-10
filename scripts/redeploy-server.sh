@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP_DIR="${APP_DIR:-/opt/govts}"
-LIVE_BIN="$APP_DIR/govts-server"
-NEW_BIN="${1:-$APP_DIR/govts-server.upload}"
-BACKUP_BIN="$APP_DIR/govts-server.previous"
+APP_DIR="${APP_DIR:-/opt/sonoryx}"
+LIVE_BIN="$APP_DIR/sonoryx-server"
+NEW_BIN="${1:-$APP_DIR/sonoryx-server.upload}"
+BACKUP_BIN="$APP_DIR/sonoryx-server.previous"
 CONFIG="${CONFIG:-$APP_DIR/server.json}"
 LOG_FILE="${LOG_FILE:-$APP_DIR/server.log}"
 PID_FILE="${PID_FILE:-$APP_DIR/server.pid}"
@@ -15,7 +15,7 @@ MEDIA_MAX_PORT="${MEDIA_MAX_PORT:-20100}"
 PUBLIC_IP="${PUBLIC_IP:-193.187.92.89}"
 STOP_TIMEOUT="${STOP_TIMEOUT:-15}"
 START_TIMEOUT="${START_TIMEOUT:-10}"
-TMUX_SESSION="${TMUX_SESSION:-govts-server}"
+TMUX_SESSION="${TMUX_SESSION:-sonoryx-server}"
 TMUX_PANE="=$TMUX_SESSION:0.0"
 VOICE_REDUNDANCY="${VOICE_REDUNDANCY:-0}"
 PUBLIC_STATUS="${PUBLIC_STATUS:-0}"
@@ -41,7 +41,7 @@ valid_server_pid() {
   kill -0 "$pid" 2>/dev/null || return 1
   exe="$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)"
   cwd="$(readlink -f "/proc/$pid/cwd" 2>/dev/null || true)"
-  [[ "$exe" == "$APP_DIR"/govts-server* && "$cwd" == "$APP_DIR" ]]
+  [[ "$exe" == "$APP_DIR"/sonoryx-server* && "$cwd" == "$APP_DIR" ]]
 }
 
 current_pid() {
@@ -64,7 +64,7 @@ current_pid() {
     rm -f "$PID_FILE"
   fi
 
-  # Compatibility with the old manually started govts-server-N process.
+  # Compatibility with the old manually started sonoryx-server-N process.
   candidates="$(listener_pid)"
   [[ "$(wc -w <<<"$candidates")" -le 1 ]] \
     || fail "multiple processes listen on UDP :$VOICE_PORT: $candidates"
@@ -211,7 +211,7 @@ if [[ -n "$old_pid" ]]; then
 fi
 
 # Keep the staged file and live file on the same filesystem for an atomic mv.
-install -m 0755 "$NEW_BIN" "$APP_DIR/govts-server.next"
+install -m 0755 "$NEW_BIN" "$APP_DIR/sonoryx-server.next"
 rm -f "$NEW_BIN"
 stop_server "$old_pid"
 
@@ -219,10 +219,10 @@ rm -f "$BACKUP_BIN"
 if [[ -f "$LIVE_BIN" ]]; then
   mv "$LIVE_BIN" "$BACKUP_BIN"
 elif [[ -n "$old_exe" && -f "$old_exe" ]]; then
-  # First managed deploy: retain the legacy govts-server-N binary.
+  # First managed deploy: retain the legacy sonoryx-server-N binary.
   install -m 0755 "$old_exe" "$BACKUP_BIN"
 fi
-mv "$APP_DIR/govts-server.next" "$LIVE_BIN"
+mv "$APP_DIR/sonoryx-server.next" "$LIVE_BIN"
 
 if start_server; then
   exit 0

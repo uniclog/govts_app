@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/mediasignal"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/mediasignal"
 )
 
 const maxMediaResponse = 256 * 1024
@@ -124,7 +124,7 @@ func (a *App) mediaRequest(ctx context.Context, path string, requestBody any, pi
 		return err
 	}
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-Govts-Session", strconv.FormatUint(a.state.SessionID(), 10))
+	request.Header.Set("X-Sonoryx-Session", strconv.FormatUint(a.state.SessionID(), 10))
 	request.Header.Set("Authorization", "Bearer "+base64.RawURLEncoding.EncodeToString(credential[:]))
 	response, err := (&http.Client{Transport: transport, Timeout: 20 * time.Second}).Do(request)
 	if err != nil {

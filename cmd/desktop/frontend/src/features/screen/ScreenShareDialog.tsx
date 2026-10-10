@@ -17,7 +17,7 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
     const [error, setError] = useState("");
     const [profileID, setProfileID] = useState<ScreenProfileID>(() => {
         try {
-            const saved = localStorage.getItem("govts.screenProfile");
+            const saved = localStorage.getItem("sonoryx.screenProfile");
             return screenProfiles.find((item) => item.id === saved)?.id ?? defaultScreenProfile.id;
         } catch { return defaultScreenProfile.id; }
     });
@@ -46,7 +46,7 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
     };
     const selectProfile = (id: ScreenProfileID) => {
         setProfileID(id);
-        try { localStorage.setItem("govts.screenProfile", id); } catch { /* Keep the choice for this session. */ }
+        try { localStorage.setItem("sonoryx.screenProfile", id); } catch { /* Keep the choice for this session. */ }
     };
     const start = async () => {
         if (busy.current || !available) return;

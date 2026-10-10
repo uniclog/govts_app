@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Протокол Govts</title>
+<title>Протокол Sonoryx</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -59,8 +59,8 @@ footer{text-align:center;color:var(--muted);font-size:.82rem;padding:0 16px 40px
 </head>
 <body>
 <header class="hero"><div class="hero-in">
-<div class="eyebrow">Govts · технический справочник</div>
-<h1>Протокол <span>Govts</span></h1>
+<div class="eyebrow">Sonoryx · технический справочник</div>
+<h1>Протокол <span>Sonoryx</span></h1>
 <p>Как устроены голос, control и чат поверх защищённого UDP и демонстрация экрана поверх WebRTC. Описание по коду ветки <code>develop</code> (клиент 0.3.44, сервер 0.2.16). Источники: <code>internal/protocol</code>, <code>internal/auth</code>, <code>internal/voice</code>, <code>internal/client</code>, <code>internal/media</code>, <code>protocol-encryption.md</code>.</p>
 <div class="kpis">
 <div class="kpi"><b>17 B</b><span>заголовок пакета</span></div>
@@ -138,13 +138,13 @@ footer{text-align:center;color:var(--muted);font-size:.82rem;padding:0 16px 40px
 <rect x="72" y="255" width="496" height="26" rx="4" fill="var(--srv)" opacity=".18"/><text x="210" y="273">далее только AES-256-GCM записи</text>
 </svg>
 <h3>Transcript T</h3>
-<pre>T = H("govts-auth-v1" ‖ RequestID ‖ version ‖ AuthInit целиком ‖
+<pre>T = H("sonoryx-auth-v1" ‖ RequestID ‖ version ‖ AuthInit целиком ‖
       serverEd25519Pub ‖ serverX25519Eph ‖ nonceS)</pre>
 <p>Обе подписи (сервера и клиента) — Ed25519 над T. Изменение любого поля — в том числе версии и RequestID — ломает проверку. Сервер требует версию клиента не ниже <code>0.2.5</code>.</p>
 <h3>Вывод ключей</h3>
 <pre>shared = X25519(eph_priv_own, eph_pub_peer)
 c2s ‖ s2c ‖ ack = HKDF-SHA256(ikm = shared, salt = T,
-                              info = "govts-udp-v1 traffic and ack"), 3 × 32 B</pre>
+                              info = "sonoryx-udp-v1 traffic and ack"), 3 × 32 B</pre>
 <ul>
 <li>Ключи направлений разные → свои счётчики, пара key+nonce не повторяется.</li>
 <li>Эфемерные X25519 новые на каждое подключение → forward secrecy для завершённых сессий.</li>
@@ -158,7 +158,7 @@ c2s ‖ s2c ‖ ack = HKDF-SHA256(ikm = shared, salt = T,
 <li>Следствие: если NAT поменяет порт во время ретрая, handshake начнётся заново.</li>
 </ul>
 <h3>TOFU</h3>
-<p>Клиент хранит <code>%APPDATA%\Govts\voice-pins.json</code>: <code>host:port → serverEd25519Pub</code>. Первый контакт закрепляет ключ, смена ключа — отказ подключения. Идентичность клиента — seed в <code>client.seed</code> (Base64, не зашифрован); учётная запись на сервере = публичный ключ, имя — только отображение.</p>
+<p>Клиент хранит <code>%APPDATA%\Sonoryx\voice-pins.json</code>: <code>host:port → serverEd25519Pub</code>. Первый контакт закрепляет ключ, смена ключа — отказ подключения. Идентичность клиента — seed в <code>client.seed</code> (Base64, не зашифрован); учётная запись на сервере = публичный ключ, имя — только отображение.</p>
 
 </section>
 <section id="rec"><h2><span class="n">05</span>Защищённая запись на проводе</h2>
@@ -396,12 +396,12 @@ repeat frame_count:
 <section id="media"><h2><span class="n">12</span>Демонстрация экрана</h2>
 <pre>Клиент ── MediaCredentialRequest (UDP, защищённо) ──► Hub выдаёт 32 B credential
 Клиент ── HTTPS POST /media/publish|subscribe|stop|unsubscribe ──► media.HTTPHandler
-          Headers: X-Govts-Session: &lt;id&gt;, Authorization: Bearer base64url(credential)
+          Headers: X-Sonoryx-Session: &lt;id&gt;, Authorization: Bearer base64url(credential)
           Body: JSON (mediasignal), ≤ 256 KiB, неизвестные поля запрещены
 media.Manager (Pion SFU) ── SDP answer ──► клиент
 WebRTC DTLS-SRTP, VP8 (+ опциональное аудио), UDP 20000–20100</pre>
 <ul>
-<li>TLS-сертификат самоподписанный (<code>govts-media.crt/.key</code>); клиент сверяет SHA-256 отпечаток — отдельный TOFU, хранится в <code>clientsettings</code>.</li>
+<li>TLS-сертификат самоподписанный (<code>sonoryx-media.crt/.key</code>); клиент сверяет SHA-256 отпечаток — отдельный TOFU, хранится в <code>clientsettings</code>.</li>
 <li>Доступ к потоку проверяется по состоянию Hub (тот же канал, права); раз в секунду идёт сверка подписок.</li>
 <li>Публичный адрес ICE задаётся <code>-media-advertised-ip</code>; TURN/TCP fallback нет.</li>
 </ul>
@@ -443,7 +443,7 @@ WebRTC DTLS-SRTP, VP8 (+ опциональное аудио), UDP 20000–20100
 </section>
 </main>
 </div>
-<footer>Govts · справочник протокола · readme_docs/review</footer>
+<footer>Sonoryx · справочник протокола · readme_docs/review</footer>
 <script>(function(){const l=[...document.querySelectorAll("#toc a")];const o=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){l.forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+x.target.id))}})},{rootMargin:"-30% 0px -60% 0px"});document.querySelectorAll("main section").forEach(s=>o.observe(s))})();</script>
 </body>
 </html>

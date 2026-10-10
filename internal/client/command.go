@@ -8,7 +8,7 @@ import (
 	"log"
 	"strings"
 
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 type Command struct {

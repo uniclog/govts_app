@@ -13,29 +13,29 @@ import (
 	"syscall"
 	"time"
 
-	"uniclog.io/govts/internal/appversion"
-	"uniclog.io/govts/internal/identity"
-	"uniclog.io/govts/internal/logging"
-	"uniclog.io/govts/internal/media"
-	"uniclog.io/govts/internal/persist"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/server"
-	"uniclog.io/govts/internal/transport/udp"
-	"uniclog.io/govts/internal/voice"
+	"uniclog.io/sonoryx/internal/appversion"
+	"uniclog.io/sonoryx/internal/identity"
+	"uniclog.io/sonoryx/internal/logging"
+	"uniclog.io/sonoryx/internal/media"
+	"uniclog.io/sonoryx/internal/persist"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/server"
+	"uniclog.io/sonoryx/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/voice"
 )
 
 func main() {
 	showVersion := flag.Bool("version", false, "print server version and exit")
 	configPath := flag.String("config", "", "path to server JSON config")
-	databasePath := flag.String("db", "govts.db", "path to persistent SQLite database")
+	databasePath := flag.String("db", "sonoryx.db", "path to persistent SQLite database")
 	logPath := flag.String("log-file", "logs/server.log", "base path for per-run server log files")
 	port := flag.Int("port", 9000, "UDP listen port (1..65535)")
 	mediaPort := flag.Int("media-port", -1, "HTTPS media signaling port; -1 uses voice port + 2, 0 disables screen sharing")
 	mediaMinPort := flag.Int("media-min-port", 20000, "first UDP port used by WebRTC")
 	mediaMaxPort := flag.Int("media-max-port", 20100, "last UDP port used by WebRTC")
 	mediaAdvertisedIP := flag.String("media-advertised-ip", "", "public IP advertised by WebRTC; empty uses local interfaces")
-	mediaIdentity := flag.String("media-identity", "govts-media", "path prefix for generated media TLS certificate and key")
-	voiceIdentity := flag.String("voice-identity", "govts-voice.seed", "path to persistent server signing seed")
+	mediaIdentity := flag.String("media-identity", "sonoryx-media", "path prefix for generated media TLS certificate and key")
+	voiceIdentity := flag.String("voice-identity", "sonoryx-voice.seed", "path to persistent server signing seed")
 	voiceRedundancy := flag.Bool("voice-redundancy", false, "repeat the previous voice frame in each server → client datagram for clients that support it")
 	publicStatus := flag.Bool("public-status", false, "allow unauthenticated UDP queries of the connected session count")
 	flag.Parse()

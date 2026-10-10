@@ -15,14 +15,14 @@ import (
 	"sync"
 	"time"
 
-	"uniclog.io/govts/internal/appversion"
-	"uniclog.io/govts/internal/audio"
-	"uniclog.io/govts/internal/audio/voicegate"
-	voiceclient "uniclog.io/govts/internal/client"
-	"uniclog.io/govts/internal/domain"
-	"uniclog.io/govts/internal/identity"
-	"uniclog.io/govts/internal/protocol"
-	"uniclog.io/govts/internal/transport/udp"
+	"uniclog.io/sonoryx/internal/appversion"
+	"uniclog.io/sonoryx/internal/audio"
+	"uniclog.io/sonoryx/internal/audio/voicegate"
+	voiceclient "uniclog.io/sonoryx/internal/client"
+	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/identity"
+	"uniclog.io/sonoryx/internal/protocol"
+	"uniclog.io/sonoryx/internal/transport/udp"
 )
 
 const (
@@ -209,7 +209,7 @@ func (a *App) runConnection(ctx context.Context, endpoint netip.AddrPort, name, 
 		}
 		seedPath := a.identityPath
 		if seedPath == "" {
-			seedPath = filepath.Join(configDir, "Govts", "client.seed")
+			seedPath = filepath.Join(configDir, "Sonoryx", "client.seed")
 		}
 		private, err = identity.LoadOrCreate(seedPath)
 		if err != nil {
@@ -219,7 +219,7 @@ func (a *App) runConnection(ctx context.Context, endpoint netip.AddrPort, name, 
 		a.chatClientIdentity = fmt.Sprintf("%x", private.Public())
 		a.mu.Unlock()
 		if a.pinsPath == "" {
-			a.pinsPath = filepath.Join(configDir, "Govts", "voice-pins.json")
+			a.pinsPath = filepath.Join(configDir, "Sonoryx", "voice-pins.json")
 		}
 	}
 	open := func() (*udp.ClientPacketConn, *protocol.SecureDatagramCodec, error) {

@@ -4,7 +4,7 @@ import App from "./App";
 import "./styles.css";
 import "./workspace.css";
 
-const initialTheme = localStorage.getItem("govts-theme") || "system";
+const initialTheme = localStorage.getItem("sonoryx-theme") || "system";
 document.documentElement.dataset.theme = initialTheme;
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"uniclog.io/govts/internal/domain"
+	"uniclog.io/sonoryx/internal/domain"
 )
 
 func TestJoinChannelPayloadRoundTrip(t *testing.T) {
