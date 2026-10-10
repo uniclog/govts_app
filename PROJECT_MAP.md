@@ -33,7 +33,9 @@
   Версия клиента также хранится в `version/release.json`.
 - `cmd/update-sign/` подписывает desktop EXE и манифест релиза, а с `-packed`
   сжимает EXE в zstd (`SRX64.exe.zst`) и добавляет его размер и SHA-256 в
-  манифест. Закрытый seed
+  манифест `SRX64.exe.signature`. С `-legacy-out` дополнительно пишет манифест
+  `signature` для имени `GTS64.exe` — по нему обновляются клиенты, выпущенные
+  до переименования в Sonoryx. Закрытый seed
   получает из `UPDATE_SIGNING_KEY`; ключ не хранится в Git. Открытый ключ
   `cmd/desktop/update-public-key.txt` встроен через `update_key.go`.
 - `cmd/release-version/` проверяет соответствие тега версии клиента и
@@ -172,8 +174,10 @@ WebRTC требуется корректный `-media-advertised-ip`.
   media-ключи. Адрес сервера UI хранит в browser localStorage. Отдельный
   `Sonoryx/client.seed` хранит приватный seed пользователя, а
   `Sonoryx/voice-pins.json` — доверенные голосовые серверы (TOFU).
+  `legacy.go` при запуске копирует эти три файла из старого профиля `Govts/`,
+  если в `Sonoryx/` их ещё нет; старый каталог не меняется.
 - `internal/clientupdate/service.go` связывает UI с Wails updater, планирует
-  проверки и сохраняет автоскачивание в `Sonoryx/updates.json`. `provider.go`
+  проверки. `provider.go`
   выбирает стабильный Windows amd64 asset и обязательно проверяет подписанный
   манифест; если в манифесте и релизе есть сжатый `SRX64.exe.zst`, качает его
   и распаковывает на лету, иначе — обычный `SRX64.exe`.
@@ -185,6 +189,9 @@ WebRTC требуется корректный `-media-advertised-ip`.
   записывается после SingleInstance. Профиль при откате EXE не откатывается.
 - `Sonoryx/pending-update.json` и `Sonoryx/update-recovery/` — план и копии
   восстановления; `Sonoryx/update-recovery-result.txt` — результат отката.
+  При запуске клиент подтверждает и план в `Govts/pending-update.json`: его
+  оставляет watcher клиента, выпущенного до переименования, и без подтверждения
+  он откатил бы обновление.
   Черновики чата перед обновлением сохраняются в frontend `localStorage`.
 
 ## Проверки, версии и релизы
@@ -197,7 +204,8 @@ WebRTC требуется корректный `-media-advertised-ip`.
   `.github/workflows/release.yml` срабатывает на тег `vX.Y.Z`, сверяет
   его с `clientVersion` в `version/release.json`, собирает Windows desktop и Linux
   server, подписывает desktop через secret `UPDATE_SIGNING_KEY`, загружает
-  бинарники, `SRX64.exe.zst`, `signature` и `SHA256SUMS` в draft и затем публикует релиз.
+  бинарники, `SRX64.exe.zst`, `SRX64.exe.signature`, копию `GTS64.exe` с
+  `signature` для старых клиентов и `SHA256SUMS` в draft и затем публикует релиз.
   Уже опубликованный релиз под тем же тегом не заменяется.
 - `internal/appversion/` разбирает и сравнивает версии, проверяет параметры
   релиза из встроенного `version/release.json`. Минимальная версия сервера
