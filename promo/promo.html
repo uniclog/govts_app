@@ -213,10 +213,12 @@ c2s ‖ s2c ‖ ack = HKDF-SHA256(ikm = shared, salt = T,
 </section>
 <section id="voice"><h2><span class="n">07</span>Голосовой тракт</h2>
 <h3>Отправка (клиент)</h3>
-<pre>malgo capture (PCM) → RNNoise (опц.) → VAD/voice gate (опц.: level | vad | hybrid,
+<pre>malgo capture (PCM) → усиление 0..2 (насыщение int16) → RNNoise (опц.) → VAD/voice gate (опц.: level | vad | hybrid,
 pre-roll 60 мс, hangover 300 мс) → Opus encode, кадр 20 мс
 → VoicePacket{Type=Voice, SessionID=own, Sequence=n++} → AES-GCM(c2s) → UDP</pre>
 <p>Без микрофона клиент остаётся в канале в состоянии mute и продолжает принимать звук.</p>
+<p>Усиление микрофона (<code>AudioControlState.MicrophoneGain</code>, <code>applyGain</code> в <code>internal/client/capture.go</code>) применяется в <code>RecordLoop</code> до индикатора, RNNoise и VAD; значение хранится в настройках клиента (<code>microphoneGain</code>, по умолчанию 1).</p>
+<p>До подключения раздел настроек «Микрофон» запускает тот же тракт без Opus и отправки (<code>internal/clientapp/preview.go</code>): индикатор показывает, что прошло бы порог, а кнопка прослушивания проигрывает пропущенные гейтом кадры на устройство вывода. При подключении предпросмотр останавливается.</p>
 <h3>Сервер</h3>
 <ol>
 <li>Проверка: сессия существует, адрес совпадает (иначе пакет молча отброшен).</li>

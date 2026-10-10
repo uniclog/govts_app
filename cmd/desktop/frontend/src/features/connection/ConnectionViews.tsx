@@ -25,11 +25,9 @@ function errorText(error: unknown): string {
     return (error instanceof Error ? error.message : String(error)).replace(/^Error:\s*/, "");
 }
 
-export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, onConnected, updateAction, currentVersion, refreshingServers, onRefreshServers}: {
+export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, onConnected, refreshingServers, onRefreshServers}: {
     refreshingServers: boolean;
     onRefreshServers: () => void;
-    updateAction?: ReactNode;
-    currentVersion?: string;
     view: ClientViewDTO;
     error: string;
     onError: (value: string) => void;
@@ -71,7 +69,7 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
         }
     };
     const selectServer = (address: string) => { setServer(address); rememberServerAddress(address); };
-    return <main className="connection-page"><div className={`connection-layout ${serverCount === 0 ? "connection-layout-empty" : ""}`}>
+    return <div className="connection-page"><div className={`connection-layout ${serverCount === 0 ? "connection-layout-empty" : ""}`}>
         <section className="connection-card connection-server-card" hidden={serverCount === 0}>
             <RecentServers view={view} expanded={true} onToggle={() => {}} standalone disabled={pending}
                 refreshingServers={refreshingServers} onRefreshServers={onRefreshServers}
@@ -79,7 +77,7 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
         </section>
         <section className="connection-card">
         <div className="connection-logo">GTS</div>
-        <div className="connection-app-heading"><p className="eyebrow">Govts{currentVersion && <> <span className="server-version">{currentVersion}</span></>}</p>{updateAction}</div><h1>Подключение к серверу</h1>
+        <h1>Подключение к серверу</h1>
         <p className="lead">Введите адрес голосового сервера и имя, под которым вас увидят другие участники.</p>
         <form onSubmit={(event) => { event.preventDefault(); void connect(server); }}>
             <label><span>Адрес сервера</span><input autoFocus value={server} onChange={(event) => {
@@ -91,7 +89,22 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
             <button className="primary-button" disabled={pending || !server.trim() || !name.trim()}
                 type="submit">{pending ? "Подключаемся…" : "Подключиться"}</button>
         </form><p></p>
-    </section></div></main>;
+    </section></div></div>;
+}
+
+// LobbyBar is the header shown before joining a server: client version,
+// update notice and settings, without any session controls.
+export function LobbyBar({version, updateAction, onPageChange}: {
+    version?: string;
+    updateAction?: ReactNode;
+    onPageChange: (page: Page) => void;
+}) {
+    return <header className="status-bar">
+        <div className="app-brand"><span className="brand-mark"><Icon name="server"/></span><strong>Govts</strong>{version && <span className="server-version" aria-label={`Версия клиента: ${version}`}>{version}</span>}{updateAction}</div>
+        <button id="open-settings" className="status-pill settings-pill" type="button" onClick={() => onPageChange("settings")}>
+            <Icon name="settings"/><span>Настройки</span>
+        </button>
+    </header>;
 }
 
 export function StatusBar({view, onPageChange, sharing, screenMedia, updateAction, invoke}: {

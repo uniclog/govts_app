@@ -79,6 +79,12 @@ type App struct {
 	captureDeviceID     string
 	playbackDeviceID    string
 
+	// previewMu is taken before mu; see preview.go.
+	previewMu      sync.Mutex
+	previewWanted  bool
+	previewMonitor bool
+	preview        *micPreview
+
 	mu                 sync.Mutex
 	closed             bool
 	active             bool
@@ -139,17 +145,27 @@ func (a *App) Connect(options ConnectOptions) error {
 		return err
 	}
 
+	// The session owns the microphone pipeline and its meter; release the
+	// preview first and resume it if the connection does not start.
+	a.previewMu.Lock()
+	defer a.previewMu.Unlock()
+	a.stopPreviewLocked()
+	a.previewMonitor = false
 	a.mu.Lock()
-	defer a.mu.Unlock()
 	if a.closed {
+		a.mu.Unlock()
 		return ErrClosed
 	}
 	if a.active {
+		a.mu.Unlock()
 		return ErrAlreadyConnected
 	}
 	if err := a.state.PrepareConnection(); err != nil {
+		a.mu.Unlock()
+		a.syncPreviewLocked()
 		return err
 	}
+	defer a.mu.Unlock()
 	runCtx, cancel := context.WithCancel(a.lifetimeCtx)
 	done := make(chan struct{})
 	a.active = true
@@ -180,6 +196,7 @@ func (a *App) run(ctx context.Context, done chan struct{}, endpoint netip.AddrPo
 	} else {
 		a.events.append("connection", "Отключено", 0)
 	}
+	a.syncPreview()
 	close(done)
 }
 
@@ -420,6 +437,7 @@ func (a *App) setAudioDevice(id string, capture bool) error {
 	a.mu.Unlock()
 	if changed {
 		a.events.append("audio", "Аудиоустройство изменено", 0)
+		a.restartPreview(capture)
 	}
 	return nil
 }
@@ -593,6 +611,10 @@ func (a *App) SetRNNoiseEnabled(value bool) { a.state.Audio.SetRNNoiseEnabled(va
 
 func (a *App) SetRNNoiseSensitivity(value float32) error {
 	return a.state.Audio.SetRNNoiseSensitivity(value)
+}
+
+func (a *App) SetMicrophoneGain(value float32) error {
+	return a.state.Audio.SetMicrophoneGain(value)
 }
 
 func (a *App) SetVADEnabled(value bool) { a.state.Audio.SetVADEnabled(value) }

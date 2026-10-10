@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"time"
 
 	"uniclog.io/govts/internal/audio"
@@ -268,6 +269,7 @@ func RecordLoop(
 			Duration:     frameDuration,
 		}
 		if len(controls) > 0 {
+			applyGain(frame.Samples, controls[0].MicrophoneGain())
 			muted, _, current := controls[0].Snapshot()
 			if muted || current != epoch {
 				controls[0].SetAudioMeter(normalizedMeterLevel(vad.LevelDBFS(frame.Samples)), 0, 0)
@@ -279,5 +281,21 @@ func RecordLoop(
 		case <-ctx.Done():
 			return ctx.Err()
 		}
+	}
+}
+
+// applyGain scales PCM in place and saturates instead of wrapping on overflow.
+func applyGain(samples []int16, gain float32) {
+	if gain == 1 {
+		return
+	}
+	for i, sample := range samples {
+		v := float32(sample) * gain
+		if v > math.MaxInt16 {
+			v = math.MaxInt16
+		} else if v < math.MinInt16 {
+			v = math.MinInt16
+		}
+		samples[i] = int16(v)
 	}
 }

@@ -18,6 +18,7 @@ type Settings struct {
 	Deafened           bool              `json:"deafened"`
 	RNNoiseEnabled     bool              `json:"rnnoiseEnabled"`
 	RNNoiseSensitivity float32           `json:"rnnoiseSensitivity"`
+	MicrophoneGain     float32           `json:"microphoneGain"`
 	VADEnabled         bool              `json:"vadEnabled"`
 	VADMode            string            `json:"vadMode"`
 	VADSensitivity     float32           `json:"vadSensitivity"`
@@ -80,6 +81,9 @@ func (store *Store) Load() (Settings, error) {
 	if err := json.Unmarshal(data, &fields); err == nil {
 		if _, exists := fields["rnnoiseSensitivity"]; !exists {
 			persisted.RNNoiseSensitivity = 1
+		}
+		if _, exists := fields["microphoneGain"]; !exists {
+			persisted.MicrophoneGain = 1
 		}
 	}
 	persisted.Theme = NormalizeTheme(persisted.Theme)
