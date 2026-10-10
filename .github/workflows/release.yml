@@ -73,9 +73,11 @@ jobs:
         env:
           UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: |
-          go run ./cmd/update-sign -binary dist/SRX64.exe -public-key cmd/desktop/update-public-key.txt -out dist/signature -packed dist/SRX64.exe.zst
+          go run ./cmd/update-sign -binary dist/SRX64.exe -public-key cmd/desktop/update-public-key.txt -out dist/SRX64.exe.signature -packed dist/SRX64.exe.zst -legacy-out dist/signature
           if ($LASTEXITCODE -ne 0) { throw 'update signing failed' }
-          $sums = foreach ($name in 'SRX64.exe', 'SRX64.exe.zst') {
+          # Clients released before the Sonoryx rename update from GTS64.exe + signature.
+          Copy-Item dist/SRX64.exe dist/GTS64.exe
+          $sums = foreach ($name in 'SRX64.exe', 'SRX64.exe.zst', 'GTS64.exe') {
             $hash = (Get-FileHash -Algorithm SHA256 "dist/$name").Hash.ToLowerInvariant()
             "$hash  $name"
           }
@@ -93,7 +95,7 @@ jobs:
             gh release create $tag --title $tag --draft --generate-notes --verify-tag
             if ($LASTEXITCODE -ne 0) { throw 'release creation failed' }
           }
-          gh release upload $tag dist/SRX64.exe dist/SRX64.exe.zst dist/sonoryx-server-linux-amd64 dist/signature dist/SHA256SUMS --clobber
+          gh release upload $tag dist/SRX64.exe dist/SRX64.exe.zst dist/SRX64.exe.signature dist/GTS64.exe dist/signature dist/sonoryx-server-linux-amd64 dist/SHA256SUMS --clobber
           if ($LASTEXITCODE -ne 0) { throw 'release asset upload failed' }
           gh release edit $tag --title $tag --draft=false
           if ($LASTEXITCODE -ne 0) { throw 'release publication failed' }

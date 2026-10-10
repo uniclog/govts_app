@@ -10,8 +10,14 @@ import (
 )
 
 const Filename = "SRX64.exe"
-const AssetName = "signature"
+const AssetName = "SRX64.exe.signature"
 const MaxSize int64 = 512 << 20
+
+// LegacyFilename and LegacyAssetName are the assets that clients released
+// before the Sonoryx rename look for. Releases keep publishing the same
+// executable under these names so those clients still update in place.
+const LegacyFilename = "GTS64.exe"
+const LegacyAssetName = "signature"
 
 // PackedFilename is the zstd-compressed copy of Filename. The plain
 // executable stays in the release for clients that predate compression.
@@ -43,12 +49,13 @@ type Envelope struct {
 	Signature []byte `json:"signature"`
 }
 
-// Sign signs binary and, when packed is not nil, its compressed copy.
-func Sign(version string, binary, packed []byte, key ed25519.PrivateKey) ([]byte, error) {
+// Sign signs binary published as filename and, when packed is not nil, its
+// compressed copy.
+func Sign(version, filename string, binary, packed []byte, key ed25519.PrivateKey) ([]byte, error) {
 	digest := sha256.Sum256(binary)
 	m := Manifest{
 		Version:          version,
-		Filename:         Filename,
+		Filename:         filename,
 		Size:             int64(len(binary)),
 		Digest:           digest[:],
 		Signature:        ed25519.Sign(key, digest[:]),
@@ -66,6 +73,11 @@ func Sign(version string, binary, packed []byte, key ed25519.PrivateKey) ([]byte
 }
 
 func Verify(data []byte, key ed25519.PublicKey) (Manifest, error) {
+	return VerifyAs(data, key, Filename)
+}
+
+// VerifyAs checks a manifest signed for the executable published as filename.
+func VerifyAs(data []byte, key ed25519.PublicKey, filename string) (Manifest, error) {
 	var e Envelope
 	if err := json.Unmarshal(data, &e); err != nil {
 		return Manifest{}, err
@@ -77,7 +89,7 @@ func Verify(data []byte, key ed25519.PublicKey) (Manifest, error) {
 	if err := json.Unmarshal(e.Payload, &m); err != nil {
 		return m, err
 	}
-	if m.Filename != Filename || m.Size <= 0 || m.Size > MaxSize || len(m.Digest) != sha256.Size || !ed25519.Verify(key, m.Digest, m.Signature) {
+	if m.Filename != filename || m.Size <= 0 || m.Size > MaxSize || len(m.Digest) != sha256.Size || !ed25519.Verify(key, m.Digest, m.Signature) {
 		return m, errors.New("неверные параметры подписанного обновления")
 	}
 	if m.Packed != nil && (m.Packed.Size <= 0 || m.Packed.Size > MaxSize || len(m.Packed.Digest) != sha256.Size) {
