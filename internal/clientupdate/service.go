@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ed25519"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -29,7 +28,6 @@ type Snapshot struct {
 	Error              string `json:"error"`
 	Written            int64  `json:"written"`
 	Total              int64  `json:"total"`
-	AutoDownload       bool   `json:"autoDownload"`
 	ReleaseURL         string `json:"releaseURL"`
 }
 
@@ -37,7 +35,7 @@ type Service struct {
 	mu       sync.Mutex
 	view     Snapshot
 	u        *updater.Updater
-	prefs    string
+	profile  string
 	busy     func() bool
 	cancel   context.CancelFunc
 	root     context.Context
@@ -47,7 +45,7 @@ type Service struct {
 }
 
 func New(profile string, busy func() bool) *Service {
-	return &Service{prefs: filepath.Join(profile, "updates.json"), busy: busy, view: Snapshot{Status: "idle"}}
+	return &Service{profile: profile, busy: busy, view: Snapshot{Status: "idle"}}
 }
 
 func Initialize(s *Service, app *application.App, version, publicKey string) error {
@@ -65,17 +63,8 @@ func Initialize(s *Service, app *application.App, version, publicKey string) err
 	s.root, s.stop = context.WithCancel(context.Background())
 	s.view.Current = version
 	s.view.MinServer = appversion.MinimumServerVersion
-	if result, err := os.ReadFile(filepath.Join(filepath.Dir(s.prefs), "update-recovery-result.txt")); err == nil {
+	if result, err := os.ReadFile(filepath.Join(s.profile, "update-recovery-result.txt")); err == nil {
 		s.view.Error = string(result)
-	}
-	data, err := os.ReadFile(s.prefs)
-	if err == nil {
-		var prefs struct {
-			AutoDownload bool `json:"autoDownload"`
-		}
-		if json.Unmarshal(data, &prefs) == nil {
-			s.view.AutoDownload = prefs.AutoDownload
-		}
 	}
 	if err := s.u.Init(updater.Config{CurrentVersion: version, Providers: []updater.Provider{&provider{key: key, client: client, busy: s.busy}}, PublicKey: key, Window: updater.WindowNone}); err != nil {
 		return err
@@ -91,32 +80,31 @@ func Initialize(s *Service, app *application.App, version, publicKey string) err
 	return nil
 }
 
+// The loop only discovers releases; downloading is always user-initiated.
+// GitHub allows 60 unauthenticated API requests per hour per IP, so the
+// interval leaves room for several clients behind one NAT.
+const (
+	firstCheckDelay = 2 * time.Second
+	checkInterval   = 5 * time.Minute
+)
+
 func (s *Service) loop() {
-	timer := time.NewTimer(10 * time.Second)
+	timer := time.NewTimer(firstCheckDelay)
 	defer timer.Stop()
-	nextCheck := time.Now().Add(10 * time.Second)
 	for {
 		select {
 		case <-s.root.Done():
 			return
 		case <-timer.C:
 		}
-		view := s.Snapshot()
-		if !time.Now().Before(nextCheck) {
-			if view.Status != "ready" && view.Status != "downloading" && view.Status != "restarting" {
-				if err := s.Check(); err != nil {
-					log.Printf("update check: %v", err)
-				}
-			}
-			nextCheck = time.Now().Add(6 * time.Hour)
-		}
-		view = s.Snapshot()
-		if view.AutoDownload && view.Status == "available" && !s.busy() {
-			if err := s.Download(); err != nil {
-				log.Printf("update download: %v", err)
+		switch s.Snapshot().Status {
+		case "checking", "ready", "downloading", "restarting":
+		default:
+			if err := s.Check(); err != nil {
+				log.Printf("update check: %v", err)
 			}
 		}
-		timer.Reset(time.Minute)
+		timer.Reset(checkInterval)
 	}
 }
 
@@ -220,37 +208,6 @@ func (s *Service) Cancel() {
 	if s.cancel != nil {
 		s.cancel()
 	}
-}
-
-func (s *Service) SetAutoDownload(enabled bool) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	data, err := json.Marshal(struct {
-		AutoDownload bool `json:"autoDownload"`
-	}{enabled})
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(s.prefs), 0700); err != nil {
-		return err
-	}
-	f, err := os.CreateTemp(filepath.Dir(s.prefs), "updates-*.tmp")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = os.Remove(f.Name()) }()
-	if _, err = f.Write(data); err != nil {
-		_ = f.Close()
-		return err
-	}
-	if err = f.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(f.Name(), s.prefs); err != nil {
-		return err
-	}
-	s.view.AutoDownload = enabled
-	return nil
 }
 
 func (s *Service) Restart() error {

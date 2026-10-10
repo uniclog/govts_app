@@ -10,6 +10,5 @@ export interface Snapshot {
     "error": string;
     "written": number;
     "total": number;
-    "autoDownload": boolean;
     "releaseURL": string;
 }

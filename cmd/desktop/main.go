@@ -103,7 +103,7 @@ func main() {
 	app.OnShutdown(shutdown)
 
 	mainWindow = app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            fmt.Sprintf("Govts %s", applicationVersion()),
+		Title:            fmt.Sprintf("GTS %s", applicationVersion()),
 		Width:            1180,
 		Height:           760,
 		MinWidth:         900,

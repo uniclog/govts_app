@@ -20,14 +20,13 @@ export function useUpdates(prepareRestart: () => void) {
         const timer = window.setInterval(() => void refresh(), 1000);
         return () => { active = false; window.clearInterval(timer); };
     }, []);
-    const action = async (method: "Check" | "Download" | "Restart" | "Cancel" | "SetAutoDownload", enabled?: boolean) => {
+    const action = async (method: "Check" | "Download" | "Restart" | "Cancel") => {
         if (actionBusy.current && method !== "Cancel") return;
         if (method !== "Cancel") { actionBusy.current = true; setActing(true); }
         setError("");
         try {
             if (method === "Restart") prepareRestart();
-            if (method === "SetAutoDownload") await Service.SetAutoDownload(enabled ?? false);
-            else await Service[method]();
+            await Service[method]();
             setView(await Service.Snapshot());
         } catch (reason) { setError((reason instanceof Error ? reason.message : String(reason)).replace(/^Error:\s*/, "")); }
         finally { if (method !== "Cancel") { actionBusy.current = false; setActing(false); } }
@@ -71,8 +70,6 @@ export function UpdatesPanel({updates}: {updates: UpdatesState}) {
             {view?.status === "ready" && <button disabled={busy} onClick={() => void updates.action("Restart")}>Обновить и перезапустить</button>}
             {view?.releaseURL && <a href={view.releaseURL} target="_blank" rel="noreferrer">Страница релиза</a>}
         </div>
-        <label className="update-preference"><input type="checkbox" checked={view?.autoDownload ?? false} disabled={!view || busy}
-            onChange={(event) => void updates.action("SetAutoDownload", event.target.checked)}/>Скачивать обновления автоматически, когда нет подключения к серверу</label>
     </section>;
 }
 
