@@ -115,7 +115,7 @@ footer{text-align:center;color:var(--muted);font-size:.82rem;padding:0 16px 40px
 <tr><td>Модерация</td><td>Kick, Ban, Drag, ModerationAck, AccountPrivileges</td><td>Проверка прав <code>kick/ban/drag</code>; Privileges — пуш при изменении прав из консоли.</td></tr>
 <tr><td>Экран</td><td>MediaCredentialRequest / Ack</td><td>32-байтный bearer-токен для HTTPS-сигнализации.</td></tr>
 <tr><td>Чат</td><td>ChatRequest / ChatAck, ChatChanged</td><td>Отдельная очередь на сервере (§10).</td></tr>
-<tr><td>Статус</td><td>ServerStatusRequest / Ack</td><td>Без сессии и шифрования; только при <code>-public-status</code>.</td></tr>
+<tr><td>Статус</td><td>ServerStatusRequest / Ack</td><td>Без сессии и шифрования; только при <code>-public-status</code>. Клиент (<code>serverstatus/client.go</code>) шлёт один и тот же запрос на 0, 400 и 1000 мс в окне 2 с, дубликаты Ack игнорируются.</td></tr>
 <tr><td>Ошибки</td><td>Error</td><td>Текст ошибки; с SessionID=0 может идти открыто.</td></tr>
 <tr><td>Legacy</td><td>Hello / HelloAck</td><td>Анонимный вход отключён: на Hello сервер отвечает «client upgrade required».</td></tr>
 </table>

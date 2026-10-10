@@ -13,6 +13,9 @@ import (
 	"uniclog.io/govts/internal/transport/udp"
 )
 
+// resendDelays are the gaps between repeated requests within the 2s timeout.
+var resendDelays = []time.Duration{400 * time.Millisecond, 600 * time.Millisecond}
+
 func Query(ctx context.Context, endpoint netip.AddrPort) (uint32, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
@@ -40,9 +43,24 @@ func Query(ctx context.Context, endpoint netip.AddrPort) (uint32, error) {
 	if err := conn.SetReadDeadline(deadline); err != nil {
 		return 0, err
 	}
-	if err := conn.SendPacket(protocol.NewServerStatusRequest(id, nonce)); err != nil {
+	request := protocol.NewServerStatusRequest(id, nonce)
+	if err := conn.SendPacket(request); err != nil {
 		return 0, err
 	}
+	// A single lost datagram must not mark the server unavailable: repeat the
+	// identical request; duplicate acks are ignored by the receive loop.
+	resendCtx, stopResend := context.WithCancel(ctx)
+	defer stopResend()
+	go func() {
+		for _, delay := range resendDelays {
+			select {
+			case <-resendCtx.Done():
+				return
+			case <-time.After(delay):
+			}
+			_ = conn.SendPacket(request)
+		}
+	}()
 	for {
 		packet, err := conn.ReceivePacket()
 		if err != nil {
