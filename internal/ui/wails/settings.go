@@ -30,6 +30,9 @@ func (s *Service) enableSettings(path string) error {
 	}
 	s.closeToTray = settings.CloseToTray
 	s.recentServers = settings.RecentServers
+	s.hotkeyKeys = clientsettings.NormalizeHotkeys(settings.Hotkeys)
+	s.hotkeyNotifications = settings.HotkeyNotifications
+	s.hotkeysEnabled = settings.HotkeysEnabled
 	s.trustedMediaKeys = settings.TrustedMediaKeys
 	if s.trustedMediaKeys == nil {
 		s.trustedMediaKeys = make(map[string]string)
@@ -96,28 +99,34 @@ func (s *Service) saveSettings() (saveErr error) {
 	}
 	closeToTray := s.closeToTray
 	recentServers := append([]clientsettings.RecentServer(nil), s.recentServers...)
+	hotkeyKeys := cloneStringMap(s.hotkeyKeys)
+	hotkeyNotifications := s.hotkeyNotifications
+	hotkeysEnabled := s.hotkeysEnabled
 	s.settingsMu.RUnlock()
 	return s.settings.Save(clientsettings.Settings{
-		DisplayName:        displayName,
-		CaptureDeviceID:    devices.CaptureID,
-		PlaybackDeviceID:   devices.PlaybackID,
-		Deafened:           s.client.SavedDeafened(),
-		RNNoiseEnabled:     view.RNNoiseEnabled,
-		RNNoiseSensitivity: view.RNNoiseSensitivity,
-		MicrophoneGain:     view.MicrophoneGain,
-		VADEnabled:         view.VADEnabled,
-		VADMode:            view.VADMode,
-		VADSensitivity:     view.VADSensitivity,
-		TrustedMediaKeys:   trustedMediaKeys,
-		Theme:              theme,
-		Locale:             locale,
-		CloseToTray:        closeToTray,
-		SoundPack:          view.SoundPack,
-		SoundVolume:        view.SoundVolume,
-		MuteOnAway:         view.MuteOnAway,
-		DeafenOnAway:       view.DeafenOnAway,
-		SoundCues:          clientsettings.NormalizeSoundCues(view.SoundCues),
-		RecentServers:      recentServers,
+		DisplayName:         displayName,
+		CaptureDeviceID:     devices.CaptureID,
+		PlaybackDeviceID:    devices.PlaybackID,
+		Deafened:            s.client.SavedDeafened(),
+		RNNoiseEnabled:      view.RNNoiseEnabled,
+		RNNoiseSensitivity:  view.RNNoiseSensitivity,
+		MicrophoneGain:      view.MicrophoneGain,
+		VADEnabled:          view.VADEnabled,
+		VADMode:             view.VADMode,
+		VADSensitivity:      view.VADSensitivity,
+		TrustedMediaKeys:    trustedMediaKeys,
+		Theme:               theme,
+		Locale:              locale,
+		CloseToTray:         closeToTray,
+		SoundPack:           view.SoundPack,
+		SoundVolume:         view.SoundVolume,
+		MuteOnAway:          view.MuteOnAway,
+		DeafenOnAway:        view.DeafenOnAway,
+		SoundCues:           clientsettings.NormalizeSoundCues(view.SoundCues),
+		RecentServers:       recentServers,
+		Hotkeys:             hotkeyKeys,
+		HotkeyNotifications: hotkeyNotifications,
+		HotkeysEnabled:      hotkeysEnabled,
 	})
 }
 

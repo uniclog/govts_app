@@ -45,6 +45,11 @@
 .sound-cues .device-hint { margin: 0 0 4px; }
 .sound-cues .setting-toggle { min-height: 0; margin-top: 0; padding: 11px 0; }
 .sound-cues .setting-toggle p:empty { display: none; }
+.hotkey-setting { min-height: 0; padding-top: 14px; margin-top: 14px; }
+.hotkey-setting p.monitor-warning { color: var(--warning); }
+.hotkey-combo { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; color: var(--muted); font-size: 0.75rem; }
+.hotkey-combo kbd { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: var(--card); font: inherit; font-weight: 600; }
+.monitor-button.hotkey-key { justify-content: center; min-width: 40px; font-weight: 700; }
 .channels-page { grid-template-rows: minmax(0, 1fr); }
 .channels-layout { grid-template-columns: var(--channel-browser-width, 210px) 6px minmax(0, 1fr) 6px var(--channel-info-width, 245px); gap: 0; }
 .channels-layout.info-hidden { grid-template-columns: var(--channel-browser-width, 210px) 6px minmax(0, 1fr); }

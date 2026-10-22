@@ -15,6 +15,7 @@ import (
 	"uniclog.io/sonoryx/internal/clientapp"
 	"uniclog.io/sonoryx/internal/clientsettings"
 	"uniclog.io/sonoryx/internal/domain"
+	"uniclog.io/sonoryx/internal/hotkeys"
 	"uniclog.io/sonoryx/internal/mediasignal"
 	"uniclog.io/sonoryx/internal/protocol"
 	"uniclog.io/sonoryx/internal/serverstatus"
@@ -52,10 +53,27 @@ type Service struct {
 	statusChanged    func()
 	// audioSwitchMu orders microphone and speaker clicks with their cues.
 	audioSwitchMu sync.Mutex
+	hotkeyKeys    map[string]string
+	hotkeyMu      sync.Mutex
+	hotkeys       *hotkeys.Manager
+	hotkeyErrors  map[string]error
+	// hotkeyNotifications and hotkeysEnabled are guarded by settingsMu.
+	// hotkeyNotifier and hotkeyNotices are guarded by hotkeyMu.
+	// The toast fields are guarded by toastMu.
+	hotkeyNotifications bool
+	hotkeysEnabled      bool
+	hotkeyNotifier      *hotkeyNotifier
+	hotkeyNotices       map[string]string
+	toastMu             sync.Mutex
+	toastSending        bool
+	toastPending        bool
+	toastID             string
+	toastTitle          string
+	toastBody           string
 }
 
 func NewService(client *clientapp.App) *Service {
-	return &Service{client: client, serverStatus: serverstatus.NewCache()}
+	return &Service{client: client, serverStatus: serverstatus.NewCache(), hotkeyKeys: clientsettings.NormalizeHotkeys(nil), hotkeyNotifications: true}
 }
 
 // LogDiagnostic receives infrequent browser-side lifecycle events. It accepts

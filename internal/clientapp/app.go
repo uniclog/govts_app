@@ -83,6 +83,10 @@ type App struct {
 	soundPreviewRun    sync.Mutex
 	// presenceMu orders Away and Back, so Back sees what Away turned off.
 	presenceMu sync.Mutex
+	// awayNow is the presence last requested. The participant flag arrives
+	// later, with the server event, so a second request cannot trust it.
+	awayNow     bool
+	awayTracked bool
 
 	mu                 sync.Mutex
 	closed             bool
@@ -182,6 +186,7 @@ func (a *App) run(ctx context.Context, done chan struct{}, endpoint netip.AddrPo
 	a.mu.Unlock()
 	a.state.SetConnectionStatus(voiceclient.ConnectionDisconnected)
 	a.state.Audio.ReleaseAway()
+	a.clearAway()
 	if err != nil && !errors.Is(err, context.Canceled) {
 		a.events.append("error", err.Error(), 0)
 	} else {
@@ -225,6 +230,7 @@ func (a *App) runConnection(ctx context.Context, endpoint netip.AddrPort, name, 
 			a.state.SetConnectionStatus(voiceclient.ConnectionReconnecting)
 			// The new session starts present, so Away no longer holds anything.
 			a.state.Audio.ReleaseAway()
+			a.clearAway()
 		}
 		attempt++
 		a.logger.Printf("handshake starting: attempt=%d server=%s local=%s", attempt, endpoint, conn.LocalAddr())
@@ -593,18 +599,66 @@ func (a *App) MessageReceived() {
 }
 
 func (a *App) SetAway(ctx context.Context, away bool) error {
-	// A Back click during the away cue waits here instead of racing the
-	// deafen that Away is about to make.
 	a.presenceMu.Lock()
 	defer a.presenceMu.Unlock()
+	_, err := a.setAway(ctx, away)
+	return err
+}
+
+// ToggleAway flips presence as it stands when the call gets the lock, so a
+// press decided earlier cannot overwrite a click that already landed.
+func (a *App) ToggleAway(ctx context.Context) (changed, away bool, err error) {
+	a.presenceMu.Lock()
+	defer a.presenceMu.Unlock()
+	next := !a.currentAway()
+	changed, err = a.setAway(ctx, next)
+	if err != nil || !changed {
+		return false, false, err
+	}
+	return true, next, nil
+}
+
+func (a *App) currentAway() bool {
+	if a.awayTracked {
+		return a.awayNow
+	}
+	id := a.state.SessionID()
+	for _, participant := range a.state.Snapshot().Participants {
+		if participant.SessionID == id {
+			return participant.Away
+		}
+	}
+	return false
+}
+
+func (a *App) clearAway() {
+	a.presenceMu.Lock()
+	a.awayTracked = false
+	a.presenceMu.Unlock()
+}
+
+func (a *App) setAway(ctx context.Context, away bool) (bool, error) {
+	// A Back click during the away cue waits here instead of racing the
+	// deafen that Away is about to make.
 	a.mu.Lock()
 	conn := a.currentConn
 	a.mu.Unlock()
 	if conn == nil || a.state.ConnectionStatus() != voiceclient.ConnectionConnected {
-		return ErrNotConnected
+		return false, ErrNotConnected
 	}
 	if a.state.ChannelID() == 0 {
-		return errors.New("presence requires a channel")
+		return false, errors.New("presence requires a channel")
+	}
+	if a.awayTracked && a.awayNow == away {
+		return false, nil
+	}
+	previousTracked, previousNow := a.awayTracked, a.awayNow
+	a.awayTracked, a.awayNow = true, away
+	published := false
+	revert := func() {
+		if !published {
+			a.awayTracked, a.awayNow = previousTracked, previousNow
+		}
 	}
 	// Play before the presence round trip. The acknowledgement can take a
 	// retry interval, and the click should not wait for it.
@@ -612,7 +666,8 @@ func (a *App) SetAway(ctx context.Context, away bool) error {
 		// Playback has to be open before the return cue, or deafen swallows it.
 		undeafened, err := a.state.Audio.UndeafenForReturn()
 		if err != nil {
-			return err
+			revert()
+			return false, err
 		}
 		a.state.PlayNotification(voiceclient.NotificationReturned)
 		if err := voiceclient.PublishPresence(ctx, conn, a.state, false); err != nil {
@@ -620,15 +675,19 @@ func (a *App) SetAway(ctx context.Context, away bool) error {
 			if undeafened {
 				a.state.Audio.DeafenForAway()
 			}
-			return err
+			revert()
+			return false, err
 		}
-		return a.state.Audio.UnmuteForReturn()
+		published = true
+		return true, a.state.Audio.UnmuteForReturn()
 	}
 	started := time.Now()
 	a.state.PlayNotification(voiceclient.NotificationAway)
 	if err := voiceclient.PublishPresence(ctx, conn, a.state, true); err != nil {
-		return err
+		revert()
+		return false, err
 	}
+	published = true
 	if a.state.Audio.MuteOnAway() {
 		a.state.Audio.MuteForAway()
 	}
@@ -646,7 +705,7 @@ func (a *App) SetAway(ctx context.Context, away bool) error {
 		}
 		a.state.Audio.DeafenForAway()
 	}
-	return nil
+	return true, nil
 }
 
 func (a *App) Wake(ctx context.Context, target uint64) error {

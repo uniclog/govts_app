@@ -36,6 +36,12 @@ export function LocaleProvider({children}: {children: ReactNode}) {
         document.documentElement.lang = current.htmlLang;
     }, [current.htmlLang]);
 
+    // Hotkey notifications appear while the window is hidden, so the desktop
+    // shell keeps the current language's titles instead of asking for them.
+    useEffect(() => {
+        void desktopAPI.setHotkeyNotices(current.messages.hotkeyNotices).catch(() => undefined);
+    }, [current.messages]);
+
     const setLocale = (id: string) => {
         if (!locales.some((item) => item.id === id) || id === locale) return;
         touched.current = true;

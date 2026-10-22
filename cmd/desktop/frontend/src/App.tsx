@@ -26,6 +26,7 @@ import {LocaleSwitch, useLocale} from "./locales/Locale";
 import {InterfaceSettings} from "./features/settings/InterfaceSettings";
 import {AdminPanel} from "./features/admin/AdminPanel";
 import {StageScene} from "./features/settings/StageScene";
+import {HotkeySettings} from "./features/settings/HotkeySettings";
 
 const contentTabs = ["chat", "screens", "events"] as const;
 type ContentTab = typeof contentTabs[number] | `direct:${string}`;
@@ -940,19 +941,6 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                         <LocaleSwitch labelledBy="locale-label"/>
                     </div>
                     <InterfaceSettings appearance={appearance} onTheme={(value) => invoke(() => setTheme(value))} onCreate={createCustomTheme} onChange={updateAppearance} onOpenSaved={openSavedTheme} onSave={saveNamedTheme} onImport={importThemeFile} onExport={exportTheme} onDelete={deleteSavedTheme}/>
-                    <SettingToggle title={m.settings.tray}
-                                   description={m.settings.trayHint}
-                                   checked={closeToTray}
-                                   onChange={(value) => invoke(async () => {
-                                       const previous = closeToTray;
-                                       setCloseToTrayState(value);
-                                       try {
-                                           await desktopAPI.setCloseToTray(value);
-                                       } catch (error) {
-                                           setCloseToTrayState(previous);
-                                           throw error;
-                                       }
-                                   })}/>
                 </section>
                 <section className="settings-card"><h3>{m.settings.sounds}</h3>
                     <Select id="sound-pack" label={m.settings.soundPack} hint={m.settings.soundPackHint}
@@ -980,14 +968,30 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                             onChange={(value) => invoke(() => desktopAPI.setSoundCue(id, value))}/>)}
                     </div>
                 </section></>}
-                {section === "behavior" && <section className="settings-card"><h3>{m.settings.awayAction}</h3>
+                {section === "behavior" && <><section className="settings-card"><h3>{m.settings.window}</h3>
+                    <SettingToggle title={m.settings.tray}
+                                   description={m.settings.trayHint}
+                                   checked={closeToTray}
+                                   onChange={(value) => invoke(async () => {
+                                       const previous = closeToTray;
+                                       setCloseToTrayState(value);
+                                       try {
+                                           await desktopAPI.setCloseToTray(value);
+                                       } catch (error) {
+                                           setCloseToTrayState(previous);
+                                           throw error;
+                                       }
+                                   })}/>
+                </section>
+                <section className="settings-card"><h3>{m.settings.awayAction}</h3>
                     <SettingToggle title={m.settings.muteOnAway} description={m.settings.muteOnAwayHint}
                                    checked={view.muteOnAway}
                                    onChange={(value) => invoke(() => desktopAPI.setMuteOnAway(value))}/>
                     <SettingToggle title={m.settings.deafenOnAway} description={m.settings.deafenOnAwayHint}
                                    checked={view.deafenOnAway}
                                    onChange={(value) => invoke(() => desktopAPI.setDeafenOnAway(value))}/>
-                </section>}
+                </section>
+                <HotkeySettings/></>}
                 {section === "updates" && <UpdatesPanel updates={updates}/>}
             </div>
         </div>

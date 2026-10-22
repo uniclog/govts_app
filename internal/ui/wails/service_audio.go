@@ -65,6 +65,24 @@ func (s *Service) StopSoundPreview() { s.client.StopSoundPreview() }
 func (s *Service) SetMuted(value bool) {
 	s.audioSwitchMu.Lock()
 	defer s.audioSwitchMu.Unlock()
+	s.applyMuted(value)
+}
+
+// toggleMuted flips the microphone as it stands now. The target is read under
+// the same lock as a button click, so a stale earlier reading cannot land late.
+func (s *Service) toggleMuted() (changed, muted bool) {
+	s.audioSwitchMu.Lock()
+	defer s.audioSwitchMu.Unlock()
+	if !s.client.Snapshot().CaptureAvailable {
+		return false, false
+	}
+	before, _ := s.client.AudioSwitches()
+	s.applyMuted(!before)
+	after, _ := s.client.AudioSwitches()
+	return after != before, after
+}
+
+func (s *Service) applyMuted(value bool) {
 	before, _ := s.client.AudioSwitches()
 	if err := s.client.SetMuted(value); err != nil {
 		log.Printf("set muted failed: value=%t error=%v", value, err)
@@ -85,6 +103,22 @@ func (s *Service) SetDeafened(value bool) error {
 	// reads the old state and is lost.
 	s.audioSwitchMu.Lock()
 	defer s.audioSwitchMu.Unlock()
+	return s.applyDeafened(value)
+}
+
+// toggleDeafened flips the speaker as it stands now, under the button lock.
+func (s *Service) toggleDeafened() (changed, deafened bool, err error) {
+	s.audioSwitchMu.Lock()
+	defer s.audioSwitchMu.Unlock()
+	_, before := s.client.AudioSwitches()
+	if err = s.applyDeafened(!before); err != nil {
+		return false, before, err
+	}
+	_, after := s.client.AudioSwitches()
+	return after != before, after, nil
+}
+
+func (s *Service) applyDeafened(value bool) error {
 	_, before := s.client.AudioSwitches()
 	if before != value && value {
 		s.client.PlayCue(voiceclient.NotificationSpeakerMuted)

@@ -36,6 +36,15 @@ type Settings struct {
 	// SoundCues lists button cues the user turned off. A missing id stays on.
 	SoundCues     map[string]bool `json:"soundCues,omitempty"`
 	RecentServers []RecentServer  `json:"recentServers,omitempty"`
+	// Hotkeys maps an action to the key pressed together with Ctrl+Alt.
+	// A missing or invalid entry falls back to the action's default key.
+	Hotkeys map[string]string `json:"hotkeys,omitempty"`
+	// HotkeyNotifications shows a system notification when a hotkey acts
+	// while the window is hidden. A missing field means on.
+	HotkeyNotifications bool `json:"hotkeyNotifications"`
+	// HotkeysEnabled arms the shortcuts. A missing field means off, so an
+	// update does not start capturing keys that the user never turned on.
+	HotkeysEnabled bool `json:"hotkeysEnabled"`
 }
 
 type RecentServer struct {
@@ -144,6 +153,57 @@ func SoundCueStates(cues map[string]bool) map[string]bool {
 	return out
 }
 
+// Global hotkey actions. Each one is Ctrl+Alt plus a single key.
+const (
+	HotkeyMute   = "mute"
+	HotkeyDeafen = "deafen"
+	HotkeyAway   = "away"
+)
+
+// HotkeyActions is the stable order of actions that have a global hotkey.
+var HotkeyActions = []string{HotkeyMute, HotkeyDeafen, HotkeyAway}
+
+var defaultHotkeys = map[string]string{
+	HotkeyMute:   "M",
+	HotkeyDeafen: "D",
+	HotkeyAway:   "E",
+}
+
+func KnownHotkeyAction(action string) bool {
+	_, ok := defaultHotkeys[action]
+	return ok
+}
+
+// NormalizeHotkeyKey accepts one Latin letter or digit in any case and
+// returns it upper-cased. The key is a physical key, not a typed character.
+func NormalizeHotkeyKey(value string) (string, bool) {
+	if len(value) != 1 {
+		return "", false
+	}
+	c := value[0]
+	if c >= 'a' && c <= 'z' {
+		c -= 'a' - 'A'
+	}
+	if (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') {
+		return string(c), true
+	}
+	return "", false
+}
+
+// NormalizeHotkeys returns a key for every action, using the default where
+// the stored value is missing or invalid.
+func NormalizeHotkeys(keys map[string]string) map[string]string {
+	out := make(map[string]string, len(HotkeyActions))
+	for _, action := range HotkeyActions {
+		key, ok := NormalizeHotkeyKey(keys[action])
+		if !ok {
+			key = defaultHotkeys[action]
+		}
+		out[action] = key
+	}
+	return out
+}
+
 func NormalizeSoundPack(value string) string {
 	switch value {
 	case SoundPackShort, SoundPackSoft, SoundPackLow, SoundPackDouble, SoundPackSignal:
@@ -220,10 +280,14 @@ func (store *Store) Load() (Settings, error) {
 		if _, exists := fields["muteOnAway"]; !exists {
 			persisted.MuteOnAway = true
 		}
+		if _, exists := fields["hotkeyNotifications"]; !exists {
+			persisted.HotkeyNotifications = true
+		}
 	}
 	persisted.Theme = NormalizeTheme(persisted.Theme)
 	persisted.SoundPack = NormalizeSoundPack(persisted.SoundPack)
 	persisted.SoundCues = NormalizeSoundCues(persisted.SoundCues)
+	persisted.Hotkeys = NormalizeHotkeys(persisted.Hotkeys)
 	if persisted.SoundVolume < 0 || persisted.SoundVolume > 1 {
 		persisted.SoundVolume = DefaultSoundVolume
 	}
