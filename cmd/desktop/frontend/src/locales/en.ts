@@ -495,6 +495,7 @@ export const en = {
         banned: "Banned",
         fingerprint: "Key",
         protected: "You can't change this account: it is the owner, your own account, an administrator, or someone with a higher level than yours.",
+        ownerPermissionsHint: "You can change your own permissions and file access. Your join level, ban status and account deletion are protected.",
         permKick: "Disconnect users",
         permKickHint: "The Disconnect button in the user menu.",
         permBan: "Ban",

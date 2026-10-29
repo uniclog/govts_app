@@ -4,7 +4,7 @@ import {desktopAPI, type AdminAccount, type AdminAuditEntry, type AdminChannelIn
 import {Select} from "../../components/Select";
 import {errorText} from "../../locales";
 import {useLocale} from "../../locales/Locale";
-import {canBan, canEditAccount, canEditChannelLevel, canTogglePermission, channelEditingServerVersion, channelTree, descendantIDs, levelAllowed, parseLevel, reorderPositions, versionAtLeast} from "./adminRules";
+import {canBan, canEditAccount, canEditAccountPermissions, canEditChannelLevel, canTogglePermission, channelEditingServerVersion, channelTree, descendantIDs, levelAllowed, parseLevel, reorderPositions, versionAtLeast} from "./adminRules";
 
 type Section = "accounts" | "channels" | "audit" | "files";
 
@@ -126,6 +126,7 @@ function AccountCard({view, account, onChange, onDelete}: {view: ClientViewDTO; 
     const [level, setLevel] = useState(String(account.joinLevel));
     const [reason, setReason] = useState("");
     const editable = canEditAccount(view, account);
+    const permissionsEditable = canEditAccountPermissions(view, account);
     const banAllowed = canBan(view, account);
     const parsedLevel = parseLevel(level);
     const levelValid = levelAllowed(view, parsedLevel);
@@ -147,7 +148,7 @@ function AccountCard({view, account, onChange, onDelete}: {view: ClientViewDTO; 
         <h3>{account.name} <span className="admin-account-id">#{account.id}</span></h3>
         <p className="device-hint admin-fingerprint">{m.admin.fingerprint}: <code>{account.fingerprint}</code></p>
         <AccountBadges account={account}/>
-        {!editable && <p className="device-hint">{m.admin.protected}</p>}
+        {!editable && <p className="device-hint">{permissionsEditable ? m.admin.ownerPermissionsHint : m.admin.protected}</p>}
         {error && <div className="device-error" role="alert">{error}</div>}
 
         {permissions.map((permission) => <div key={permission.id} className="setting-toggle">
@@ -156,7 +157,7 @@ function AccountCard({view, account, onChange, onDelete}: {view: ClientViewDTO; 
                                              onChange={(event) => void update(() => desktopAPI.adminSetPermission(account.id, permission.id, event.target.checked))}/><span/></label>
         </div>)}
 
-        <AccountFileRights key={`${view.chatContext}:${account.id}`} context={view.chatContext} accountID={account.id} editable={editable} accountBusy={busy}/>
+        <AccountFileRights key={`${view.chatContext}:${account.id}`} context={view.chatContext} accountID={account.id} editable={permissionsEditable} accountBusy={busy}/>
 
         <form className="admin-inline-form" onSubmit={(event) => {
             event.preventDefault();

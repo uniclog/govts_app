@@ -73,9 +73,9 @@ func (a *Administration) SetPrivilegeNotifier(notify func(userID int64, level ui
 	a.notify = notify
 }
 
-// checkTarget enforces the hierarchy for mutations of an account: nobody
-// changes the owner or their own account remotely, and only the owner
-// changes another administrator.
+// checkTarget enforces the general account hierarchy: remote actors cannot
+// change an owner or themselves, and only an owner changes another admin.
+// Permission mutations use checkPermissionTarget for the owner self exception.
 func (a *Administration) checkTarget(actor AdminActor, target persist.Account) error {
 	if actor.Local {
 		return nil
@@ -87,6 +87,15 @@ func (a *Administration) checkTarget(actor AdminActor, target persist.Account) e
 		return ErrPermissionDenied
 	}
 	return nil
+}
+
+// checkPermissionTarget lets an owner edit their own permission bits and file
+// rights. Other mutations retain checkTarget's protection against self-editing.
+func (a *Administration) checkPermissionTarget(actor AdminActor, target persist.Account) error {
+	if actor.Owner && target.Owner && target.ID == actor.UserID {
+		return nil
+	}
+	return a.checkTarget(actor, target)
 }
 
 func (a *Administration) account(ctx context.Context, id int64) (persist.Account, error) {
@@ -113,7 +122,7 @@ func (a *Administration) SetFileRights(ctx context.Context, actor AdminActor, id
 	if err != nil {
 		return err
 	}
-	if err = a.checkTarget(actor, target); err != nil {
+	if err = a.checkPermissionTarget(actor, target); err != nil {
 		return err
 	}
 	return a.store.SetFileRights(ctx, actor.auditName(), id, upload, download)
@@ -158,7 +167,7 @@ func (a *Administration) SetPermission(ctx context.Context, actor AdminActor, id
 	if err != nil {
 		return AdminChange{}, err
 	}
-	if err := a.checkTarget(actor, target); err != nil {
+	if err := a.checkPermissionTarget(actor, target); err != nil {
 		return AdminChange{}, err
 	}
 	account, err := a.store.SetPermissionBy(ctx, actor.auditName(), id, permission, enabled)
