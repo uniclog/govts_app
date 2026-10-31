@@ -174,7 +174,7 @@ export function ParticipantRow({participant, canKick, canBan, canDrag, canWake =
         {!participant.local && menu && createPortal(<div ref={menuRef} className="participant-menu" role="menu" style={position}
                                    aria-label={m.people.manage(participant.displayName)}>
             <div className="participant-menu-user">
-                <span className="participant-menu-avatar" aria-hidden="true">{participant.displayName.slice(0, 1).toUpperCase()}</span>
+                <span className="participant-menu-avatar" style={avatarStyle(participant.displayName)} aria-hidden="true">{participant.displayName.slice(0, 1).toUpperCase()}</span>
                 <strong>{participant.displayName}</strong>
             </div>
             <div className="participant-menu-separator"/>
@@ -196,13 +196,13 @@ export function ParticipantRow({participant, canKick, canBan, canDrag, canWake =
             </>}
             <div className="participant-menu-actions">
                 <button type="button" role="menuitem" onClick={() => { onMessage(participant); close(); }}><span><Icon name="chat"/></span>{m.people.message}</button>
-                {canWake && onWake && <button type="button" role="menuitem" onClick={() => { onWake(participant); close(); }}>{m.people.wake}</button>}
+                {canWake && onWake && <button type="button" role="menuitem" onClick={() => { onWake(participant); close(); }}><span aria-hidden="true"><Icon name="voice"/></span>{m.people.wake}</button>}
                 {!participant.local && <button type="button" role="menuitem" className={menu.volume === 0 ? "active" : ""}
                         onClick={() => setVolume(menu.volume === 0 ? 1 : 0, true)}>
                     <span aria-hidden="true"><SpeakerIcon muted={menu.volume !== 0}/></span>{menu.volume === 0 ? m.people.unmute : m.people.mute}
                 </button>}
-                {!participant.local && canKick && <button type="button" role="menuitem" onClick={() => void moderate("kick")}>{m.people.kick}</button>}
-                {!participant.local && canBan && <button type="button" role="menuitem" onClick={() => void moderate("ban")}>{m.people.ban}</button>}
+                {!participant.local && canKick && <button type="button" role="menuitem" className="is-danger" onClick={() => void moderate("kick")}><span aria-hidden="true"><Icon name="disconnect"/></span>{m.people.kick}</button>}
+                {!participant.local && canBan && <button type="button" role="menuitem" className="is-danger" onClick={() => void moderate("ban")}><span aria-hidden="true"><Icon name="shield"/></span>{m.people.ban}</button>}
             </div>
         </div>, document.body)}
     </>;

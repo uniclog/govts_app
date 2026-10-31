@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {FileAdmin} from "./FileAdmin";
 import {desktopAPI, type AdminAccount, type AdminAuditEntry, type AdminChannelInput, type AdminPermission, type ChannelDTO, type ClientViewDTO} from "../../api";
+import {Icon} from "../../components/Icon";
 import {Select} from "../../components/Select";
 import {errorText} from "../../locales";
 import {useLocale} from "../../locales/Locale";
@@ -17,10 +18,10 @@ export function AdminPanel({view}: {view: ClientViewDTO}) {
         <div className="settings-heading"><p className="eyebrow">{view.server.name || m.connection.server}</p><h2>{m.admin.title}</h2></div>
         <div className="settings-layout">
             <nav className="settings-nav" aria-label={m.admin.sections}>
-                <button type="button" aria-current={section === "accounts" ? "page" : undefined} onClick={() => setSection("accounts")}>{m.admin.accounts}</button>
-                <button type="button" aria-current={section === "channels" ? "page" : undefined} onClick={() => setSection("channels")}>{m.admin.channels}</button>
-                <button type="button" aria-current={section === "audit" ? "page" : undefined} onClick={() => setSection("audit")}>{m.admin.audit}</button>
-                <button type="button" aria-current={section === "files" ? "page" : undefined} onClick={() => setSection("files")}>{m.files.admin}</button>
+                <button type="button" aria-current={section === "accounts" ? "page" : undefined} onClick={() => setSection("accounts")}><Icon name="users"/>{m.admin.accounts}</button>
+                <button type="button" aria-current={section === "channels" ? "page" : undefined} onClick={() => setSection("channels")}><Icon name="channels"/>{m.admin.channels}</button>
+                <button type="button" aria-current={section === "audit" ? "page" : undefined} onClick={() => setSection("audit")}><Icon name="shield"/>{m.admin.audit}</button>
+                <button type="button" aria-current={section === "files" ? "page" : undefined} onClick={() => setSection("files")}><Icon name="file"/>{m.files.admin}</button>
             </nav>
             <div className="settings-content">
                 {section === "accounts" && <AccountsSection view={view}/>}

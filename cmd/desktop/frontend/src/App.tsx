@@ -880,11 +880,11 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
         <div className="settings-heading"><p className="eyebrow">{m.settings.eyebrow}</p><h2>{m.settings.title}</h2></div>
         <div className="settings-layout">
             <nav className="settings-nav" aria-label={m.settings.sections}>
-                <button type="button" aria-current={section === "microphone" ? "page" : undefined} onClick={() => setSection("microphone")}>{m.settings.microphone}</button>
-                <button type="button" aria-current={section === "playback" ? "page" : undefined} onClick={() => setSection("playback")}>{m.settings.playback}</button>
-                <button type="button" aria-current={section === "interface" ? "page" : undefined} onClick={() => setSection("interface")}>{m.settings.interface}</button>
-                <button type="button" aria-current={section === "behavior" ? "page" : undefined} onClick={() => setSection("behavior")}>{m.settings.behavior}</button>
-                <button type="button" aria-current={section === "updates" ? "page" : undefined} onClick={() => setSection("updates")}>{m.settings.updates}</button>
+                <button type="button" aria-current={section === "microphone" ? "page" : undefined} onClick={() => setSection("microphone")}><Icon name="mic"/>{m.settings.microphone}</button>
+                <button type="button" aria-current={section === "playback" ? "page" : undefined} onClick={() => setSection("playback")}><Icon name="headphones"/>{m.settings.playback}</button>
+                <button type="button" aria-current={section === "interface" ? "page" : undefined} onClick={() => setSection("interface")}><Icon name="screen"/>{m.settings.interface}</button>
+                <button type="button" aria-current={section === "behavior" ? "page" : undefined} onClick={() => setSection("behavior")}><Icon name="settings"/>{m.settings.behavior}</button>
+                <button type="button" aria-current={section === "updates" ? "page" : undefined} onClick={() => setSection("updates")}><Icon name="download"/>{m.settings.updates}</button>
             </nav>
             <div className="settings-content">
                 {(section === "microphone" || section === "playback") && devicesError && <div className="device-error" role="alert">{m.settings.devicesFailed}: {errorText(devicesError, m)}

@@ -11,8 +11,8 @@
 .app-shell .window-controls svg { width: 18px; height: 18px; stroke-width: 1.8; }
 .window-controls .window-close:hover { color: #ff8b83; background: #c42b1c26; }
 .lobby-shell .window-controls { right: var(--lobby-bar-inset); width: calc(var(--window-controls-width) - var(--lobby-bar-inset)); height: var(--lobby-bar-item-height); }
-.lobby-shell .window-controls button { color: #999da8; }
-.lobby-shell .window-controls button:hover { color: #f3f3f1; background: #252932; }
+.lobby-shell .window-controls button { color: var(--muted); }
+.lobby-shell .window-controls button:hover { color: var(--text); background: var(--card-strong); }
 .lobby-shell .window-controls .window-close:hover { color: #ff8b83; background: #c42b1c26; }
 .window-overlay-drag { position: absolute; inset: 0 var(--window-controls-width) 0 0; pointer-events: auto; --wails-draggable: drag; user-select: none; }
 .app-shell .settings-overlay { top: var(--window-titlebar-height); }
