@@ -67,11 +67,15 @@ func handleServerStatus(conn *udp.ServerPacketConn, hub *Hub, limiter *statusLim
 		return
 	}
 	hub.mu.RLock()
-	enabled, count := hub.publicStatus, len(hub.sessions)
+	enabled, count, version := hub.publicStatus, len(hub.sessions), hub.serverVersion
 	hub.mu.RUnlock()
 	if !enabled || !limiter.allow(addr.AddrPort().Addr(), time.Now()) {
 		return
 	}
-	// No error response: the 38-byte reply must never exceed its 49-byte request.
-	_ = conn.WritePacket(0, addr, protocol.NewServerStatusAck(packet.RequestID, nonce, uint32(count)))
+	// No error response: legacy (38 B) and extended (42 B) replies fit the 49 B request.
+	ack := protocol.NewServerStatusAck(packet.RequestID, nonce, uint32(count))
+	if packet.Payload[0] == protocol.ServerStatusVersionV2 {
+		ack = protocol.NewServerStatusAckV2(packet.RequestID, nonce, uint32(count), uint32(version))
+	}
+	_ = conn.WritePacket(0, addr, ack)
 }

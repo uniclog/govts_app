@@ -53,6 +53,7 @@ type Settings struct {
 type RecentServer struct {
 	Address     string `json:"address"`
 	Alias       string `json:"alias,omitempty"`
+	Version     string `json:"version,omitempty"`
 	Favorite    bool   `json:"favorite"`
 	LastVisited int64  `json:"lastVisited"`
 }

@@ -61,6 +61,7 @@ export const en = {
         server: "Server",
         clientVersion: (version: string) => `Client version: ${version}`,
         serverVersion: (version: string) => `Server version: ${version}`,
+        lastServerVersion: (version: string) => `Last known server version: ${version}`,
         syncing: "Syncing…",
         disconnect: "Disconnect from server",
         leave: "Leave",

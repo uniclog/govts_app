@@ -45,7 +45,7 @@ const adminCall = <T>(method: string, ...args: unknown[]): Promise<T> =>
     Call.ByName(`uniclog.io/sonoryx/internal/ui/wails.Service.${method}`, ...args) as Promise<T>;
 
 let diagnosticsInFlight = 0;
-export type RecentServer = {address: string; alias?: string; favorite: boolean; lastVisited: number; current: boolean;
+export type RecentServer = {address: string; alias?: string; version?: string; favorite: boolean; lastVisited: number; current: boolean;
     onlineCount: number | null; status: "unknown" | "available" | "unavailable"; updatedAt: number; lastAttemptAt: number};
 export function logDiagnostic(operation: string, message: unknown): void {
     if (diagnosticsInFlight >= 16) return;

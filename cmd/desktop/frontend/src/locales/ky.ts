@@ -61,6 +61,7 @@ export const ky = {
         server: "Сервер",
         clientVersion: (version: string) => `Кардардын версиясы: ${version}`,
         serverVersion: (version: string) => `Сервердин версиясы: ${version}`,
+        lastServerVersion: (version: string) => `Сервердин акыркы белгилүү версиясы: ${version}`,
         syncing: "Шайкештирүү…",
         disconnect: "Серверден ажыратуу",
         leave: "Чыгуу",

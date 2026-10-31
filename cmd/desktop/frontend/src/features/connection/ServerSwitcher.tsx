@@ -40,7 +40,6 @@ export function ServerSwitcher({view, refreshingServers, onRefreshServers, onRec
             <span className="server-switcher-brand"><VoiceMark/></span>
             <strong>{view.server.name || m.connection.server}</strong><Icon name="chevronDown"/>
         </button>
-        {view.server.version && <small className="workspace-server-version">{view.server.version}</small>}
         {open && <div id="server-switcher-panel" className="server-switcher-popover" role="region" aria-label={m.connection.servers}>
             <button className="server-switcher-close" type="button" title={m.connection.closeServers} aria-label={m.connection.closeServers} onClick={close}><Icon name="close"/></button>
             <RecentServers standalone view={view} expanded onToggle={() => {}} disabled={view.connectionStatus !== "connected"}

@@ -9,6 +9,7 @@ import (
 )
 
 type Status struct {
+	ServerVersion string  `json:"-"`
 	OnlineCount   *uint32 `json:"onlineCount"`
 	Status        string  `json:"status"`
 	UpdatedAt     int64   `json:"updatedAt"`
@@ -133,9 +134,10 @@ func (b *Batch) Run() error {
 					continue
 				}
 				work.result.LastAttemptAt = time.Now().UnixMilli()
-				count, err := Query(work.ctx, work.address)
+				count, version, err := QueryDetails(work.ctx, work.address)
 				if err == nil {
 					work.result.OnlineCount = &count
+					work.result.ServerVersion = version
 					work.result.UpdatedAt = time.Now().UnixMilli()
 					work.result.Status = "available"
 				} else {

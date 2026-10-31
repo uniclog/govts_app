@@ -62,6 +62,7 @@ export const ru = {
         server: "Сервер",
         clientVersion: (version: string) => `Версия клиента: ${version}`,
         serverVersion: (version: string) => `Версия сервера: ${version}`,
+        lastServerVersion: (version: string) => `Последняя известная версия сервера: ${version}`,
         syncing: "Синхронизация…",
         disconnect: "Отключиться от сервера",
         leave: "Выйти",

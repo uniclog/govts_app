@@ -130,7 +130,7 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
                         if (event.key === "Escape") { editingRef.current = null; setEditing(null); }
                     }}/> :
                 <button type="button" className="recent-server-connect" disabled={pending || disabled || (!standalone && view.connectionStatus !== "connected")}
-                        title={`${server.alias ? `${server.alias}\n` : ""}${server.address}\n${m.connection.serverHint}`}
+                        title={`${server.alias ? `${server.alias}\n` : ""}${server.address}${server.version ? `\n${m.connection.serverVersion(server.version)}` : ""}\n${m.connection.serverHint}`}
                         aria-label={rail ? `${server.alias || server.address}. ${m.connection.serverHint}` : undefined}
                         aria-current={server.current || (standalone && server.address === selectedAddress) ? "true" : undefined}
                         onClick={() => onSelect?.(server.address)}
@@ -148,7 +148,7 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
                         <span aria-hidden="true">{server.alias?.trim() ? serverInitials(server.alias) : <Icon name="globe"/>}</span>
                         <span className={`connection-server-status ${server.status}`} role="img" title={statusTitle(server, m, htmlLang)} aria-label={statusTitle(server, m, htmlLang)}/>
                     </span> : <span className={`server-availability ${server.status}`} role="img" title={statusTitle(server, m, htmlLang)} aria-label={statusTitle(server, m, htmlLang)}/>}
-                    <span className="recent-server-label"><span>{server.alias || server.address}</span>{server.alias ? <small>{server.address}</small> : standalone && <small>{server.status === "available" ? m.connection.availableShort : server.status === "unavailable" ? m.connection.unavailableShort : m.connection.unknownShort}</small>}</span>
+                    <span className="recent-server-label"><span>{server.alias || server.address}</span>{server.alias ? <small>{server.address}</small> : standalone && <small>{server.status === "available" ? m.connection.availableShort : server.status === "unavailable" ? m.connection.unavailableShort : m.connection.unknownShort}</small>}{server.version && <small className="recent-server-version" title={server.current ? m.connection.serverVersion(server.version) : m.connection.lastServerVersion(server.version)}>{m.connection.serverVersion(server.version)}</small>}</span>
                 </button>}
                 <ServerPopulation server={server}/>
                 <button type="button" className="server-favorite" aria-pressed={server.favorite}

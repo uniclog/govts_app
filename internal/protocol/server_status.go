@@ -6,6 +6,7 @@ import (
 )
 
 const ServerStatusVersion byte = 1
+const ServerStatusVersionV2 byte = 2
 
 func IsServerStatusPacket(kind uint8) bool {
 	return kind == PacketServerStatusRequest || kind == PacketServerStatusAck
@@ -27,9 +28,34 @@ func NewServerStatusAck(requestID uint32, nonce [16]byte, count uint32) VoicePac
 	return VoicePacket{Type: PacketServerStatusAck, RequestID: requestID, Payload: payload}
 }
 
+// V2 preserves the padded request size and adds the packed server version to the ack.
+func NewServerStatusRequestV2(requestID uint32, nonce [16]byte) VoicePacket {
+	packet := NewServerStatusRequest(requestID, nonce)
+	packet.Payload[0] = ServerStatusVersionV2
+	return packet
+}
+
+func NewServerStatusAckV2(requestID uint32, nonce [16]byte, count, version uint32) VoicePacket {
+	packet := NewServerStatusAck(requestID, nonce, count)
+	packet.Payload[0] = ServerStatusVersionV2
+	packet.Payload = binary.BigEndian.AppendUint32(packet.Payload, version)
+	return packet
+}
+
+// ServerStatusAckVersion returns a version only for a valid extended reply.
+func ServerStatusAckVersion(packet VoicePacket) (uint32, bool) {
+	if _, _, err := DecodeServerStatus(packet); err != nil || packet.Type != PacketServerStatusAck || packet.Payload[0] != ServerStatusVersionV2 {
+		return 0, false
+	}
+	return binary.BigEndian.Uint32(packet.Payload[21:]), true
+}
+
 func DecodeServerStatus(packet VoicePacket) (nonce [16]byte, count uint32, err error) {
 	invalid := errors.New("invalid public server status packet")
 	if packet.SessionID != 0 || packet.Sequence != 0 || packet.RequestID == 0 {
+		return nonce, 0, invalid
+	}
+	if len(packet.Payload) == 0 || (packet.Payload[0] != ServerStatusVersion && packet.Payload[0] != ServerStatusVersionV2) {
 		return nonce, 0, invalid
 	}
 	switch packet.Type {
@@ -43,14 +69,15 @@ func DecodeServerStatus(packet VoicePacket) (nonce [16]byte, count uint32, err e
 			}
 		}
 	case PacketServerStatusAck:
-		if len(packet.Payload) != 21 {
+		expected := 21
+		if packet.Payload[0] == ServerStatusVersionV2 {
+			expected = 25
+		}
+		if len(packet.Payload) != expected {
 			return nonce, 0, invalid
 		}
 		count = binary.BigEndian.Uint32(packet.Payload[17:])
 	default:
-		return nonce, 0, invalid
-	}
-	if packet.Payload[0] != ServerStatusVersion {
 		return nonce, 0, invalid
 	}
 	copy(nonce[:], packet.Payload[1:17])

@@ -127,6 +127,7 @@
 @media (prefers-reduced-motion: reduce) {
   .connection-switch, .connection-switch::after { transition: none; }
 }
+.connection-server-list .recent-server-label > .recent-server-version { font-size: 10px; line-height: 13px; color: var(--muted); }
 .server-key-change { margin: 16px 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card-strong); text-align: left; font-size: .75rem; }
 .connection-progress:has(.server-key-change) { max-height: 100%; overflow-y: auto; }
 .server-key-change dt { color: var(--muted); }
