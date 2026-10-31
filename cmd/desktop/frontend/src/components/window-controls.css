@@ -4,13 +4,13 @@
 .status-bar button, .status-bar input, .status-bar a, .status-bar .locale-header,
 .status-bar .connection-stats-anchor { --wails-draggable: no-drag; }
 .window-chrome { position: absolute; z-index: 100; inset: 0 0 auto; height: var(--window-titlebar-height); pointer-events: none; }
-.window-controls { display: flex; position: absolute; top: 50%; right: 12px; gap: 4px; width: calc(var(--window-controls-width) - 12px); height: 27px; transform: translateY(-50%); pointer-events: auto; --wails-draggable: no-drag; }
+.window-controls { display: flex; position: absolute; top: calc(50% + 2px); right: 12px; gap: 4px; width: calc(var(--window-controls-width) - 12px); height: 27px; transform: translateY(-50%); pointer-events: auto; --wails-draggable: no-drag; }
 .window-controls button { display: grid; flex: 1; min-width: 0; height: 100%; place-items: center; padding: 0; border: 0; border-radius: 7px; color: var(--muted); background: transparent; cursor: pointer; }
 .window-controls button:hover { color: var(--text); background: var(--card-strong); }
 .window-controls button:focus-visible { position: relative; outline-offset: -3px; }
 .app-shell .window-controls svg { width: 18px; height: 18px; stroke-width: 1.8; }
 .window-controls .window-close:hover { color: #ff8b83; background: #c42b1c26; }
-.lobby-shell .window-controls { height: 24px; }
+.lobby-shell .window-controls { right: var(--lobby-bar-inset); width: calc(var(--window-controls-width) - var(--lobby-bar-inset)); height: var(--lobby-bar-item-height); }
 .lobby-shell .window-controls button { color: #999da8; }
 .lobby-shell .window-controls button:hover { color: #f3f3f1; background: #252932; }
 .lobby-shell .window-controls .window-close:hover { color: #ff8b83; background: #c42b1c26; }

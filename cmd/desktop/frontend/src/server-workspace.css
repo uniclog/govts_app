@@ -1,14 +1,14 @@
 /* Server workspace: shared geometry for the dark and light references. */
-.server-shell { --window-titlebar-height: 36px; --workspace-brand: #ff7942; }
+.server-shell { --window-titlebar-height: 32px; --workspace-brand: #ff7942; }
 .server-shell .window-controls { height: 24px; }
 :root:not([data-theme="custom"]) .server-shell { font-family: Arial, sans-serif; }
 .server-main { grid-template-rows: var(--window-titlebar-height) 0 minmax(0, 1fr); }
-.server-titlebar { height: var(--window-titlebar-height); min-height: var(--window-titlebar-height); padding-block: 0; border: 0; }
+.server-titlebar { height: var(--window-titlebar-height); min-height: var(--window-titlebar-height); padding-block: 4px 0; border: 0; }
 .server-titlebar .app-brand { gap: 7px; font-size: .6875rem; color: var(--muted); }
 .server-titlebar .app-brand strong { font-weight: 400; }
 .server-titlebar .brand-mark { width: 13px; height: 18px; padding: 0; border: 0; background: none; color: var(--workspace-brand); }
 .server-titlebar .brand-mark svg { width: 13px; height: 13px; }
-.server-shell .channels-page { grid-row: 3; height: 100%; min-height: 0; padding: 8px; overflow: hidden; }
+.server-shell .channels-page { grid-row: 3; height: 100%; min-height: 0; padding: 4px 8px 8px; overflow: hidden; }
 .server-shell .channels-layout,
 .server-shell .channels-layout.info-hidden { position: relative; display: grid; grid-template-columns: var(--channel-browser-width, 240px) 8px minmax(0, 1fr) 8px var(--channel-chat-width, 288px); grid-template-rows: minmax(0, 1fr); gap: 0; height: 100%; min-height: 0; }
 .server-shell .channel-browser { grid-column: 1; grid-row: 1; }

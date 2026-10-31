@@ -1,4 +1,9 @@
 /* Connection screen palette and geometry follow the supplied SRX design. */
+.lobby-shell {
+  --lobby-bar-inset: 8px;
+  --lobby-bar-item-height: 24px;
+  --lobby-bar-height: var(--window-titlebar-height);
+}
 .lobby-main {
   --window: #0d0f12;
   --card: #15181e;
@@ -13,20 +18,21 @@
   --field-border: transparent;
   --field-border-hover: #50535b;
   --field-inset: none;
-  grid-template-rows: 32px 0 minmax(0, 1fr);
+  grid-template-rows: var(--lobby-bar-height) 0 minmax(0, 1fr);
   background: var(--window);
   font-family: Arial, sans-serif;
 }
-.lobby-bar { height: 32px; padding: 3px 14px; border: 0; gap: 12px; }
-.lobby-bar .app-brand { gap: 7px; font-size: 12px; color: var(--muted); }
+.lobby-bar { height: var(--lobby-bar-height); padding: 6px var(--lobby-bar-inset) 2px; border: 0; gap: 12px; }
+.app-shell.lobby-shell .lobby-bar { padding-right: calc(var(--window-controls-width) + var(--lobby-bar-inset)); }
+.lobby-bar .app-brand { height: var(--lobby-bar-item-height); gap: 7px; font-size: 12px; color: var(--muted); }
 .lobby-bar .app-brand strong { font-weight: 500; }
-.lobby-bar .brand-mark { width: 15px; height: 20px; border: 0; background: none; color: var(--accent); }
+.lobby-bar .brand-mark { width: var(--lobby-bar-item-height); height: var(--lobby-bar-item-height); border: 0; background: none; color: var(--accent); }
 .lobby-bar .brand-mark svg { width: 14px; height: 14px; }
 .lobby-bar .server-version { font-size: 11px; }
-.lobby-bar .locale-header, .lobby-bar .settings-pill { height: 24px; background: transparent; border-color: transparent; }
-.lobby-bar .locale-header button { height: 19px; font-size: 11px; }
+.lobby-bar .locale-header, .lobby-bar .settings-pill { height: var(--lobby-bar-item-height); background: transparent; border-color: transparent; }
+.lobby-bar .locale-header button { height: 18px; font-size: 11px; }
 .lobby-bar .settings-pill { width: auto; font-size: 11px; }
-.connection-page { grid-row: 3; height: 100%; min-height: 0; overflow-y: auto; padding: 8px; }
+.connection-page { grid-row: 3; height: 100%; min-height: 0; overflow-y: auto; padding: 4px 8px 8px; }
 .connection-layout { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 8px; min-height: 100%; }
 .connection-card { min-width: 0; border: 1px solid #181b21; border-radius: 20px; background: var(--card); }
 .connection-hero { position: relative; display: grid; align-items: start; overflow: hidden; padding: 32px 64px; }
