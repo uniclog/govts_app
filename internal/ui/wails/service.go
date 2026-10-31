@@ -34,23 +34,25 @@ type ConnectRequest struct {
 	Name             string `json:"name"`
 	Server           string `json:"server"`
 	MinServerVersion string `json:"minServerVersion,omitempty"`
+	SkipHistory      bool   `json:"skipHistory,omitempty"`
 }
 
 type Service struct {
-	client           *clientapp.App
-	settings         *clientsettings.Store
-	settingsMu       sync.RWMutex
-	displayName      string
-	serverAddress    string
-	trustedMediaKeys map[string]string
-	theme            string
-	locale           string
-	closeToTray      bool
-	connectionMu     sync.Mutex
-	recentServers    []clientsettings.RecentServer
-	recordedVisit    string
-	serverStatus     *serverstatus.Cache
-	statusChanged    func()
+	client            *clientapp.App
+	settings          *clientsettings.Store
+	settingsMu        sync.RWMutex
+	displayName       string
+	serverAddress     string
+	trustedMediaKeys  map[string]string
+	theme             string
+	locale            string
+	closeToTray       bool
+	connectionMu      sync.Mutex
+	recentServers     []clientsettings.RecentServer
+	recordedVisit     string
+	skipServerHistory bool
+	serverStatus      *serverstatus.Cache
+	statusChanged     func()
 	// audioSwitchMu orders microphone and speaker clicks with their cues.
 	audioSwitchMu     sync.Mutex
 	hotkeyKeys        map[string]string
@@ -124,6 +126,7 @@ func (s *Service) connect(request ConnectRequest) error {
 	s.settingsMu.Lock()
 	s.serverAddress = request.Server
 	s.recordedVisit = ""
+	s.skipServerHistory = request.SkipHistory
 	s.settingsMu.Unlock()
 	return nil
 }

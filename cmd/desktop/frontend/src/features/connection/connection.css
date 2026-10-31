@@ -1,0 +1,123 @@
+/* Connection screen palette and geometry follow the supplied SRX design. */
+.lobby-main {
+  --window: #0d0f12;
+  --card: #15181e;
+  --card-strong: #1d2129;
+  --line: #252932;
+  --text: #f3f3f1;
+  --muted: #999da8;
+  --accent: #ff7942;
+  --accent-blue: #ff7942;
+  --on-accent: #251b15;
+  --field-bg: #0a0c10;
+  --field-border: transparent;
+  --field-border-hover: #50535b;
+  --field-inset: none;
+  grid-template-rows: 32px 0 minmax(0, 1fr);
+  background: var(--window);
+  font-family: Arial, sans-serif;
+}
+.lobby-bar { height: 32px; padding: 3px 14px; border: 0; gap: 12px; }
+.lobby-bar .app-brand { gap: 7px; font-size: 12px; color: var(--muted); }
+.lobby-bar .app-brand strong { font-weight: 500; }
+.lobby-bar .brand-mark { width: 15px; height: 20px; border: 0; background: none; color: var(--accent); }
+.lobby-bar .brand-mark svg { width: 14px; height: 14px; }
+.lobby-bar .server-version { font-size: 11px; }
+.lobby-bar .locale-header, .lobby-bar .settings-pill { height: 24px; background: transparent; border-color: transparent; }
+.lobby-bar .locale-header button { height: 19px; font-size: 11px; }
+.lobby-bar .settings-pill { width: auto; font-size: 11px; }
+.connection-page { grid-row: 3; height: 100%; min-height: 0; overflow-y: auto; padding: 8px; }
+.connection-layout { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 8px; min-height: 100%; }
+.connection-card { min-width: 0; border: 1px solid #181b21; border-radius: 20px; background: var(--card); }
+.connection-hero { position: relative; display: grid; align-items: start; overflow: hidden; padding: 32px 64px; }
+.connection-content { position: relative; z-index: 1; width: 100%; }
+.connection-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.connection-brand strong { font-size: 26px; font-weight: 700; letter-spacing: -.8px; }
+.connection-logo { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: #252019; background: var(--accent); }
+.connection-logo svg { width: 27px; height: 27px; }
+.connection-hero h1 { margin: 0 0 14px; font-size: 38px; line-height: 1.2; font-weight: 700; letter-spacing: -1.15px; }
+.connection-hero .lead { max-width: 480px; margin: 0 0 16px; color: #b6bbc6; font-size: 14px; line-height: 22px; }
+.connection-form { display: grid; gap: 14px; width: min(408px, 100%); padding: 22px; border: 1px solid #20242b; border-radius: 20px; background: var(--card-strong); }
+.connection-form > label { display: grid; gap: 7px; color: #b6bbc6; font-size: 12px; line-height: 16px; font-weight: 400; }
+.connection-input { position: relative; display: flex; align-items: center; min-width: 0; height: 36px; border: 1px solid #252932; border-radius: 10px; background: var(--field-bg); }
+.connection-input > svg { position: absolute; left: 11px; width: 15px; height: 15px; color: #717784; pointer-events: none; }
+.connection-page .connection-input input:is(#server-address, #display-name, #server-password, #server-invitation) { width: 100%; min-width: 0; height: 100%; padding: 0 10px 0 32px; border: 0; border-radius: inherit; outline: none; color: var(--text); background: transparent; box-shadow: none; font-size: 13px; animation: none; }
+.connection-page .connection-input input:is(#server-address, #display-name, #server-password, #server-invitation):hover:not(:disabled),
+.connection-page .connection-input input:is(#server-address, #display-name, #server-password, #server-invitation):focus { border: 0; background: transparent; box-shadow: none; animation: none; }
+.connection-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.connection-page input::placeholder { color: #959ca9; opacity: 1; }
+.connection-page input:disabled { cursor: not-allowed; opacity: 1; }
+.connection-form > .connection-remember { position: relative; display: flex; align-items: center; gap: 8px; min-height: 22px; cursor: pointer; font-size: 13px; }
+.connection-remember input { position: absolute; left: 0; width: 38px; height: 22px; margin: 0; opacity: 0; cursor: pointer; }
+.connection-switch { flex: 0 0 38px; height: 22px; padding: 3px; border-radius: 99px; background: #444953; transition: background .15s; }
+.connection-switch::after { content: ""; display: block; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0003; transition: transform .15s; }
+.connection-remember input:checked + .connection-switch { background: var(--accent); }
+.connection-remember input:checked + .connection-switch::after { transform: translateX(16px); }
+.connection-remember input:focus-visible + .connection-switch { outline: 2px solid var(--accent); outline-offset: 3px; }
+.connection-form .primary-button { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 41px; padding: 0 16px; border-radius: 12px; font-size: 13px; font-weight: 600; }
+.connection-form .primary-button svg { width: 15px; height: 15px; }
+.connection-form .primary-button:disabled { opacity: .6; }
+.connection-form .form-error { margin: 0; padding: 8px 10px; font-size: 12px; overflow-wrap: anywhere; }
+.connection-rings { position: absolute; top: 50%; right: -390px; width: 720px; height: 720px; transform: translateY(-50%); pointer-events: none; background: radial-gradient(circle, #ff79421a 0, #ff794207 30%, transparent 62%); }
+.connection-rings i { position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; transform: translate(-50%, -50%); border: 1px solid #ffffff04; border-radius: 50%; }
+.connection-rings i:nth-child(2) { width: 76%; height: 76%; border-color: #ffffff06; }
+.connection-rings i:nth-child(3) { width: 54%; height: 54%; border-color: #ffffff07; }
+.connection-rings i:nth-child(4) { width: 34%; height: 34%; border-color: #ffffff08; }
+.connection-server-card { display: flex; flex-direction: column; gap: 10px; padding: 20px; }
+.connection-server-list { display: flex; flex-direction: column; flex: 0 1 auto; max-height: min(65vh, 540px); border: 0; overflow: hidden; }
+.connection-server-list .servers-heading { flex: 0 0 auto; min-height: 20px; padding: 0; margin-bottom: 10px; }
+.connection-server-list .servers-heading h2 { margin-right: auto; color: var(--text); font-size: 14px; line-height: 20px; font-weight: 600; }
+.connection-server-list .count-badge { color: #ff985f; background: #ff79421a; border-radius: 6px; font-size: 10px; }
+.connection-server-list .servers-refresh { width: 24px; height: 24px; opacity: .7; }
+.connection-server-list:hover .servers-refresh, .connection-server-list:focus-within .servers-refresh { opacity: 1; }
+.connection-server-list .servers-scroll { padding: 0; scrollbar-gutter: auto; }
+.connection-server-list .recent-server { position: relative; grid-template-columns: minmax(0, 1fr) 52px; gap: 6px; min-height: 66px; margin: 0; padding: 11px 10px; border: 1px solid transparent; border-radius: 14px; background: var(--card-strong); }
+.connection-server-list .recent-server + .recent-server { margin-top: 10px; border-top: 1px solid transparent; border-radius: 14px; }
+.connection-server-list .recent-server.selected { border-color: #c56c43; background: #352620; box-shadow: inset 0 0 0 1px #ff794214; }
+.connection-server-list .recent-server:hover { border-color: #62616a; }
+.connection-server-list .recent-server.selected:hover { border-color: var(--accent); }
+.connection-server-list .recent-server:focus-within { border-color: var(--accent); }
+.connection-server-list .recent-server-connect { gap: 10px; padding: 0; color: var(--text); }
+.connection-server-avatar { position: relative; display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 12px; color: #ebebed; background: #252932; font-size: 12px; font-weight: 600; }
+.connection-server-avatar > span:first-child { display: grid; place-items: center; }
+.connection-server-status { position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border: 2px solid var(--card-strong); border-radius: 50%; background: #8d95a4; }
+.connection-server-status.available { background: #45c99c; }
+.connection-server-status.unavailable { background: #e5ad69; }
+.selected .connection-server-status { border-color: #352620; }
+.selected .connection-server-avatar { color: #302018; background: var(--accent); }
+.connection-server-list .recent-server-label { gap: 5px; font-size: 13px; line-height: 16px; }
+.connection-server-list .recent-server-label > small { color: #a2a9b7; font-size: 12px; line-height: 15px; }
+.connection-server-list .server-population { display: flex; justify-content: flex-end; align-self: start; gap: 4px; margin-top: 1px; color: #aeb5c2; font-size: 11px; line-height: 15px; }
+.connection-server-list .server-population svg { display: block; flex-shrink: 0; width: 12px; height: 12px; }
+.connection-server-list .server-population.available { color: #7cdabb; }
+.connection-server-list .server-favorite { position: absolute; right: 10px; bottom: 7px; width: 22px; height: 20px; opacity: 0; }
+.connection-server-list .recent-server:hover .server-favorite, .connection-server-list .server-favorite:focus-visible, .connection-server-list .server-favorite[aria-pressed="true"] { opacity: 1; }
+.connection-server-list .recent-server:focus-within .server-favorite { opacity: 1; }
+.connection-server-list .server-alias-input { min-width: 0; margin: 0; padding: 8px; font-size: 12px; }
+.connection-server-list .recent-servers-empty { margin: 0; padding: 18px 10px; border-radius: 12px; background: var(--card-strong); font-size: 12px; line-height: 1.6; }
+.connection-invitation { padding-top: 12px; border-top: 1px solid #21252d; }
+.connection-invitation > label { display: block; margin-bottom: 12px; color: #b6bbc6; font-size: 13px; line-height: 18px; }
+.connection-invitation-row { display: flex; gap: 8px; }
+.connection-invitation-row .connection-input { flex: 1; }
+.connection-invitation-row button { flex-shrink: 0; padding: 0 13px; border: 0; border-radius: 10px; color: var(--text); background: #252932; font-size: 13px; font-weight: 600; cursor: pointer; }
+.connection-invitation-row button:hover { background: #323741; }
+.connection-invitation-row button:disabled { opacity: .6; cursor: default; }
+.connection-invite-error { margin: 10px 0 0; color: #ffb18f; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+@media (max-width: 1050px) {
+  .connection-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+  .connection-hero { padding: 40px; }
+  .connection-hero h1 { font-size: 34px; }
+  .connection-server-card { padding: 18px; }
+}
+@media (max-width: 760px) {
+  .connection-layout { grid-template-columns: minmax(0, 1fr); }
+  .connection-hero { padding: 36px 24px; }
+  .connection-hero h1 { font-size: clamp(28px, 6vw, 38px); }
+  .connection-form { width: min(408px, 100%); }
+  .connection-server-card { min-height: 220px; }
+  .connection-server-list { max-height: 340px; }
+  .connection-rings { right: -520px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .connection-switch, .connection-switch::after { transition: none; }
+}

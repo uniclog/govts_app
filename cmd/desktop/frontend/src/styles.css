@@ -59,16 +59,6 @@ h1, h2, h3, p { margin-top: 0; }
 h1 { margin-bottom: 0; font-size: 1.5625rem; line-height: 1.15; }
 h2 { margin: 0; font-size: 1.25rem; }
 
-.connection-page { display: grid; min-height: 100%; place-items: center; padding: 32px; background: radial-gradient(circle at 50% 10%, color-mix(in srgb, var(--card-strong) 70%, var(--accent-blue)) 0, var(--window) 48%); }
-.connection-card { width: min(470px, 100%); padding: 38px; border: 1px solid var(--line); border-radius: 24px; background: var(--card); box-shadow: 0 30px 80px color-mix(in srgb, var(--shadow) 35%, transparent); }
-.connection-logo { display: grid; place-items: center; color: var(--on-accent); font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent-blue)); box-shadow: 0 9px 30px color-mix(in srgb, var(--accent) 28%, transparent); }
-.connection-logo { width: 54px; height: 54px; margin-bottom: 27px; border-radius: 18px; font-size: 1.25rem; letter-spacing: -1px; }
-.connection-card h1 { margin-bottom: 12px; font-size: 1.875rem; }
-.lead { margin-bottom: 28px; color: var(--muted); line-height: 1.55; }
-.connection-card form { display: grid; gap: 18px; }
-.connection-card form > label { display: grid; gap: 8px; font-size: 0.8125rem; font-weight: 700; }
-.connection-card input { width: 100%; padding: 14px 15px; }
-.connection-card input::placeholder { color: var(--muted); }
 .primary-button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 11px; color: var(--on-accent); background: var(--accent); font-weight: 800; cursor: pointer; }
 .primary-button:hover:not(:disabled) { filter: brightness(1.07); }
 .primary-button:disabled { cursor: not-allowed; opacity: .48; }

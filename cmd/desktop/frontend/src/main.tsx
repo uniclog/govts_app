@@ -7,6 +7,7 @@ import "./fonts.css";
 import "./theme.css";
 import "./styles.css";
 import "./workspace.css";
+import "./features/connection/connection.css";
 
 applyAppearance(loadAppearance());
 

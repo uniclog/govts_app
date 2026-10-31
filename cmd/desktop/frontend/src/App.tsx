@@ -16,6 +16,7 @@ import {EventPanel} from "./features/connection/EventPanel";
 import {RecentServers} from "./features/connection/RecentServers";
 import {rememberServerAddress} from "./features/connection/ConnectionViews";
 import {Icon} from "./components/Icon";
+import {WindowControls} from "./components/WindowControls";
 import {Select, type SelectOption} from "./components/Select";
 import {ChatPanel} from "./features/chat/ChatPanel";
 import {ChatStore} from "./features/chat/chatStore";
@@ -415,8 +416,9 @@ function MainApp({appearance, setTheme, createCustomTheme, updateAppearance, ope
         if (page === "admin" && !adminAvailable) setPage("channels");
     }, [page, adminAvailable]);
 
-    return <div className="app-shell">
-        <main className="main-area" ref={mainRef}>
+    return <div className={`app-shell${lobby ? " lobby-shell" : ""}`}>
+        <WindowControls overlayOpen={page !== "channels"} onError={setActionError}/>
+        <main className={`main-area${lobby ? " lobby-main" : ""}`} ref={mainRef}>
             {lobby ? <>
                 <LobbyBar version={updates.view?.current} updateAction={<UpdateButton updates={updates}/>} onPageChange={setPage}/>
                 <ConnectionPage

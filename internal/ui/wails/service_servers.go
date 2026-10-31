@@ -22,6 +22,10 @@ func (s *Service) recordServerVisit(view ClientViewDTO) {
 		return
 	}
 	s.settingsMu.Lock()
+	if s.skipServerHistory {
+		s.settingsMu.Unlock()
+		return
+	}
 	address := s.serverAddress
 	endpoint, err := clientapp.ParseServerEndpoint(address)
 	if err != nil {
@@ -189,6 +193,7 @@ func (s *Service) ReconnectServer(address string) error {
 	s.settingsMu.RLock()
 	current, _ := clientapp.ParseServerEndpoint(s.serverAddress)
 	name := s.displayName
+	skipHistory := s.skipServerHistory
 	found := false
 	for _, server := range s.recentServers {
 		if server.Address == endpoint.String() {
@@ -215,5 +220,5 @@ func (s *Service) ReconnectServer(address string) error {
 	if err := s.disconnect(); err != nil {
 		return err
 	}
-	return s.connect(ConnectRequest{Name: name, Server: endpoint.String()})
+	return s.connect(ConnectRequest{Name: name, Server: endpoint.String(), SkipHistory: skipHistory})
 }

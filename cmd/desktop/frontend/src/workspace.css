@@ -344,23 +344,6 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .chat-older { display: block; margin: 0 auto 10px; }
 .chat-new { align-self: center; margin-bottom: 6px; }
 .settings-page { margin: 0; padding: 24px 28px 22px; }
-.connection-card { color: var(--text); background: var(--card); border-color: var(--line); }
-.connection-page { grid-row: 3; height: 100%; min-height: 0; overflow-y: auto; }
-.connection-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 24px; width: min(1000px, 100%); }
-.connection-layout > .connection-card { width: 100%; min-width: 0; }
-.connection-layout.connection-layout-empty { grid-template-columns: minmax(0, 1fr); width: min(470px, 100%); }
-.connection-server-card[hidden] { display: none; }
-.connection-server-card { display: grid; contain: size; min-height: 300px; padding: 24px; }
-.connection-server-list { border: 0; }
-.connection-server-list .panel-heading { padding: 0 8px; }
-.connection-server-list .recent-server-connect { padding-top: 12px; padding-bottom: 12px; }
-.connection-server-list .recent-server-label { font-size: 0.8125rem; }
-.connection-server-list .recent-server-label > small { font-size: 0.6875rem; }
-@media (max-width: 760px) {
-    .connection-layout { grid-template-columns: minmax(0, 1fr); }
-    .connection-server-card { height: 300px; }
-}
-.connection-card input { color: var(--text); }
 @media (max-width: 1100px) {
   .channel-stage { padding-inline: 12px; }
   .participants-strip { gap: 12px; }
