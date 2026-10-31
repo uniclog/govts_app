@@ -2,7 +2,6 @@ import {useEffect, useRef, useState} from "react";
 import type {ReactNode} from "react";
 import type {ClientViewDTO} from "../../api";
 import {desktopAPI} from "../../api";
-import {ConnectionStatsPopup} from "./ConnectionStatsPopup";
 import {RecentServers} from "./RecentServers";
 import {Icon} from "../../components/Icon";
 import {errorCode, errorText, rawError} from "../../locales";
@@ -138,7 +137,7 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
     </div></div>;
 }
 
-function VoiceMark() {
+export function VoiceMark() {
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none"/><path d="M11 7a7 7 0 0 1 0 10M15 3a12 12 0 0 1 0 18"/></svg>;
 }
 
@@ -168,18 +167,10 @@ export function StatusBar({view, onPageChange, sharing, screenMedia, updateActio
     screenMedia: ScreenMediaController;
 }) {
     const {m} = useLocale();
-    return <header className="status-bar">
-        <div className="app-brand"><span className="brand-mark"><Icon name="server"/></span><strong title={view.server.name}>{view.server.name || m.connection.server}</strong>{view.server.version && <span className="server-version" aria-label={m.connection.serverVersion(view.server.version)}>{view.server.version}</span>}{updateAction}</div>
-        <div className={`sync-pill ${view.snapshotFresh ? "synced" : ""}`} aria-hidden={view.snapshotFresh}>{m.connection.syncing}</div>
-        <ConnectionStatsPopup sessionId={view.sessionId} status={view.connectionStatus} channelId={view.channelId} sharing={sharing} screenMedia={screenMedia}/>
-        {view.canAdmin && <button id="open-admin" className="status-pill settings-pill admin-pill" type="button" onClick={() => onPageChange("admin")}>
-            <Icon name="shield"/><span>{m.admin.open}</span>
-        </button>}
-        <button className="status-pill settings-pill disconnect-button" type="button" title={m.connection.disconnect}
-            onClick={() => void invoke(() => desktopAPI.disconnect())}><Icon name="hangup"/><span>{m.connection.leave}</span></button>
-        <button id="open-settings" className="status-pill settings-pill" type="button" onClick={() => onPageChange("settings")}>
-            <Icon name="settings"/><span>{m.connection.settings}</span>
-        </button>
+    const channel = view.channels?.find((item) => item.id === view.channelId);
+    return <header className="status-bar server-titlebar">
+        <div className="app-brand"><span className="brand-mark"><VoiceMark/></span><strong>SRX — {channel?.name || view.server.name || m.connection.server}</strong>{updateAction}</div>
+        {!view.snapshotFresh && <div className="sync-pill">{m.connection.syncing}</div>}
     </header>;
 }
 
@@ -193,21 +184,26 @@ export function AudioControls({view, invoke, sharing}: {
     return <div className="audio-control-island" role="group" aria-label={m.connection.audioGroup}>
             <button className={`voice-control ${view.audio.muted || !view.audio.captureAvailable ? "active" : ""}`}
                 aria-pressed={view.audio.muted} disabled={!view.audio.captureAvailable}
+                aria-label={!view.audio.captureAvailable ? m.connection.noMic : view.audio.muted ? m.connection.micOn : m.connection.micOff}
                 title={!view.audio.captureAvailable ? m.connection.noMic : view.audio.muted ? m.connection.micOn : m.connection.micOff}
                 onClick={() => void invoke(() => desktopAPI.setMuted(!view.audio.muted))}><Icon name="mic"/><span>{m.connection.mic}</span></button>
             <button className={`voice-control ${view.audio.deafened ? "active" : ""}`} aria-pressed={view.audio.deafened}
+                aria-label={view.audio.deafened ? m.connection.soundOn : m.connection.soundOff}
                 title={view.audio.deafened ? m.connection.soundOn : m.connection.soundOff}
-                onClick={() => void invoke(() => desktopAPI.setDeafened(!view.audio.deafened))}><Icon name="sound"/><span>{m.connection.audio}</span></button>
+                onClick={() => void invoke(() => desktopAPI.setDeafened(!view.audio.deafened))}><Icon name="headphones"/><span>{m.connection.audio}</span></button>
             <button className={`voice-control away-control ${away ? "active" : ""}`}
                 aria-pressed={away}
+                aria-label={away ? m.connection.hereHint : m.connection.awayHint}
                 disabled={view.connectionStatus !== "connected" || view.channelId === "0"}
                 title={away ? m.connection.hereHint : m.connection.awayHint}
                 onClick={() => void invoke(() => desktopAPI.setAway(!away))}>
-                <Icon name={away ? "here" : "away"}/><span>{away ? m.connection.here : m.connection.away}</span>
+                <Icon name="moon"/><span>{away ? m.connection.here : m.connection.away}</span>
             </button>
         <button ref={sharing.buttonRef} className={`voice-control screen-share-button ${sharing.active ? "sharing" : ""}`}
+            aria-label={sharing.active ? m.connection.stopShare : m.connection.startShare}
             title={sharing.active ? m.connection.stopShare : m.connection.startShare} aria-pressed={sharing.active}
             aria-haspopup={sharing.active ? undefined : "dialog"} disabled={sharing.pending || !sharing.available}
             onClick={() => void sharing.toggle()}><Icon name="screen"/><span>{sharing.active ? m.connection.stopShare : m.connection.sharing}</span></button>
+        <button className="voice-control voice-disconnect" aria-label={m.connection.disconnect} title={m.connection.disconnect} onClick={() => void invoke(() => desktopAPI.disconnect())}><Icon name="hangup"/><span>{m.connection.leave}</span></button>
     </div>;
 }

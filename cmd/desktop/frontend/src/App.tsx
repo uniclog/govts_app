@@ -5,7 +5,7 @@ import type {AudioDeviceDTO, AudioDevicesDTO, ChannelDTO, ClientEventDTO, Client
 import {desktopAPI} from "./api";
 import {buildChannelGroups, canMoveParticipant, mergeEventTail} from "./model";
 import {ScreenMediaController} from "./features/screen/screenMedia";
-import {ScreenSharing, ScreenStageTile, ScreenViewerWindow} from "./features/screen/ScreenViews";
+import {ScreenStageTile, ScreenViewerWindow} from "./features/screen/ScreenViews";
 import {LinkConfirmDialog} from "./features/chat/LinkConfirm";
 import {MediaTrustDialog} from "./features/screen/MediaTrustConfirm";
 import {ScreenShareDialog, useScreenSharing, type ScreenSharingState} from "./features/screen/ScreenShareDialog";
@@ -13,9 +13,11 @@ import {AudioControls, ConnectionPage, LobbyBar, StatusBar, type Page} from "./f
 import {ParticipantRow} from "./features/participants/ParticipantRow";
 import {ConnectionProgress} from "./features/connection/ConnectionProgress";
 import {EventPanel} from "./features/connection/EventPanel";
-import {RecentServers} from "./features/connection/RecentServers";
 import {rememberServerAddress} from "./features/connection/ConnectionViews";
 import {Icon} from "./components/Icon";
+import {avatarStyle} from "./components/avatar";
+import {ConnectionStatsPopup} from "./features/connection/ConnectionStatsPopup";
+import {ServerSwitcher} from "./features/connection/ServerSwitcher";
 import {WindowControls} from "./components/WindowControls";
 import {Select, type SelectOption} from "./components/Select";
 import {ChatPanel} from "./features/chat/ChatPanel";
@@ -31,7 +33,7 @@ import {AdminPanel} from "./features/admin/AdminPanel";
 import {StageScene} from "./features/settings/StageScene";
 import {HotkeySettings} from "./features/settings/HotkeySettings";
 
-const contentTabs = ["chat", "screens", "events"] as const;
+const contentTabs = ["chat", "events"] as const;
 type ContentTab = typeof contentTabs[number] | `direct:${string}`;
 type DirectChat = {userId: string; displayName: string};
 
@@ -416,9 +418,9 @@ function MainApp({appearance, setTheme, createCustomTheme, updateAppearance, ope
         if (page === "admin" && !adminAvailable) setPage("channels");
     }, [page, adminAvailable]);
 
-    return <div className={`app-shell${lobby ? " lobby-shell" : ""}`}>
+    return <div className={`app-shell${lobby ? " lobby-shell" : " server-shell"}`}>
         <WindowControls overlayOpen={page !== "channels"} onError={setActionError}/>
-        <main className={`main-area${lobby ? " lobby-main" : ""}`} ref={mainRef}>
+        <main className={`main-area${lobby ? " lobby-main" : " server-main"}`} ref={mainRef}>
             {lobby ? <>
                 <LobbyBar version={updates.view?.current} updateAction={<UpdateButton updates={updates}/>} onPageChange={setPage}/>
                 <ConnectionPage
@@ -435,7 +437,7 @@ function MainApp({appearance, setTheme, createCustomTheme, updateAppearance, ope
             <StatusBar view={view} onPageChange={setPage} sharing={sharing} screenMedia={screenMedia.current} updateAction={<UpdateButton updates={updates}/>} invoke={invoke}/>
             {actionError && <div className="error-banner" role="alert">{errorText(actionError, m)}</div>}
             {wakeUntil > wakeNow && <WakeNotice until={wakeUntil} now={wakeNow} label={wakeLabel}/>}
-            <ChannelsPage view={view} screenMedia={screenMedia.current} events={events} invoke={invoke} onWake={wakeParticipant} refreshingServers={refreshingServers} onRefreshServers={refreshServers}
+            <ChannelsPage onPageChange={setPage} referenceBackdrop={appearance.theme !== "custom"} view={view} screenMedia={screenMedia.current} events={events} invoke={invoke} onWake={wakeParticipant} refreshingServers={refreshingServers} onRefreshServers={refreshServers}
                           stageBackdrop={appearance.theme === "custom" ? appearance.stageBackdrop : "mountains"}
                           onReconnect={(address) => invoke(async () => {
                               if (sharing.pending) throw new Error(errorCode("screen-picker-switch"));
@@ -474,7 +476,9 @@ function WakeNotice({until, now, label}: {until: number; now: number; label: str
     </div>;
 }
 
-function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onReconnect, onWake, contentTab, setContentTab, directChats, setDirectChats, chatStore, refreshingServers, onRefreshServers, stageBackdrop}: {
+function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onReconnect, onWake, contentTab, setContentTab, directChats, setDirectChats, chatStore, refreshingServers, onRefreshServers, stageBackdrop, onPageChange, referenceBackdrop}: {
+    onPageChange: (page: Page) => void;
+    referenceBackdrop: boolean;
     screenMedia: ScreenMediaController;
     refreshingServers: boolean;
     onRefreshServers: () => void;
@@ -519,17 +523,10 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
     const selectedID = view.channelId;
     const selected = channels.find((channel) => channel.id === selectedID);
     const [showInfo, setShowInfo] = useState(false);
-    const [serversExpanded, setServersExpanded] = useState(false);
+    const [channelQuery, setChannelQuery] = useState("");
     const channelStreams = (view.screenStreams ?? []).filter((stream) => stream.channelId === view.channelId);
     const hasScreens = channelStreams.length > 0;
-    const allTabs: ContentTab[] = [...contentTabs.filter((tab) => tab !== "screens" || hasScreens), ...directChats.map((chat): ContentTab => `direct:${chat.userId}`)];
-    useEffect(() => {
-        if (!hasScreens && contentTab === "screens") {
-            const focused = document.activeElement?.id === "screens-tab";
-            setContentTab("chat");
-            if (focused) requestAnimationFrame(() => document.getElementById("chat-tab")?.focus());
-        }
-    }, [hasScreens, contentTab, setContentTab]);
+    const allTabs: ContentTab[] = [...contentTabs, ...directChats.map((chat): ContentTab => `direct:${chat.userId}`)];
     const openDirect = (userId: string, displayName: string) => {
         if (!chatStore || userId === "0" || userId === chatStore.userId) return;
         if (directChats.length >= 16 && !directChats.some((chat) => chat.userId === userId)) { onError(errorCode("direct-chat-limit")); return; }
@@ -552,17 +549,19 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
         setContentTab(next);
         requestAnimationFrame(() => document.getElementById(`${next}-tab`)?.focus());
     };
-    const infoVisible = showInfo && Boolean(selected);
+    const infoVisible = showInfo && Boolean(selected) && view.connectionStatus === "connected";
     const workspaceResize = useWorkspaceResize(infoVisible);
     const members = participants.filter((item) => item.channelId === selectedID);
+    const localParticipant = participants.find((person) => person.local);
+    const speakingMembers = members.filter((person) => person.speaking && !person.muted && !person.deafened && !person.away);
     return <section className="channels-page">
         <div ref={workspaceResize.layoutRef} style={workspaceResize.style} className={`channels-layout ${infoVisible ? "" : "info-hidden"} ${workspaceResize.resizing ? "is-resizing" : ""}`}>
-            <section id="channel-browser-pane" className={`panel channel-browser ${serversExpanded ? "servers-expanded" : ""}`}>
+            <section id="channel-browser-pane" className="panel channel-browser">
+                <ServerSwitcher view={view} refreshingServers={refreshingServers} onRefreshServers={onRefreshServers} onReconnect={onReconnect} onError={onError}/>
+                <label className="channel-search"><Icon name="search"/><input id="server-channel-search" value={channelQuery} onChange={(event) => setChannelQuery(event.target.value)} placeholder={m.channels.search} aria-label={m.channels.search}/></label>
                 <section className="sidebar-section" aria-label={m.channels.browser}>
-                <div className="panel-heading">
-                    <div><h2>{m.channels.title}</h2></div>
-                    <span className="count-badge">{participants.length}</span></div>
-                <div className="channel-scroll"><ChannelTree channels={channels} participants={participants} screenOwners={screenOwners}
+                    <div className="panel-heading"><h2>{m.channels.voiceChannels}</h2>{view.canAdmin && <button type="button" className="channel-add" title={m.admin.open} aria-label={m.admin.open} onClick={() => onPageChange("admin")}><Icon name="plus"/></button>}</div>
+                    <div className="channel-scroll"><ChannelTree query={channelQuery} channels={channels} participants={participants} screenOwners={screenOwners}
                                                              canKick={view.canKick} canBan={view.canBan}
                                                              canDrag={view.canDrag && view.connectionStatus === "connected"}
                                                              wakeEnabled={view.connectionStatus === "connected"}
@@ -575,22 +574,37 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                     void invoke(() => desktopAPI.drag(sessionID, channelID));
                 }}/></div>
                 </section>
-                <RecentServers view={view} expanded={serversExpanded} onToggle={() => setServersExpanded((value) => !value)} onReconnect={onReconnect} onError={onError} refreshingServers={refreshingServers} onRefreshServers={onRefreshServers}/>
+                <footer className="workspace-user-footer">
+                    <span className={`footer-avatar ${localParticipant?.speaking && !view.audio.muted ? "speaking" : ""}`} style={avatarStyle(localChatName)}>{localChatName.slice(0, 1).toUpperCase()}</span>
+                    <div className="workspace-user-identity"><strong title={localChatName}>{localChatName}</strong><ConnectionStatsPopup sessionId={view.sessionId} status={view.connectionStatus} channelId={view.channelId} sharing={sharing} screenMedia={screenMedia}/></div>
+                    <button id="open-settings" type="button" aria-label={m.connection.settings} title={m.connection.settings} onClick={() => onPageChange("settings")}><Icon name="settings"/></button>
+                </footer>
             </section>
-            <div className="workspace-divider" {...workspaceResize.separatorProps("browser")}/>
-            <section className={`channel-stage${hasScreens ? " has-screen-stage" : ""} ${view.connectionStatus !== "connected" ? "connection-pending" : ""}`}>{selected && view.connectionStatus === "connected" ? <>
-                <header className="channel-stage-heading"><span className="channel-heading-icon"><Icon name="sound"/></span><div><h2 title={selected.name}>{selected.name}</h2><p title={selected.topic || m.channels.voice}>{selected.topic || m.channels.voice}</p></div>
-                    <button className="info-toggle" aria-label={m.channels.info} aria-expanded={showInfo} onClick={() => setShowInfo(!showInfo)}><Icon name="info"/></button>
-                </header>
-                <div className="participants-stage" data-backdrop={stageBackdrop} role="region" tabIndex={0} aria-label={m.channels.stage}><StageScene backdrop={stageBackdrop}/><div className="participants-strip">
-                    {members.length ? members.map((participant) => <div className="stage-participant-group" key={participant.sessionId}><ParticipantRow
-                        participant={participant} variant="stage" sharingScreen={screenOwners.has(participant.sessionId)} canKick={view.canKick} canBan={view.canBan} canDrag={false}
-                        canWake={view.connectionStatus === "connected" && participant.channelId === view.channelId}
-                        onWake={(person) => { onWake(person.sessionId); }}
-                        depth={0} onError={onError} onMessage={openMessage} onDragStart={(event) => event.preventDefault()} onDragEnd={() => {}}/>
-                        {channelStreams.filter((stream) => stream.ownerSessionId === participant.sessionId).map((stream) => <ScreenStageTile key={stream.id} stream={stream} ownerName={participant.displayName} local={participant.local} connected={view.connectionStatus === "connected"} onError={onError}/>)}</div>) : <div className="stage-empty">{m.channels.emptyStage}</div>}
-                </div></div>
-                <section className="channel-content">
+            <div className="workspace-divider workspace-browser-divider" {...workspaceResize.separatorProps("browser")}/>
+            <section className={`channel-stage${hasScreens ? " has-screen-stage" : ""} ${view.connectionStatus !== "connected" ? "connection-pending" : ""}`}>
+                {selected && view.connectionStatus === "connected" ? <>
+                    <header className="channel-stage-heading">
+                        <span className="channel-heading-icon"><Icon name="voice"/></span>
+                        <div><h2 title={selected.name}>{selected.name}</h2><p title={selected.topic}>{selected.topic || m.channels.voice} · {members.length}{selected.maxUsers ? ` / ${selected.maxUsers}` : ""} · {selected.audio.codec} {m.channels.kbps(selected.audio.bitrate / 1000)}</p></div>
+                        <span className="channel-member-stack" aria-label={m.channels.members}>{members.slice(0, 4).map((person) => <span key={person.sessionId} style={avatarStyle(person.displayName)} title={person.displayName}>{person.displayName.slice(0, 1).toUpperCase()}</span>)}{members.length > 4 && <small>+{members.length - 4}</small>}</span>
+                        <button className="info-toggle" title={m.channels.info} aria-label={m.channels.info} aria-expanded={showInfo} onClick={() => setShowInfo(!showInfo)}><Icon name="info"/></button>
+                        {view.canAdmin && <button id="open-admin" className="info-toggle" title={m.admin.open} aria-label={m.admin.open} onClick={() => onPageChange("admin")}><Icon name="more"/></button>}
+                    </header>
+                    <div className="participants-stage" data-backdrop={stageBackdrop} data-reference-backdrop={referenceBackdrop} role="region" tabIndex={0} aria-label={m.channels.stage}>
+                        {referenceBackdrop ? <div className="workspace-stage-art" aria-hidden="true"><i/><i/><i/></div> : <StageScene backdrop={stageBackdrop}/>}
+                        <div className={`stage-speaking-summary ${speakingMembers.length ? "is-speaking" : ""}`}><Icon name="voice"/><span>{speakingMembers.length ? `${m.channels.speakingNow} ${speakingMembers.map((person) => person.displayName).join(", ")}` : m.channels.quiet}</span></div>
+                        <div className="stage-member-summary"><Icon name="users"/>{members.length}{selected.maxUsers ? ` / ${selected.maxUsers}` : ""}</div>
+                        <div className="participants-strip" data-single={members.length + channelStreams.length === 1}>
+                            {members.map((participant) => <div className="stage-participant-group" key={participant.sessionId}><ParticipantRow participant={participant} variant="stage" sharingScreen={screenOwners.has(participant.sessionId)} canKick={view.canKick} canBan={view.canBan} canDrag={false} canWake={participant.channelId === view.channelId} onWake={(person) => onWake(person.sessionId)} depth={0} onError={onError} onMessage={openMessage} onDragStart={(event) => event.preventDefault()} onDragEnd={() => {}}/></div>)}
+                            {channelStreams.map((stream) => <ScreenStageTile key={stream.id} stream={stream} ownerName={participants.find((person) => person.sessionId === stream.ownerSessionId)?.displayName || m.screen.participant} local={stream.ownerSessionId === view.sessionId} connected={view.connectionStatus === "connected"} onError={onError} screenMedia={screenMedia}/>)}
+                            {!members.length && !channelStreams.length && <div className="stage-empty">{m.channels.emptyStage}</div>}
+                        </div>
+                    </div>
+                </> : <ConnectionProgress view={view} events={events}/>}
+                {view.connectionStatus === "connected" && <div className="channel-audio-dock"><AudioControls view={view} invoke={invoke} sharing={sharing}/></div>}
+            </section>
+            <div className="workspace-divider workspace-chat-divider" {...workspaceResize.separatorProps("chat")}/>
+            {selected && view.connectionStatus === "connected" ? <section id="server-content-pane" className="channel-content" hidden={infoVisible}>
                     <div className="channel-tabs" role="tablist" aria-label={m.channels.content} onKeyDown={(event) => {
                         if ((event.target as HTMLElement).getAttribute("role") !== "tab") return;
                         if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -600,9 +614,11 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                         setContentTab(next);
                         document.getElementById(`${next}-tab`)?.focus();
                     }}>
+                        <div className="workspace-primary-tabs" role="presentation">
                         <button id="chat-tab" role="tab" tabIndex={contentTab === "chat" ? 0 : -1} aria-selected={contentTab === "chat"} aria-controls="chat-panel" onClick={() => setContentTab("chat")}><Icon name="chat"/>{m.channels.chat}{chatStore && chatChannelID !== "0" && chatStore.conversation({kind: "channel", id: chatChannelID}).unread > 0 && <span className="count-badge">{chatStore.conversation({kind: "channel", id: chatChannelID}).unread}</span>}</button>
-                        {hasScreens && <button id="screens-tab" role="tab" tabIndex={contentTab === "screens" ? 0 : -1} aria-selected={contentTab === "screens"} aria-controls="screens-panel" onClick={() => setContentTab("screens")}><Icon name="screen"/>{m.channels.screens}<span className="count-badge">{channelStreams.length}</span></button>}
                         <button id="events-tab" role="tab" tabIndex={contentTab === "events" ? 0 : -1} aria-selected={contentTab === "events"} aria-controls="events-panel" onClick={() => setContentTab("events")}>{m.channels.events}</button>
+                        </div>
+                        {directChats.length > 0 && <div className="workspace-direct-tabs" role="presentation">
                         {directChats.map((chat) => {
                             const tab: ContentTab = `direct:${chat.userId}`;
                             const dialog = dialogs.find((d) => d.userId === chat.userId);
@@ -611,20 +627,15 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                                 <button id={`${tab}-tab`} role="tab" tabIndex={contentTab === tab ? 0 : -1} aria-selected={contentTab === tab} aria-controls={`${tab}-panel`} title={name} onClick={() => setContentTab(tab)}><span>{name}</span>{!!dialog?.unread && <span className="count-badge">{dialog.unread}</span>}</button>
                                 <button className="close-chat-tab" type="button" aria-label={m.channels.closeDirect(name)} title={m.channels.closeTab} onClick={() => closeMessage(chat.userId)}>×</button>
                             </div>;
-                        })}
+                        })}</div>}
                     </div>
-                    <div id="chat-panel" role="tabpanel" aria-labelledby="chat-tab" hidden={contentTab !== "chat"}>{chatStore && chatChannelID !== "0" ? <ChatPanel key={chatChannelID} store={chatStore} localName={localChatName} target={{kind: "channel", id: chatChannelID}} title={m.channels.channelChat(channels.find((c) => c.id === chatChannelID)?.name ?? "")} active={contentTab === "chat"} connected={view.connectionStatus === "connected" && view.channelId === chatChannelID}/> : <div className="chat-placeholder">{m.channels.waitingChannel}</div>}</div>
-                    {hasScreens && <div id="screens-panel" role="tabpanel" aria-labelledby="screens-tab" hidden={contentTab !== "screens"}><ScreenSharing view={view} channelID={selected.id} participants={participants} screenMedia={screenMedia}/></div>}
-                    <div id="events-panel" role="tabpanel" aria-labelledby="events-tab" hidden={contentTab !== "events"}><EventPanel events={events} active={contentTab === "events"}/></div>
+                    <div id="chat-panel" role="tabpanel" aria-labelledby="chat-tab" hidden={contentTab !== "chat"}>{chatStore && chatChannelID !== "0" ? <ChatPanel key={chatChannelID} store={chatStore} localName={localChatName} target={{kind: "channel", id: chatChannelID}} title={m.channels.channelChat(channels.find((c) => c.id === chatChannelID)?.name ?? "")} active={contentTab === "chat" && !infoVisible} connected={view.connectionStatus === "connected" && view.channelId === chatChannelID}/> : <div className="chat-placeholder">{m.channels.waitingChannel}</div>}</div>
+                    <div id="events-panel" role="tabpanel" aria-labelledby="events-tab" hidden={contentTab !== "events"}><EventPanel events={events} active={contentTab === "events" && !infoVisible}/></div>
                     {directChats.map((chat) => <div key={chat.userId} id={`direct:${chat.userId}-panel`} role="tabpanel" aria-labelledby={`direct:${chat.userId}-tab`} hidden={contentTab !== `direct:${chat.userId}`}>
-                        {chatStore && <ChatPanel store={chatStore} localName={localChatName} target={{kind: "direct", id: chat.userId}} title={m.channels.direct(participants.find((participant) => participant.userId === chat.userId)?.displayName ?? dialogs.find((d) => d.userId === chat.userId)?.displayName ?? chat.displayName)} online={participants.some((p) => p.userId === chat.userId)} active={contentTab === `direct:${chat.userId}`} connected={view.connectionStatus === "connected"}/>}
+                        {chatStore && <ChatPanel store={chatStore} localName={localChatName} target={{kind: "direct", id: chat.userId}} title={m.channels.direct(participants.find((participant) => participant.userId === chat.userId)?.displayName ?? dialogs.find((d) => d.userId === chat.userId)?.displayName ?? chat.displayName)} online={participants.some((p) => p.userId === chat.userId)} active={contentTab === `direct:${chat.userId}` && !infoVisible} connected={view.connectionStatus === "connected"}/>}
                     </div>)}
-                </section>
-            </> : <ConnectionProgress view={view} events={events}/>}
-                {view.connectionStatus === "connected" && <div className="channel-audio-dock"><AudioControls view={view} invoke={invoke} sharing={sharing}/></div>}
-            </section>
-            {infoVisible && <div className="workspace-divider info-divider" {...workspaceResize.separatorProps("info")}/>}
-            {showInfo && selected && <section id="channel-info-pane" className="panel channel-detail">{selected ? <><div className="channel-info-heading"><span>{m.channels.info}</span><button aria-label={m.channels.closeInfo} onClick={() => setShowInfo(false)}>×</button></div>
+                </section> : <section id="server-content-pane" className="channel-content"><div className="chat-placeholder">{m.channels.waitingChannel}</div></section>}
+            {infoVisible && selected && <section id="channel-info-pane" className="panel channel-detail">{selected ? <><div className="channel-info-heading"><span>{m.channels.info}</span><button aria-label={m.channels.closeInfo} onClick={() => setShowInfo(false)}>×</button></div>
                 <h2>{selected.name}</h2>
                 <p className="channel-topic">{selected.topic || m.channels.voice}</p><p
                     className="channel-description">{selected.description || m.channels.noDescription}</p>
@@ -641,7 +652,8 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
     </section>;
 }
 
-function ChannelTree({channels, participants, screenOwners, canKick, canBan, canDrag, wakeEnabled, currentID, onJoin, onMoveParticipant, onError, onMessage, onWake}: {
+function ChannelTree({channels, participants, screenOwners, canKick, canBan, canDrag, wakeEnabled, currentID, onJoin, onMoveParticipant, onError, onMessage, onWake, query = ""}: {
+    query?: string;
     channels: ChannelDTO[];
     participants: ParticipantDTO[];
     screenOwners: Set<string>;
@@ -659,9 +671,28 @@ function ChannelTree({channels, participants, screenOwners, canKick, canBan, can
     const {m} = useLocale();
     const [draggingSessionID, setDraggingSessionID] = useState<string | null>(null);
     const [dropTargetID, setDropTargetID] = useState<string | null>(null);
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    const visibleChannels = useMemo(() => {
+        if (!normalizedQuery) return channels;
+        const visible = new Set(channels.filter((channel) => channel.name.toLocaleLowerCase().includes(normalizedQuery)).map((channel) => channel.id));
+        for (const person of participants) {
+            if (person.displayName.toLocaleLowerCase().includes(normalizedQuery)) visible.add(person.channelId);
+        }
+        const byID = new Map(channels.map((channel) => [channel.id, channel]));
+        for (const id of [...visible]) {
+            const visited = new Set<string>();
+            let parent = byID.get(id)?.parentId;
+            while (parent && parent !== "0" && !visited.has(parent)) {
+                visited.add(parent);
+                visible.add(parent);
+                parent = byID.get(parent)?.parentId;
+            }
+        }
+        return channels.filter((channel) => visible.has(channel.id));
+    }, [channels, participants, normalizedQuery]);
     const children = useMemo(() => {
-        return buildChannelGroups(channels);
-    }, [channels]);
+        return buildChannelGroups(visibleChannels);
+    }, [visibleChannels]);
     const draggingParticipant = participants.find((participant) => participant.sessionId === draggingSessionID);
     const renderLevel = (parentID: string, depth: number): React.ReactNode => (children.get(parentID) ?? []).map((channel) => {
         const members = participants.filter((participant) => participant.channelId === channel.id);
@@ -692,7 +723,7 @@ function ChannelTree({channels, participants, screenOwners, canKick, canBan, can
                 onDoubleClick={() => { if (channel.canJoin) onJoin(channel.id); }}><span className="channel-icon" aria-hidden="true"><Icon name="sound"/></span><span
                 className="channel-name">{channel.name}</span><span className="channel-count">{members.length}{channel.maxUsers ? `/${channel.maxUsers}` : ""}</span>
             </button>
-            {members.map((participant) => <ParticipantRow key={participant.sessionId} participant={participant}
+            {members.filter((person) => !normalizedQuery || channel.name.toLocaleLowerCase().includes(normalizedQuery) || person.displayName.toLocaleLowerCase().includes(normalizedQuery)).map((participant) => <ParticipantRow key={participant.sessionId} participant={participant}
                                                           sharingScreen={screenOwners.has(participant.sessionId)}
                                                           canKick={canKick} canBan={canBan} canDrag={canDrag}
                                                           canWake={wakeEnabled && participant.channelId === currentID}
@@ -709,7 +740,7 @@ function ChannelTree({channels, participants, screenOwners, canKick, canBan, can
                                                           }}
                                                           onDragEnd={() => { setDraggingSessionID(null); setDropTargetID(null); }}/>)}{renderLevel(channel.id, depth + 1)}</div>;
     });
-    return <div className="channel-tree">{channels.length ? renderLevel("0", 0) :
+    return <div className="channel-tree">{visibleChannels.length ? renderLevel("0", 0) :
         <div className="empty-state">{m.channels.noChannels}</div>}</div>;
 }
 

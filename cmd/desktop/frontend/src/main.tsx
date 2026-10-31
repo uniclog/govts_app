@@ -8,6 +8,7 @@ import "./theme.css";
 import "./styles.css";
 import "./workspace.css";
 import "./features/connection/connection.css";
+import "./server-workspace.css";
 
 applyAppearance(loadAppearance());
 

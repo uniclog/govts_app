@@ -29,7 +29,8 @@ function serverInitials(alias: string): string {
         : Array.from(words[0]).slice(0, 2).join("")).toUpperCase();
 }
 
-export function RecentServers({view, expanded, onToggle, onReconnect, onError, refreshingServers, onRefreshServers, standalone = false, disabled = false, onSelect, onCountChange, selectedAddress}: {
+export function RecentServers({view, expanded, onToggle, onReconnect, onError, refreshingServers, onRefreshServers, standalone = false, rail = false, disabled = false, onSelect, onCountChange, selectedAddress}: {
+    rail?: boolean;
     selectedAddress?: string;
     refreshingServers: boolean;
     onRefreshServers: () => void;
@@ -105,7 +106,7 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
         editingRef.current = null; setEditing(null);
         if (address) void run(() => desktopAPI.setServerAlias(address, alias));
     };
-    return <section className={`sidebar-section recent-servers ${standalone ? "connection-server-list" : ""}`} aria-label={m.connection.recent}>
+    return <section className={`sidebar-section recent-servers ${standalone ? "connection-server-list" : ""} ${rail ? "server-rail-list" : ""}`} aria-label={m.connection.recent}>
         <div className={`servers-heading ${standalone ? "panel-heading" : ""}`}>
         {standalone ? <h2>{m.connection.recentHeading}</h2> :
         <button className="servers-toggle" type="button" aria-expanded={expanded} aria-controls="recent-servers-list" onClick={onToggle}>
@@ -121,7 +122,7 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
         <span className="count-badge">{servers.length}</span>
         </div>
         <div id="recent-servers-list" className="servers-scroll" hidden={!expanded}>
-            {servers.map((server) => <div key={server.address} className={`recent-server${standalone && server.address === selectedAddress ? " selected" : ""}`}>
+            {servers.filter((server) => !rail || !server.current).map((server) => <div key={server.address} className={`recent-server${standalone && server.address === selectedAddress ? " selected" : ""}`}>
                 {editing === server.address ? <input className="server-alias-input" autoFocus maxLength={64} value={alias}
                     aria-label={m.connection.alias} placeholder={server.address} onChange={(event) => setAlias(event.target.value)}
                     onBlur={saveAlias} onKeyDown={(event) => {
@@ -129,7 +130,8 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
                         if (event.key === "Escape") { editingRef.current = null; setEditing(null); }
                     }}/> :
                 <button type="button" className="recent-server-connect" disabled={pending || disabled || (!standalone && view.connectionStatus !== "connected")}
-                        title={`${server.address}\n${m.connection.serverHint}`}
+                        title={`${server.alias ? `${server.alias}\n` : ""}${server.address}\n${m.connection.serverHint}`}
+                        aria-label={rail ? `${server.alias || server.address}. ${m.connection.serverHint}` : undefined}
                         aria-current={server.current || (standalone && server.address === selectedAddress) ? "true" : undefined}
                         onClick={() => onSelect?.(server.address)}
                         onContextMenu={(event) => {
@@ -142,7 +144,7 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
                             if (event.key === "Delete") { event.preventDefault(); void run(() => desktopAPI.deleteRecentServer(server.address)); }
                             if (event.key === "Enter" && !event.repeat) { event.preventDefault(); reconnect(server); }
                         }}>
-                    {standalone ? <span className="connection-server-avatar">
+                    {rail ? <span className="rail-server-avatar" aria-hidden="true">{server.alias?.trim() ? serverInitials(server.alias) : <Icon name="globe"/>}<i className={server.status}/></span> : standalone ? <span className="connection-server-avatar">
                         <span aria-hidden="true">{server.alias?.trim() ? serverInitials(server.alias) : <Icon name="globe"/>}</span>
                         <span className={`connection-server-status ${server.status}`} role="img" title={statusTitle(server, m, htmlLang)} aria-label={statusTitle(server, m, htmlLang)}/>
                     </span> : <span className={`server-availability ${server.status}`} role="img" title={statusTitle(server, m, htmlLang)} aria-label={statusTitle(server, m, htmlLang)}/>}

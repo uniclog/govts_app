@@ -1,6 +1,7 @@
 import {useEffect, useLayoutEffect, useReducer, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {Icon} from "../../components/Icon";
+import {avatarStyle} from "../../components/avatar";
 import {errorText} from "../../locales";
 import {useLocale} from "../../locales/Locale";
 import {chatLinkParts, openConfirmedLink} from "./chatLinks";
@@ -160,8 +161,9 @@ export function ChatPanel({store, target, title, active, connected, online, loca
             {!c.loaded && <div className="chat-placeholder"><Icon name="chat"/><p>{c.loading ? m.chat.loading : connected ? m.chat.openToLoad : m.chat.waiting}</p></div>}
             {c.loaded && !c.messages.length && !c.pending.length && <div className="chat-placeholder">{m.chat.empty}</div>}
             {c.messages.map((message) => <article key={message.id} data-message-id={message.id} className={`chat-message ${message.senderId === store.userId ? "own" : ""}${message.deleted ? " is-deleted" : ""}`}>
+                <span className="chat-author-avatar" style={avatarStyle(message.senderName)} aria-hidden="true">{message.senderName.slice(0, 1).toUpperCase()}</span>
                 <div className="chat-message-body">
-                    <div className="chat-message-meta"><strong className="chat-message-author">{message.senderName}</strong><time dateTime={new Date(message.sentAtMs).toISOString()}>{messageDate(message.sentAtMs)}</time>{message.deleted && <span className="chat-message-deleted">{m.chat.deleted}</span>}</div>
+                    <div className="chat-message-meta"><strong className="chat-message-author">{message.senderName}</strong><time title={messageDate(message.sentAtMs)} dateTime={new Date(message.sentAtMs).toISOString()}>{new Date(message.sentAtMs).toLocaleTimeString(htmlLang, {hour: "2-digit", minute: "2-digit"})}</time>{message.deleted && <span className="chat-message-deleted">{m.chat.deleted}</span>}</div>
                     {!message.deleted && message.text && <div className="chat-message-text"><ChatMessageText text={message.text}/></div>}
                     {active && !message.deleted && message.attachmentIds?.map((id) => <AttachmentCard key={id} context={store.context} id={id}/>)}
                 </div>
@@ -196,7 +198,7 @@ export function ChatPanel({store, target, title, active, connected, online, loca
                 onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); send(); } }}/>
             {bytes >= 800 && <small className={bytes > 1000 ? "is-over-limit" : ""} title={m.chat.bytes}>{bytes}/1000</small>}
             </div>
-            <button disabled={!connected || !valid} type="button" onClick={send}>{m.chat.send}</button>
+            <button className="chat-send-button" disabled={!connected || !valid} type="button" title={m.chat.send} aria-label={m.chat.send} onClick={send}><Icon name="send"/></button>
         </div>
         </div>
         {menu && menuMessage && active && createPortal(<div ref={menuRef} id="chat-message-actions" tabIndex={-1} className="chat-context-menu" role="menu" aria-label={m.chat.actions} style={{left: menu.x, top: menu.y}} onKeyDown={(event) => {
