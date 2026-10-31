@@ -86,7 +86,7 @@ func ReplaceServerKey(path string, change ServerKeyChangedError) error {
 		return fmt.Errorf("decode voice server pins: %w", err)
 	}
 	if previous, known := pins[change.Endpoint]; !known || previous != change.Previous {
-		return errors.New("saved voice server identity changed; reconnect before confirming")
+		return errors.New("voice-key-pin-changed")
 	}
 	pins[change.Endpoint] = change.NewKey
 	return writePins(path, pins)

@@ -615,6 +615,8 @@ export const en = {
         "returned": "You are back",
     },
     errors: {
+        "voice-key-confirmation-expired": "The key confirmation request has expired. Reconnect to the server and verify the fingerprint.",
+        "voice-key-pin-changed": "The saved server key has changed. Reconnect and verify the new fingerprint before confirming.",
         "name-required": "Enter a display name",
         "hotkey-action-unknown": "Unknown hotkey action.",
         "hotkey-key-invalid": "Use A–Z, 0–9 or F1–F12, optionally with Ctrl, Alt, Shift or Win.",

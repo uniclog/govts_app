@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from "react";
 import type {ClientEventDTO, ClientViewDTO} from "../../api";
 import {desktopAPI} from "../../api";
-import {errorText} from "../../locales";
+import {errorText, rawError} from "../../locales";
 import {useLocale} from "../../locales/Locale";
 import {Icon} from "../../components/Icon";
 import {EventPanel} from "./EventPanel";
@@ -15,15 +15,21 @@ export function ConnectionProgress({view, events, onDisconnect}: {
     const cancelling = useRef(false);
     const [pending, setPending] = useState(false);
     const [trustError, setTrustError] = useState("");
+    const [confirmedChange, setConfirmedChange] = useState("");
     const change = view.serverIdentityChange;
+    const changeKey = change ? JSON.stringify([change.endpoint, change.previousFingerprint, change.newFingerprint]) : "";
+    const confirmed = changeKey !== "" && confirmedChange === changeKey;
     const trust = async () => {
-        if (!change || cancelling.current) return;
+        if (!change || cancelling.current || confirmed) return;
         cancelling.current = true; setPending(true); setTrustError("");
-        try { await desktopAPI.trustServerIdentity(change.endpoint, change.newFingerprint); }
-        catch (error) { setTrustError(errorText(error, m)); }
+        try {
+            await desktopAPI.trustServerIdentity(change.endpoint, change.newFingerprint);
+            setConfirmedChange(changeKey);
+        }
+        catch (error) { setTrustError(rawError(error)); }
         finally { cancelling.current = false; setPending(false); }
     };
-    useEffect(() => { setTrustError(""); }, [change?.endpoint, change?.newFingerprint]);
+    useEffect(() => { setTrustError(""); setConfirmedChange(""); }, [changeKey]);
     const cancel = async () => {
         if (cancelling.current) return;
         cancelling.current = true; setPending(true);
@@ -52,9 +58,9 @@ export function ConnectionProgress({view, events, onDisconnect}: {
             </dl>}
             {!change && (!connected || !view.snapshotFresh) && <span className="connection-progress-elapsed">{m.connection.elapsed} {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}</span>}
             <div className="connection-progress-actions"><button type="button" className="connection-cancel" disabled={pending} aria-busy={pending} onClick={() => void cancel()}><Icon name="disconnect"/>{connected ? m.connection.disconnect : m.connection.cancelConnection}</button>
-                {change && <button type="button" className="primary-button" disabled={pending} aria-busy={pending} onClick={() => void trust()}>{m.connection.trustNewServerKey}</button>}
+                {change && <button type="button" className="primary-button" disabled={pending || confirmed} aria-busy={pending} onClick={() => void trust()}>{m.connection.trustNewServerKey}</button>}
             </div>
-            {trustError && <div className="form-error" role="alert">{trustError}</div>}
+            {trustError && <div className="form-error" role="alert">{errorText(trustError, m)}</div>}
             {view.lastError && <div className="form-error" role="alert">{errorText(view.lastError, m)}</div>}
         </div>
         <div className="connection-progress-log"><h2>{m.channels.eventLog}</h2><EventPanel events={events} active/></div>

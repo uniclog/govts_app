@@ -59,7 +59,7 @@ func (a *App) TrustServerIdentity(endpoint, fingerprint string) error {
 	pending := a.pendingServerKey
 	if pending == nil || pending.ctx.Err() != nil || pending.change.Endpoint != endpoint || identity.KeyFingerprint(pending.change.NewKey) != fingerprint {
 		a.mu.Unlock()
-		return errors.New("server identity confirmation expired; reconnect before confirming")
+		return errors.New("voice-key-confirmation-expired")
 	}
 	if err := identity.ReplaceServerKey(a.pinsPath, pending.change); err != nil {
 		a.mu.Unlock()
