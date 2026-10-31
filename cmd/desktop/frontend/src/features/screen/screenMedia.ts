@@ -5,6 +5,7 @@ import {ScreenStatsLog} from "./screenStatsLog";
 import {defaultScreenSettings, profileFromSettings, screenSizes, type ScreenSettings} from "./screenProfiles";
 import {closeAudioContext, ScreenAudioBridge, type ScreenAudioChoice} from "./screenAudio";
 import {confirmMediaServer} from "./MediaTrustConfirm";
+import {applyH264Formats, createH264Probe, h264CaptureFPS, h264Fits, h264Limits, matchingH264, receivingH264Formats, requiredH264Level, sendingH264Format, supportedH264Options, type H264Format} from "./screenH264";
 
 type ServerCodecs = {legacy?: boolean; codecs?: {mimeType: string; sdpFmtpLine: string; payloadType: number}[]; audio?: {mimeType: string}[]};
 export class ScreenCodecLimitError extends Error {
@@ -14,16 +15,6 @@ export class ScreenCodecLimitError extends Error {
 }
 type PublisherState = {streamID: string; pc: RTCPeerConnection; capture: MediaStream; settings: ScreenSettings; releaseSound: () => void; cleanup?: () => void};
 const fmtp = (line = "") => Object.fromEntries(line.split(";").map((part) => part.trim().split("=")));
-const h264Limits: Record<number, [number, number]> = {
-    31: [3600, 108000], 32: [5120, 216000], 40: [8192, 245760], 41: [8192, 245760],
-    42: [8704, 522240], 50: [22080, 589824], 51: [36864, 983040], 52: [36864, 2073600],
-};
-function h264Fits(level: number, actual: MediaTrackSettings, fps: number): boolean {
-    const limit = h264Limits[level];
-    if (!limit || !actual.width || !actual.height) return false;
-    const blocks = Math.ceil(actual.width / 16) * Math.ceil(actual.height / 16);
-    return blocks <= limit[0] && blocks * Math.min(fps, actual.frameRate ?? fps) <= limit[1];
-}
 export function senderH264Level(server?: ServerCodecs): number {
     if (typeof RTCRtpSender === "undefined" || server?.legacy) return 0;
     const local = RTCRtpSender.getCapabilities?.("video")?.codecs ?? [];
@@ -57,17 +48,17 @@ export function senderCodecAvailable(name: string): boolean {
     if (typeof RTCRtpSender === "undefined") return false;
     return Boolean(RTCRtpSender.getCapabilities?.("video")?.codecs.some((c) => c.mimeType.toLowerCase() === `video/${name.toLowerCase()}`));
 }
-function preferCodecs(transceiver: RTCRtpTransceiver, settings: ScreenSettings, server: ServerCodecs, actual: MediaTrackSettings) {
+async function preferCodecs(transceiver: RTCRtpTransceiver, settings: ScreenSettings, server: ServerCodecs, actual: MediaTrackSettings, checkCurrent: () => void): Promise<H264Format[]> {
     const capabilities = RTCRtpSender.getCapabilities?.("video");
     if (!capabilities || !transceiver.setCodecPreferences) {
         if (settings.codec !== "auto" && settings.codec !== "VP8") throw new Error(errorCode("screen-codec-selection-unavailable"));
-        return;
+        return [];
     }
     const supported = server.legacy ? [{mimeType: "video/VP8", sdpFmtpLine: ""}] : server.codecs ?? [];
     const compatible = capabilities.codecs.filter((c) => supported.some((remote) => {
         if (c.mimeType.toLowerCase() !== remote.mimeType.toLowerCase()) return false;
         const local = fmtp(c.sdpFmtpLine), peer = fmtp(remote.sdpFmtpLine);
-        if (/h264$/i.test(c.mimeType)) return local["packetization-mode"] === peer["packetization-mode"] && local["profile-level-id"]?.slice(0,4).toLowerCase() === peer["profile-level-id"]?.slice(0,4).toLowerCase();
+        if (/h264$/i.test(c.mimeType)) return matchingH264(c, remote);
         if (/vp9$/i.test(c.mimeType)) return (local["profile-id"] ?? "0") === (peer["profile-id"] ?? "0");
         if (/av1$/i.test(c.mimeType)) return (local.profile ?? "0") === (peer.profile ?? "0");
         return !/rtx$/i.test(c.mimeType);
@@ -76,30 +67,41 @@ function preferCodecs(transceiver: RTCRtpTransceiver, settings: ScreenSettings, 
     // Keep VP8 first in auto until quality and CPU comparisons are available.
     selected.sort((a,b) => Number(!/vp8$/i.test(a.mimeType))-Number(!/vp8$/i.test(b.mimeType)));
     if (!selected.length) throw new Error(errorCode("screen-codec-unavailable"));
-    if (selected.some((c) => /h264$/i.test(c.mimeType))) {
-        const valid = selected.filter((c) => {
-            if (!/h264$/i.test(c.mimeType)) return true;
-            const local = fmtp(c.sdpFmtpLine);
-            const level = parseInt(local["profile-level-id"]?.slice(4) ?? "0", 16);
-            return supported.some((remote) => {
-                const peer = fmtp(remote.sdpFmtpLine);
-                if (!/h264$/i.test(remote.mimeType) || local["packetization-mode"] !== peer["packetization-mode"] || local["profile-level-id"]?.slice(0,4).toLowerCase() !== peer["profile-level-id"]?.slice(0,4).toLowerCase()) return false;
-                const peerLevel = parseInt(peer["profile-level-id"]?.slice(4) ?? "0", 16);
-                return h264Fits(Math.min(level, peerLevel), actual, settings.fps);
-            });
-        });
-        if (!valid.length) throw new ScreenCodecLimitError(senderH264Level(server));
-        selected.splice(0,selected.length,...valid);
+    const formats: H264Format[] = [];
+    const probe = createH264Probe(undefined, checkCurrent);
+    const valid: typeof selected = [];
+    for (const codec of selected) {
+        if (!/h264$/i.test(codec.mimeType)) { valid.push(codec); continue; }
+        for (const remote of supported) {
+            const format = await sendingH264Format(codec, remote, actual.width ?? 0, actual.height ?? 0,
+                h264CaptureFPS(actual, settings.fps), settings.bitrate, probe);
+            checkCurrent();
+            if (format) { formats.push(format); valid.push(codec); break; }
+        }
     }
+    if (!valid.length) {
+        const options = await supportedH264Options(server, settings.bitrate, undefined, checkCurrent);
+        checkCurrent();
+        const verifiedLevel = Math.max(0, ...options.map((option) => {
+            const [width, height] = screenSizes[option.resolution];
+            return requiredH264Level(width, height, option.fps);
+        }));
+        throw new ScreenCodecLimitError(verifiedLevel);
+    }
+    checkCurrent();
+    selected.splice(0, selected.length, ...valid);
     transceiver.setCodecPreferences([...selected, ...capabilities.codecs.filter((c) => /rtx$/i.test(c.mimeType))]);
+    return formats;
 }
 function verifyNegotiatedCodec(sdp: string, settings: ScreenSettings, actual: MediaTrackSettings) {
-    const video = sdp.split(/(?=m=)/).find((section) => section.startsWith("m=video "));
+    const video = sdp.split(/(?=^m=)/m).find((section) => section.startsWith("m=video "));
     const payload = video?.split(/\r?\n/)[0]?.split(" ")[3];
     const codec = video?.match(new RegExp(`a=rtpmap:${payload} ([^/]+)/`, "i"))?.[1];
     if (!codec || video?.startsWith("m=video 0 ")) throw new Error(errorCode("screen-codec-rejected"));
     if (settings.codec !== "auto" && codec.toLowerCase() !== settings.codec.toLowerCase()) throw new Error(`Requested ${settings.codec}, negotiated ${codec}. Choose a supported codec.`);
     const parameters = fmtp(video?.match(new RegExp(`a=fmtp:${payload} ([^\r\n]+)`, "i"))?.[1]);
+    logDiagnostic("screen_codec_answer", JSON.stringify({codec, payload, parameters, requested: settings.codec,
+        width: actual.width, height: actual.height, fps: h264CaptureFPS(actual, settings.fps)}));
     if (codec.toLowerCase() === "h264" && !h264Fits(parseInt(parameters["profile-level-id"]?.slice(4) ?? "0", 16), actual, settings.fps)) {
         throw new ScreenCodecLimitError(parseInt(parameters["profile-level-id"]?.slice(4) ?? "0", 16));
     }
@@ -126,8 +128,11 @@ function waitForGathering(pc: RTCPeerConnection): Promise<void> {
     });
 }
 
-async function localOffer(pc: RTCPeerConnection): Promise<{type: string; sdp: string}> {
-    await pc.setLocalDescription(await pc.createOffer());
+async function localOffer(pc: RTCPeerConnection, formats: H264Format[] = []): Promise<{type: string; sdp: string}> {
+    const offer = await pc.createOffer();
+    if (formats.length && offer.sdp) offer.sdp = applyH264Formats(offer.sdp, formats);
+    await pc.setLocalDescription(offer);
+    if (formats.length) logDiagnostic("screen_h264_offer", JSON.stringify(formats));
     await waitForGathering(pc);
     if (!pc.localDescription?.sdp) throw new Error(errorCode("screen-offer-failed"));
     return {type: "offer", sdp: pc.localDescription.sdp};
@@ -328,7 +333,10 @@ export class ScreenMediaController {
             checkCurrent();
             const server = await desktopAPI.screenCapabilities();
             checkCurrent();
-            preferCodecs(transceiver, settings, server, captureTrack.getSettings());
+            const h264Formats = await preferCodecs(transceiver, settings, server, captureTrack.getSettings(), () => {
+                checkCurrent();
+                ensureCaptureOpen();
+            });
             checkCurrent();
             // Sound is optional: a server without it or a failed capture leaves
             // the share video-only rather than failing it.
@@ -345,7 +353,7 @@ export class ScreenMediaController {
                 pc.addTransceiver(soundTrack, {direction: "sendonly", streams: [capture], sendEncodings: [{maxBitrate: 128_000}]});
                 logDiagnostic("screen_audio_added", sound.source);
             }
-            const offer = await localOffer(pc);
+            const offer = await localOffer(pc, h264Formats);
             checkCurrent();
             checkCapture();
             const result = await desktopAPI.publishScreen(offer);
@@ -459,21 +467,32 @@ export class ScreenMediaController {
         pc.addEventListener("connectionstatechange", () => {
             logDiagnostic("screen_viewer_state", `stream=${streamID} connection=${pc.connectionState} ice=${pc.iceConnectionState}`);
         });
-        // Install the listener before applying the answer: WebRTC dispatches `track`
-        // from setRemoteDescription, before the signaling call below returns.
-        const remoteVideo = waitForRemoteVideo(pc);
-        void remoteVideo.catch(() => undefined);
         const subscriberID = crypto.randomUUID();
         try {
             const receiver = pc.addTransceiver("video", {direction: "recvonly"});
             const receiveCodecs = RTCRtpReceiver.getCapabilities?.("video")?.codecs;
             if (receiveCodecs && receiver.setCodecPreferences) receiver.setCodecPreferences(receiveCodecs);
+            const server: ServerCodecs = await desktopAPI.screenCapabilities().catch((reason) => {
+                logDiagnostic("screen_viewer_capabilities_failed", reason);
+                return {};
+            });
+            checkCurrent();
+            const h264Formats = await receivingH264Formats(receiveCodecs ?? [], server, checkCurrent);
+            checkCurrent();
             // Stream sound shares the video's stream id, so it joins the returned
             // MediaStream. Servers or streams without sound leave it inactive.
             pc.addTransceiver("audio", {direction: "recvonly"});
-            const result = await desktopAPI.subscribeScreen(streamID, subscriberID, await localOffer(pc));
+            const offer = await localOffer(pc, h264Formats);
+            checkCurrent();
+            const result = await desktopAPI.subscribeScreen(streamID, subscriberID, offer);
+            checkCurrent();
+            // Start the video timeout only after signaling, but install the
+            // listener before setRemoteDescription dispatches the track event.
+            const remoteVideo = waitForRemoteVideo(pc);
+            void remoteVideo.catch(() => undefined);
             await pc.setRemoteDescription({type: "answer", sdp: result.answer.sdp});
             const remote = await remoteVideo;
+            checkCurrent();
             await waitForConnected(pc);
             if (generation !== this.viewerGeneration) throw new DOMException(errorCode("screen-aborted"), "AbortError");
             this.pendingViewer = undefined;
