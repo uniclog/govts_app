@@ -11,16 +11,23 @@
 }
 :root:is([data-theme="dark"], [data-theme="light"]) .lobby-main { --accent: var(--accent-blue); }
 :root:not([data-theme="custom"]) .lobby-main { font-family: Arial, sans-serif; }
-.lobby-bar { height: var(--lobby-bar-height); padding: 6px var(--lobby-bar-inset) 2px; border: 0; gap: 12px; }
+.lobby-bar { height: var(--lobby-bar-height); padding: 6px var(--lobby-bar-inset) 2px; border: 0; gap: 8px; }
 .app-shell.lobby-shell .lobby-bar { padding-right: calc(var(--window-controls-width) + var(--lobby-bar-inset)); }
 .lobby-bar .app-brand { height: var(--lobby-bar-item-height); gap: 7px; font-size: 12px; color: var(--muted); }
 .lobby-bar .app-brand strong { font-weight: 500; }
 .lobby-bar .brand-mark { width: var(--lobby-bar-item-height); height: var(--lobby-bar-item-height); border: 0; background: none; color: var(--accent); }
-.lobby-bar .brand-mark svg { width: 14px; height: 14px; }
-.lobby-bar .server-version { font-size: 11px; }
+.lobby-bar .brand-mark svg { width: 18px; height: 18px; }
+.lobby-bar svg { stroke-width: 1.8; }
+.lobby-bar .server-version { font-size: 12px; }
 .lobby-bar .locale-header, .lobby-bar .settings-pill { height: var(--lobby-bar-item-height); background: transparent; border-color: transparent; }
-.lobby-bar .locale-header button { height: 18px; font-size: 11px; }
-.lobby-bar .settings-pill { width: auto; font-size: 11px; }
+.lobby-bar .locale-header { padding: 0; }
+.lobby-bar .locale-header .locale-header-mark { width: 18px; height: 18px; margin: 0 4px 0 6px; }
+.lobby-bar .settings-pill svg { width: 17px; height: 17px; }
+.lobby-bar .locale-header button { height: 22px; padding: 0 8px; font-size: 12px; font-weight: 500; }
+.lobby-bar .locale-header button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
+.lobby-bar .locale-header button:hover:not([aria-pressed="true"]) { color: var(--text); background: var(--card-strong); }
+.lobby-bar .settings-pill { width: auto; gap: 6px; font-size: 12px; font-weight: 500; }
+.lobby-bar .settings-pill:hover { color: var(--text); background: var(--card-strong); }
 .connection-page { grid-row: 3; height: 100%; min-height: 0; overflow-y: auto; padding: 4px 8px 8px; }
 .connection-layout { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 8px; min-height: 100%; }
 .connection-card { min-width: 0; border: 1px solid var(--line); border-radius: 20px; background: var(--card); }
