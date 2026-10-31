@@ -67,6 +67,7 @@ export function ChatPanel({store, target, title, active, connected, online, loca
     const messageDate = (at: number) => new Date(at).toLocaleString(htmlLang, {day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"});
     const [, refresh] = useReducer((n: number) => n + 1, 0);
     const history = useRef<HTMLDivElement>(null);
+    const historyContent = useRef<HTMLDivElement>(null);
     const composer = useRef<HTMLTextAreaElement | null>(null);
     const atBottom = useRef(true);
     const previousHeight = useRef<number | null>(null);
@@ -104,6 +105,19 @@ export function ChatPanel({store, target, title, active, connected, online, loca
         return () => observer.disconnect();
     }, [c.draft, active]);
     const lastID = c.messages[c.messages.length - 1]?.id;
+    useLayoutEffect(() => {
+        const node = history.current;
+        const content = historyContent.current;
+        if (!active || !node || !content) return;
+        // Attachment metadata and decoded previews can resize existing messages
+        // without changing their IDs. Keep following the end until the user scrolls up.
+        const observer = new ResizeObserver(() => {
+            if (atBottom.current && previousHeight.current === null) node.scrollTop = node.scrollHeight;
+        });
+        observer.observe(content);
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [active]);
     useEffect(() => {
         if (!active || !connected || !visible) return;
         return store.watch(target);
@@ -157,6 +171,7 @@ export function ChatPanel({store, target, title, active, connected, online, loca
             }
             if (active && connected && node.scrollTop < 20 && node.scrollHeight > node.clientHeight && c.hasOlder && !c.loading) void older();
         }}>
+            <div ref={historyContent} className="chat-history-content">
             {c.hasOlder && <button className="chat-older" disabled={!connected || c.loading} onClick={() => void older()}>{m.chat.older}</button>}
             {!c.loaded && <div className="chat-placeholder"><Icon name="chat"/><p>{c.loading ? m.chat.loading : connected ? m.chat.openToLoad : m.chat.waiting}</p></div>}
             {c.loaded && !c.messages.length && !c.pending.length && <div className="chat-placeholder">{m.chat.empty}</div>}
@@ -178,6 +193,7 @@ export function ChatPanel({store, target, title, active, connected, online, loca
                 {p.attachmentIds?.length ? <span>📎 {p.attachmentIds.length}</span> : null}
                 {p.state === "sending" ? <span className="chat-send-status" role="status" aria-label={m.chat.sending} title={m.chat.sending}>…</span> : <button disabled={!connected} title={errorText(p.error ?? "", m)} aria-label={m.chat.retrySend(errorText(p.error ?? "chat-send-failed", m))} onClick={() => void store.send(target, p.text, p)}>{m.chat.retry}</button>}
             </article>)}
+            </div>
         </div>
         {(newMessages || c.olderWindow || c.newMessages) && <button className="chat-new" disabled={!connected || c.loading} onClick={async () => {
             atBottom.current = true;

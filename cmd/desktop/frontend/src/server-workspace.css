@@ -126,8 +126,9 @@
 .server-shell .channel-content > [role="tabpanel"][hidden] { display: none; }
 .server-shell .chat-panel { min-height: 0; padding: 0; }
 .server-shell .chat-history { display: flex; flex-direction: column; padding: 10px 0; overflow-x: hidden; scrollbar-gutter: auto; }
-.server-shell .chat-history > * { flex-shrink: 0; }
-.server-shell .chat-history > .chat-message:first-of-type { margin-top: auto; }
+.server-shell .chat-history-content { display: flex; flex-direction: column; flex: 1 0 auto; }
+.server-shell .chat-history-content > * { flex-shrink: 0; }
+.server-shell .chat-history-content > .chat-message:first-of-type { margin-top: auto; }
 .server-shell .chat-message { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 9px; margin: 0; padding: 9px 0; border: 0; font-size: .8125rem; line-height: 1.5; }
 .server-shell .chat-message.is-deleted { grid-template-columns: 34px minmax(0, 1fr); }
 .chat-author-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: #26302c; background: var(--avatar-colour); font-size: .8125rem; font-weight: 600; }
