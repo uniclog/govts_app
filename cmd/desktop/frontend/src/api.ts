@@ -13,7 +13,6 @@ export type {
     AudioMeterDTO,
     ChannelDTO,
     ClientEventDTO,
-    ClientViewDTO,
     ConnectionStatsDTO,
     ConnectRequest,
     ParticipantDTO,
@@ -26,6 +25,11 @@ export type {
 } from "../bindings/uniclog.io/sonoryx/internal/ui/wails";
 
 import type {AudioMeterDTO, ConnectRequest, ChatRequestDTO} from "../bindings/uniclog.io/sonoryx/internal/ui/wails";
+
+export type ServerIdentityChange = {endpoint: string; previousFingerprint: string; newFingerprint: string};
+export type ClientViewDTO = import("../bindings/uniclog.io/sonoryx/internal/ui/wails").ClientViewDTO & {
+    serverIdentityChange?: ServerIdentityChange | null;
+};
 
 export type AdminPermission = "kick" | "ban" | "drag" | "admin";
 export type AdminAccount = {id: string; name: string; fingerprint: string; joinLevel: number; kick: boolean; ban: boolean; drag: boolean;
@@ -96,6 +100,8 @@ export const desktopAPI = {
     eventsAfter: (sequence: string) => Service.EventsAfter(sequence),
     savedDisplayName: () => Service.SavedDisplayName(),
     connect: (request: ConnectRequest) => Service.Connect(request),
+    trustServerIdentity: (endpoint: string, fingerprint: string): Promise<void> =>
+        Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.TrustServerIdentity", endpoint, fingerprint),
     disconnect: () => Service.Disconnect(),
     joinChannel: (channelID: string) => Service.JoinChannel(channelID),
     kick: (sessionID: string) => Service.Kick(sessionID),

@@ -600,7 +600,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                             {!members.length && !channelStreams.length && <div className="stage-empty">{m.channels.emptyStage}</div>}
                         </div>
                     </div>
-                </> : <ConnectionProgress view={view} events={events}/>}
+                </> : <ConnectionProgress view={view} events={events} onDisconnect={() => invoke(() => desktopAPI.disconnect())}/>}
                 {view.connectionStatus === "connected" && <div className="channel-audio-dock"><AudioControls view={view} invoke={invoke} sharing={sharing}/></div>}
             </section>
             <div className="workspace-divider workspace-chat-divider" {...workspaceResize.separatorProps("chat")}/>

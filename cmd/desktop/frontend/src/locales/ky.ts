@@ -14,6 +14,11 @@ export const ky = {
         close: "Жабуу",
     },
     connection: {
+        serverKeyChanged: "Сервердин ачкычы өзгөрдү",
+        serverKeyChangedHint: "Туташуу тындырылды. Сервер кайра орнотулган же жасалма сервер болушу мүмкүн. Ачкычка ишенүүдөн мурун жаңы манжа изин администратор менен текшериңиз.",
+        previousServerKey: "Мурунку манжа изи (SHA-256)",
+        newServerKey: "Жаңы манжа изи (SHA-256)",
+        trustNewServerKey: "Жаңы ачкычка ишенүү",
         switchServer: "Серверди алмаштыруу",
         closeServers: "Серверлердин тизмесин жабуу",
 

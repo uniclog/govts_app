@@ -14,6 +14,11 @@ export const en = {
         close: "Close",
     },
     connection: {
+        serverKeyChanged: "Server key changed",
+        serverKeyChangedHint: "Connection paused. The server may have been reinstalled or impersonated. Verify the new fingerprint with the administrator before trusting the key.",
+        previousServerKey: "Previous fingerprint (SHA-256)",
+        newServerKey: "New fingerprint (SHA-256)",
+        trustNewServerKey: "Trust new key",
         switchServer: "Switch server",
         closeServers: "Close server list",
 

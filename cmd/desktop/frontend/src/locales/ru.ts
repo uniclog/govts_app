@@ -15,6 +15,11 @@ export const ru = {
         close: "Закрыть",
     },
     connection: {
+        serverKeyChanged: "Ключ сервера изменился",
+        serverKeyChangedHint: "Подключение приостановлено. Сервер мог быть переустановлен или подменён. Сверьте новый отпечаток с администратором, прежде чем доверять ключу.",
+        previousServerKey: "Прежний отпечаток (SHA-256)",
+        newServerKey: "Новый отпечаток (SHA-256)",
+        trustNewServerKey: "Доверять новому ключу",
         switchServer: "Сменить сервер",
         closeServers: "Закрыть список серверов",
 

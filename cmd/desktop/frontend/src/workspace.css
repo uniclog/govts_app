@@ -498,3 +498,8 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .chat-context-menu button.is-danger { color: var(--danger); }
 .chat-context-menu button:disabled { opacity: .45; cursor: default; }
 .chat-context-menu button:hover, .chat-context-menu button:focus-visible { background: var(--card-strong); outline: none; }
+
+.connection-progress-actions { display: flex; justify-content: center; margin-top: 18px; }
+.connection-cancel { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 8px 14px; border: 1px solid var(--danger-line); border-radius: 10px; color: var(--danger-text); background: var(--danger-soft); font-size: .75rem; cursor: pointer; }
+.connection-cancel:hover:not(:disabled) { border-color: var(--danger); }
+.connection-cancel:disabled { opacity: .6; cursor: wait; }

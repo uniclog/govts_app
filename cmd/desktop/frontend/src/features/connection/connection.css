@@ -121,3 +121,11 @@
 @media (prefers-reduced-motion: reduce) {
   .connection-switch, .connection-switch::after { transition: none; }
 }
+.server-key-change { margin: 16px 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card-strong); text-align: left; font-size: .75rem; }
+.connection-progress:has(.server-key-change) { max-height: 100%; overflow-y: auto; }
+.server-key-change dt { color: var(--muted); }
+.server-key-change dd { margin: 4px 0 12px; color: var(--text); overflow-wrap: anywhere; user-select: text; }
+.server-key-change dd:last-child { margin-bottom: 0; }
+.server-key-change code { font-size: .6875rem; }
+.connection-progress-actions { flex-wrap: wrap; gap: 10px; }
+.connection-progress-actions .primary-button { min-height: 36px; padding: 8px 14px; font-size: .75rem; }

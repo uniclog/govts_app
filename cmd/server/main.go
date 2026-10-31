@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"errors"
 	"flag"
 	"fmt"
@@ -212,6 +213,7 @@ func run(configPath, databasePath, voiceIdentityPath string, port, mediaPort, me
 	if err != nil {
 		return fmt.Errorf("load voice server identity: %w", err)
 	}
+	log.Printf("voice server identity fingerprint=%s", identity.PublicKeyFingerprint(signer.Public().(ed25519.PublicKey)))
 	secureCodec := protocol.NewSecureDatagramCodec(true)
 	authenticator, err := voice.NewAuthenticator(signer, store, secureCodec)
 	if err != nil {

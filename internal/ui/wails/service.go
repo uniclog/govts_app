@@ -98,6 +98,12 @@ func (s *Service) Connect(request ConnectRequest) error {
 	return s.connect(request)
 }
 
+func (s *Service) TrustServerIdentity(endpoint, fingerprint string) error {
+	s.connectionMu.Lock()
+	defer s.connectionMu.Unlock()
+	return s.client.TrustServerIdentity(endpoint, fingerprint)
+}
+
 func (s *Service) connect(request ConnectRequest) error {
 	request.Name = strings.TrimSpace(request.Name)
 	request.Server = strings.TrimSpace(request.Server)
@@ -392,6 +398,7 @@ func (s *Service) Snapshot() ClientViewDTO {
 	s.connectionMu.Lock()
 	defer s.connectionMu.Unlock()
 	dto := viewDTO(s.client.Snapshot(), s.client.LastError())
+	dto.ServerIdentityChange = s.client.ServerIdentityChange()
 	dto.ChatContext = s.client.ChatContext() + "|" + dto.UserID
 	s.recordServerVisit(dto)
 	return dto
