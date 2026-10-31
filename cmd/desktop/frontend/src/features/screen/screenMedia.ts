@@ -1,5 +1,5 @@
 import {desktopAPI, logDiagnostic} from "../../api";
-import {errorCode, mediaKeyError} from "../../locales";
+import {errorCode} from "../../locales";
 import {ScreenStatsCollector, type ScreenStats} from "./screenStats";
 import {ScreenStatsLog} from "./screenStatsLog";
 import {defaultScreenSettings, profileFromSettings, screenSizes, type ScreenSettings} from "./screenProfiles";
@@ -184,16 +184,15 @@ function peerClosed(pc: RTCPeerConnection): boolean {
 
 let trustInFlight: Promise<void> | undefined;
 
-// ensureTrusted pins the media server key on first use after the user confirms
-// its fingerprint; a changed key is always rejected. Concurrent publish and
-// subscribe calls share one confirmation.
+// First use and changed keys both require explicit confirmation. The backend
+// rechecks the displayed key, previous pin and session before saving it.
+// Concurrent publish and subscribe calls share one confirmation.
 function ensureTrusted(): Promise<void> {
     trustInFlight ??= (async () => {
         const identity = await desktopAPI.mediaServerIdentity();
         if (identity.trusted) return;
-        if (identity.known) throw new Error(mediaKeyError(identity.fingerprint));
-        if (!await confirmMediaServer(identity.fingerprint)) throw new DOMException(errorCode("screen-aborted"), "AbortError");
-        await desktopAPI.trustMediaServer(identity.fingerprint);
+        if (!await confirmMediaServer(identity)) throw new DOMException(errorCode("screen-aborted"), "AbortError");
+        await desktopAPI.confirmMediaServerIdentity(identity);
     })().finally(() => { trustInFlight = undefined; });
     return trustInFlight;
 }
@@ -220,10 +219,25 @@ export class ScreenMediaController {
     private diagnosticsTimer?: number;
     private publishGeneration = 0;
     private picking = false;
+    private publishReady = false;
+
+    publishingPrepared(): boolean { return this.publishReady; }
+
+    async preparePublishing(): Promise<void> {
+        const generation = this.publishGeneration;
+        this.publishReady = false;
+        await ensureTrusted();
+        if (generation !== this.publishGeneration) throw new DOMException(errorCode("screen-aborted"), "AbortError");
+        this.publishReady = true;
+        logDiagnostic("screen_trust_prepared", `generation=${generation}`);
+    }
 
     async publish(onEnded: () => void, settings: ScreenSettings = defaultScreenSettings, isCurrent: () => boolean = () => true, sound: ScreenAudioChoice = {source: "off"}): Promise<string> {
         if (this.publisher) return this.publisher.streamID;
         if (this.picking || this.pendingPublisher) throw new Error(errorCode("screen-already-starting"));
+        // Preparation is a separate UI step, before the Start click. This keeps
+        // capture behind trust approval and the picker in the user gesture.
+        if (!this.publishReady) throw new Error(errorCode("media-key-confirmation-required"));
         settings = {...settings};
         const profile = profileFromSettings(settings);
         const generation = ++this.publishGeneration;
@@ -311,7 +325,6 @@ export class ScreenMediaController {
             const senderParameters = transceiver.sender.getParameters();
             senderParameters.degradationPreference = profile.degradationPreference;
             await transceiver.sender.setParameters(senderParameters).catch((error) => { logDiagnostic("screen_sender_parameters", error); });
-            await ensureTrusted();
             checkCurrent();
             const server = await desktopAPI.screenCapabilities();
             checkCurrent();
@@ -385,6 +398,7 @@ export class ScreenMediaController {
             return result.streamId;
         } catch (error) {
             logDiagnostic("screen_publish_failed", error);
+            this.publishReady = false;
             if (this.pendingPublisher === pending) this.pendingPublisher = undefined;
             releaseCapture();
             pc.close();
@@ -405,6 +419,7 @@ export class ScreenMediaController {
 
     async stopPublishing(): Promise<void> {
         ++this.publishGeneration;
+        this.publishReady = false;
         const active = this.publisher;
         const pending = this.pendingPublisher;
         this.publisher = undefined;

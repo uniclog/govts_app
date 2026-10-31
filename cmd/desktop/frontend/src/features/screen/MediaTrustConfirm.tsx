@@ -1,10 +1,10 @@
 import {useEffect, useRef, useState} from "react";
+import type {MediaServerIdentity} from "../../api";
 import {useLocale} from "../../locales/Locale";
 
-// The first use of a media server pins its TLS fingerprint. The user confirms
-// it here instead of the client trusting whatever key answers first.
+// First use and replacement of a media key require explicit confirmation.
 
-type PendingTrust = {fingerprint: string; resolve: (accepted: boolean) => void};
+type PendingTrust = {identity: MediaServerIdentity; resolve: (accepted: boolean) => void};
 
 let pending: PendingTrust | null = null;
 const listeners = new Set<() => void>();
@@ -13,18 +13,17 @@ function publish() {
     for (const listener of listeners) listener();
 }
 
-function settle(accepted: boolean) {
-    const current = pending;
-    if (!current) return;
+function settle(current: PendingTrust | null, accepted: boolean) {
+    if (!current || pending !== current) return;
     pending = null;
     current.resolve(accepted);
     publish();
 }
 
-export function confirmMediaServer(fingerprint: string): Promise<boolean> {
+export function confirmMediaServer(identity: MediaServerIdentity): Promise<boolean> {
     if (pending) pending.resolve(false);
     return new Promise((resolve) => {
-        pending = {fingerprint, resolve};
+        pending = {identity, resolve};
         publish();
     });
 }
@@ -41,36 +40,41 @@ function KeyMark() {
 export function MediaTrustDialog() {
     const {m} = useLocale();
     const dialogRef = useRef<HTMLDialogElement>(null);
-    const shownRef = useRef("");
-    const [fingerprint, setFingerprint] = useState<string | null>(null);
-    if (fingerprint) shownRef.current = fingerprint;
+    const shownRef = useRef<PendingTrust | null>(null);
+    const [request, setRequest] = useState<PendingTrust | null>(null);
+    if (request) shownRef.current = request;
     useEffect(() => {
-        const sync = () => setFingerprint(pending?.fingerprint ?? null);
+        const sync = () => setRequest(pending);
         listeners.add(sync);
         sync();
-        return () => { listeners.delete(sync); };
+        return () => { listeners.delete(sync); settle(pending, false); };
     }, []);
     useEffect(() => {
         const dialog = dialogRef.current;
         if (!dialog) return;
-        if (fingerprint && !dialog.open) {
-            dialog.showModal();
+        if (request) {
+            if (!dialog.open) dialog.showModal();
             // Cancel is the safe default: Enter must not trust an unknown key.
             dialog.querySelector<HTMLButtonElement>("button:not(.primary-button)")?.focus();
-        } else if (!fingerprint && dialog.open) dialog.close();
-    }, [fingerprint]);
-    return <dialog ref={dialogRef} className="link-confirm" aria-labelledby="media-trust-title" aria-describedby="media-trust-text"
-        onCancel={() => settle(false)}
-        onClose={() => settle(false)}
-        onClick={(event) => { if (event.target === event.currentTarget) dialogRef.current?.close(); }}>
-        {(fingerprint ?? shownRef.current) && <>
+        } else if (dialog.open) dialog.close();
+    }, [request]);
+    const identity = (request ?? shownRef.current)?.identity;
+    const changed = Boolean(identity?.previousFingerprint);
+    return <dialog ref={dialogRef} className="link-confirm media-trust-dialog" aria-labelledby="media-trust-title" aria-describedby="media-trust-text"
+        onCancel={(event) => { event.preventDefault(); settle(request, false); }}
+        onClick={(event) => { if (event.target === event.currentTarget) settle(request, false); }}>
+        {identity && <>
             <div className="link-confirm-mark"><KeyMark/></div>
-            <h2 id="media-trust-title">{m.screen.mediaTrustTitle}</h2>
-            <p id="media-trust-text">{m.screen.mediaTrustText}</p>
-            <p className="link-confirm-address"><code>{fingerprint ?? shownRef.current}</code></p>
+            <h2 id="media-trust-title">{changed ? m.screen.mediaTrustChangedTitle : m.screen.mediaTrustTitle}</h2>
+            <p id="media-trust-text">{changed ? m.screen.mediaTrustChangedText : m.screen.mediaTrustText}</p>
+            <dl className="server-key-change">
+                <dt>{m.connection.server}</dt><dd>{identity.server}</dd>
+                {changed && <><dt>{identity.previousFingerprint.includes("\n") ? m.screen.mediaTrustConflictingKeys : m.connection.previousServerKey}</dt><dd><code>{identity.previousFingerprint}</code></dd></>}
+                <dt>{m.connection.newServerKey}</dt><dd><code>{identity.fingerprint}</code></dd>
+            </dl>
             <div className="screen-dialog-actions">
-                <button type="button" onClick={() => settle(false)}>{m.screen.mediaTrustCancel}</button>
-                <button className="primary-button" type="button" onClick={() => settle(true)}>{m.screen.mediaTrustAccept}</button>
+                <button type="button" onClick={() => settle(request, false)}>{m.screen.mediaTrustCancel}</button>
+                <button className="primary-button" type="button" onClick={() => settle(request, true)}>{changed ? m.connection.trustNewServerKey : m.screen.mediaTrustAccept}</button>
             </div>
         </>}
     </dialog>;

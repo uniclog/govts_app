@@ -207,7 +207,7 @@ function App() {
     };
     const params = new URLSearchParams(window.location.search);
     const streamID = params.get("screen");
-    if (streamID) return <ScreenViewerWindow streamID={streamID} ownerName={params.get("owner") || m.screen.participant}/>;
+    if (streamID) return <><ScreenViewerWindow streamID={streamID} ownerName={params.get("owner") || m.screen.participant}/><MediaTrustDialog/></>;
     return <MainApp appearance={appearance} setTheme={setTheme} createCustomTheme={createCustomTheme} updateAppearance={updateAppearance} openSavedTheme={openSavedTheme} saveNamedTheme={saveNamedTheme} importThemeFile={importThemeFile} deleteSavedTheme={deleteSavedTheme} exportTheme={exportTheme}/>;
 }
 

@@ -262,6 +262,8 @@
 .screen-share-dialog { width: min(880px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 24px; border: 1px solid var(--line); border-radius: 16px; color: var(--text); background: var(--card); box-shadow: 0 20px 70px color-mix(in srgb, var(--shadow) 40%, transparent); overflow-y: auto; }
 .link-confirm { width: min(400px, calc(100vw - 32px)); margin: auto; padding: 22px 22px 18px; border: 1px solid var(--line); border-radius: 18px; color: var(--text); background: var(--card); box-shadow: 0 24px 70px color-mix(in srgb, var(--shadow) 42%, transparent); text-align: center; }
 .link-confirm::backdrop { background: var(--overlay); }
+.media-trust-dialog { max-height: calc(100vh - 32px); overflow-y: auto; }
+.media-trust-dialog code { white-space: pre-wrap; }
 .link-confirm-mark { display: grid; width: 42px; height: 42px; margin: 0 auto 14px; place-items: center; border-radius: 50%; color: var(--accent); background: var(--accent-soft); }
 .link-confirm .link-confirm-mark svg { width: 18px; height: 18px; }
 .link-confirm h2 { margin: 0 0 14px; font-size: 1.05rem; font-weight: 700; line-height: 1.35; }

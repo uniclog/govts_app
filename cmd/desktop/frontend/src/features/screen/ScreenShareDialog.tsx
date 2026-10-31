@@ -57,6 +57,11 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
         busy.current = true; setPending(true); setError(""); setCodecLimit(null); setOpen(false);
         const startedIn = context;
         try {
+            if (!controller.publishingPrepared()) {
+                await controller.preparePublishing();
+                if (currentContext.current === startedIn) setOpen(true);
+                return; // Capture requires a new, explicit Start click.
+            }
             await controller.publish(() => { if (currentContext.current === startedIn) setPublishing(false); }, settings, () => currentContext.current === startedIn, sound);
             if (currentContext.current === startedIn) { setPublishing(true); setOpen(false); }
         } catch (reason) {
@@ -73,11 +78,22 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
     };
     const toggle = async () => {
         if (busy.current || !available) return;
-        if (!active) { setError(""); setOpen(true); return; }
         busy.current = true; setPending(true);
-        try { await controller.stopPublishing(); }
-        catch (reason) { onError(reason instanceof Error ? reason.message : String(reason)); }
-        finally { setPublishing(false); busy.current = false; setPending(false); }
+        const startedIn = context;
+        try {
+            if (active) {
+                await controller.stopPublishing();
+                setPublishing(false);
+            } else {
+                setError("");
+                await controller.preparePublishing();
+                if (currentContext.current === startedIn) setOpen(true);
+            }
+        }
+        catch (reason) {
+            if (!(reason instanceof DOMException && reason.name === "AbortError")) onError(reason instanceof Error ? reason.message : String(reason));
+        }
+        finally { busy.current = false; setPending(false); }
     };
     return {open, pending, active, available, settings, selectSettings, soundSource, selectSound, soundApp, setSoundApp, nativeSound, setNativeSound, error, codecLimit, buttonRef, close, start, toggle};
 }
