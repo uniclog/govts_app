@@ -106,6 +106,7 @@ type App struct {
 	chatServerIdentity string
 	chatClientIdentity string
 	lastError          string
+	pendingServerKey   *pendingServerKey
 }
 
 func New(options Options) *App {
@@ -248,6 +249,15 @@ func (a *App) runConnection(ctx context.Context, endpoint netip.AddrPort, name, 
 			a.logger.Printf("handshake failed: attempt=%d server=%s local=%s error=%v", attempt, endpoint, conn.LocalAddr(), err)
 			if ctx.Err() != nil {
 				return nil
+			}
+			var keyChange *identity.ServerKeyChangedError
+			if errors.As(err, &keyChange) {
+				if !a.waitForServerKeyTrust(ctx, *keyChange) {
+					return nil
+				}
+				// Confirmation may outlive the challenge; start a fresh signed
+				// handshake and check that the server still has the approved key.
+				continue
 			}
 			var versionError *voiceclient.ServerVersionTooOldError
 			if errors.As(err, &versionError) {

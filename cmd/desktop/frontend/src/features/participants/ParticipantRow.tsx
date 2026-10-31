@@ -3,6 +3,7 @@ import {createPortal} from "react-dom";
 import type {ParticipantDTO} from "../../api";
 import {desktopAPI} from "../../api";
 import {Icon} from "../../components/Icon";
+import {avatarStyle} from "../../components/avatar";
 import {useLocale} from "../../locales/Locale";
 
 type MenuState = {x: number; y: number; volume: number} | null;
@@ -30,10 +31,7 @@ function SoundOffIcon() {
 function AwayIcon() {
     return <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true" fill="none"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="8" r="3"/>
-        <path d="M6 19v-1a4 4 0 0 1 4-4h1"/>
-        <path d="M16 16h5"/>
-        <path d="M16 20h5"/>
+        <path d="M20.5 13.2A8.5 8.5 0 0 1 10.8 3.5a8.5 8.5 0 1 0 9.7 9.7Z"/>
     </svg>;
 }
 
@@ -128,7 +126,9 @@ export function ParticipantRow({participant, canKick, canBan, canDrag, canWake =
     const volumeLevel = menu ? Math.round(Math.sqrt(menu.volume) * 100) : 100;
     return <>
         <div ref={rowRef} className={`${variant === "stage" ? "stage-participant" : "participant-row"} participant-${variant} ${variant !== "list" && participant.speaking ? "speaking" : ""} ${variant !== "list" && participant.muted ? "muted" : ""} ${canDrag ? "draggable" : ""} ${participant.local ? "local" : ""}`}
-             style={variant === "stage" ? undefined : {paddingLeft: variant === "list" ? 12 : 46 + depth * 18}} tabIndex={participant.local ? -1 : 0}
+             style={{...avatarStyle(participant.displayName), ...(variant === "stage" ? {} : {paddingLeft: variant === "list" ? 12 : 30 + depth * 18})}}
+             data-voice-state={participant.away ? "away" : participant.muted ? "muted" : participant.deafened ? "deafened" : participant.speaking ? "speaking" : "silent"}
+             tabIndex={participant.local ? -1 : 0}
              draggable={canDrag}
              onDragStart={(event) => onDragStart(event, participant)} onDragEnd={onDragEnd}
              onDoubleClick={(event) => {
@@ -149,7 +149,9 @@ export function ParticipantRow({participant, canKick, canBan, canDrag, canWake =
                     void open(bounds.left + 40, bounds.bottom);
                 }
              }}>{variant === "stage" ? <>
-            <span className="stage-avatar">{participant.displayName.slice(0, 1).toUpperCase()}</span>
+            <span className="stage-avatar-wrap"><span className="stage-avatar">{participant.displayName.slice(0, 1).toUpperCase()}</span>
+                {(participant.away || participant.muted || participant.deafened) && <span className="stage-state-badge" aria-hidden="true">{participant.away ? <AwayIcon/> : participant.muted ? <MicOffIcon/> : <SoundOffIcon/>}</span>}
+            </span>
             <span className="stage-label"><span className="stage-name" title={`${participant.displayName}${participant.local ? m.people.you : ""}`}>{participant.displayName}{participant.local ? m.people.you : ""}</span>
             </span>
             <span className="stage-voice" aria-label={participant.muted ? m.people.micOff : participant.deafened ? m.people.soundOff : participant.speaking ? m.people.speaking : m.people.silent}>
@@ -157,6 +159,7 @@ export function ParticipantRow({participant, canKick, canBan, canDrag, canWake =
                 {participant.away && <span className="participant-flag away" title={m.people.away} aria-label={m.people.away}><AwayIcon/></span>}
                 {participant.muted ? <span title={m.people.micOff} aria-label={m.people.micOff}><MicOffIcon/></span> : participant.deafened ? <span title={m.people.soundOff} aria-label={m.people.soundOff}><SoundOffIcon/></span> : participant.speaking ? <span className="voice-bars"><i/><i/><i/><i/><i/></span> : null}
             </span>
+            <span className="stage-state-label">{participant.away ? m.people.awayShort : participant.muted ? m.people.micOffShort : participant.deafened ? m.people.soundOffShort : participant.speaking ? <><Icon name="voice"/>{m.people.speaking}</> : m.people.inVoice}</span>
             </> : <><span className="avatar">{participant.displayName.slice(0, 1).toUpperCase()}</span>
             <span className="participant-label"><span className="participant-name" title={participant.displayName}>{participant.displayName}{participant.local ? m.people.you : ""}</span>
             </span>
@@ -165,13 +168,13 @@ export function ParticipantRow({participant, canKick, canBan, canDrag, canWake =
                 {participant.away && <span className="participant-flag away" title={m.people.away} aria-label={m.people.away}><AwayIcon/></span>}
                 {participant.muted && <span className="participant-flag" title={m.people.micOff} aria-label={m.people.micOff}><MicOffIcon/></span>}
                 {participant.deafened && <span className="participant-flag" title={m.people.soundOff} aria-label={m.people.soundOff}><SoundOffIcon/></span>}
-                <span className="speaking-ring" aria-label={participant.speaking ? m.people.speaking : m.people.silent}/>
+                <span className="speaking-ring" aria-label={participant.speaking ? m.people.speaking : m.people.silent}>{participant.speaking && !participant.muted && !participant.deafened && !participant.away && <Icon name="voice"/>}</span>
             </span>}</>}
         </div>
         {!participant.local && menu && createPortal(<div ref={menuRef} className="participant-menu" role="menu" style={position}
                                    aria-label={m.people.manage(participant.displayName)}>
             <div className="participant-menu-user">
-                <span className="participant-menu-avatar" aria-hidden="true">{participant.displayName.slice(0, 1).toUpperCase()}</span>
+                <span className="participant-menu-avatar" style={avatarStyle(participant.displayName)} aria-hidden="true">{participant.displayName.slice(0, 1).toUpperCase()}</span>
                 <strong>{participant.displayName}</strong>
             </div>
             <div className="participant-menu-separator"/>
@@ -193,13 +196,13 @@ export function ParticipantRow({participant, canKick, canBan, canDrag, canWake =
             </>}
             <div className="participant-menu-actions">
                 <button type="button" role="menuitem" onClick={() => { onMessage(participant); close(); }}><span><Icon name="chat"/></span>{m.people.message}</button>
-                {canWake && onWake && <button type="button" role="menuitem" onClick={() => { onWake(participant); close(); }}>{m.people.wake}</button>}
+                {canWake && onWake && <button type="button" role="menuitem" onClick={() => { onWake(participant); close(); }}><span aria-hidden="true"><Icon name="voice"/></span>{m.people.wake}</button>}
                 {!participant.local && <button type="button" role="menuitem" className={menu.volume === 0 ? "active" : ""}
                         onClick={() => setVolume(menu.volume === 0 ? 1 : 0, true)}>
                     <span aria-hidden="true"><SpeakerIcon muted={menu.volume !== 0}/></span>{menu.volume === 0 ? m.people.unmute : m.people.mute}
                 </button>}
-                {!participant.local && canKick && <button type="button" role="menuitem" onClick={() => void moderate("kick")}>{m.people.kick}</button>}
-                {!participant.local && canBan && <button type="button" role="menuitem" onClick={() => void moderate("ban")}>{m.people.ban}</button>}
+                {!participant.local && canKick && <button type="button" role="menuitem" className="is-danger" onClick={() => void moderate("kick")}><span aria-hidden="true"><Icon name="disconnect"/></span>{m.people.kick}</button>}
+                {!participant.local && canBan && <button type="button" role="menuitem" className="is-danger" onClick={() => void moderate("ban")}><span aria-hidden="true"><Icon name="shield"/></span>{m.people.ban}</button>}
             </div>
         </div>, document.body)}
     </>;

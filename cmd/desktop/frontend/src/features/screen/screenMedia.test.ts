@@ -12,6 +12,7 @@ vi.mock("../../api", () => ({
 }));
 
 const answerSDP = "v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=rtpmap:96 VP8/90000\r\n";
+let offerSDP = answerSDP;
 const pcs: FakePC[] = [];
 const preferences = vi.fn();
 let constructorError = false;
@@ -32,7 +33,7 @@ class FakePC extends EventTarget {
     connectionState = initialConnectionState;
     iceGatheringState = "complete";
     iceConnectionState = "connected";
-    localDescription = {type: "offer", sdp: answerSDP};
+    localDescription = {type: "offer", sdp: offerSDP};
     constructor() {
         super();
         if (constructorError) throw new Error("PeerConnection allocation failed");
@@ -63,7 +64,7 @@ beforeEach(() => {
     vi.useFakeTimers(); vi.clearAllMocks();
     pcs.length = 0; constructorError = false; addTransceiverError = false; initialConnectionState = "connected";
     closeEmitsEvent = true;
-    sendEncodings = undefined;
+    sendEncodings = undefined; offerSDP = answerSDP;
     track.readyState = "live"; track.onended = null;
     track.applyConstraints.mockResolvedValue(undefined);
     track.getSettings.mockReturnValue({width: 1920, height: 1080, frameRate: 15});
@@ -81,11 +82,23 @@ beforeEach(() => {
     vi.mocked(desktopAPI.stopScreen).mockResolvedValue(undefined);
     vi.mocked(desktopAPI.unsubscribeScreen).mockResolvedValue(undefined);
 });
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("screen publisher lifecycle", () => {
+    let controller: ScreenMediaController;
+    beforeEach(async () => {
+        controller = new ScreenMediaController();
+        await controller.preparePublishing();
+        vi.mocked(desktopAPI.mediaServerIdentity).mockClear();
+    });
+
+    it("does not capture without explicit preparation", async () => {
+        await expect(new ScreenMediaController().publish(vi.fn())).rejects.toThrow("media-key-confirmation-required");
+        expect(getDisplayMedia).not.toHaveBeenCalled();
+        expect(desktopAPI.publishScreen).not.toHaveBeenCalled();
+    });
+
     it("opens the picker before the first asynchronous bridge call", async () => {
-        const controller = new ScreenMediaController();
         const publishing = controller.publish(vi.fn());
         expect(getDisplayMedia).toHaveBeenCalledOnce();
         expect(desktopAPI.mediaServerIdentity).not.toHaveBeenCalled();
@@ -96,12 +109,12 @@ describe("screen publisher lifecycle", () => {
 
     it("stops capture if creating the PeerConnection throws", async () => {
         constructorError = true;
-        await expect(new ScreenMediaController().publish(vi.fn())).rejects.toThrow("PeerConnection allocation failed");
+        await expect(controller.publish(vi.fn())).rejects.toThrow("PeerConnection allocation failed");
         expect(track.stop).toHaveBeenCalledOnce();
     });
 
     it("does not silently replace an unsupported explicit codec on an old server", async () => {
-        await expect(new ScreenMediaController().publish(vi.fn(), {...defaultScreenSettings, codec: "VP9"})).rejects.toThrow(/unavailable/);
+        await expect(controller.publish(vi.fn(), {...defaultScreenSettings, codec: "VP9"})).rejects.toThrow(/unavailable/);
         expect(desktopAPI.publishScreen).not.toHaveBeenCalled();
         expect(track.stop).toHaveBeenCalledOnce();
         expect(pcs[0].close).toHaveBeenCalledOnce();
@@ -109,7 +122,7 @@ describe("screen publisher lifecycle", () => {
 
     it("cleans up an allocated server stream when the answer rejects its requested codec", async () => {
         vi.mocked(desktopAPI.screenCapabilities).mockResolvedValue({codecs: [{mimeType: "video/VP9", sdpFmtpLine: "profile-id=0", payloadType: 98}]});
-        await expect(new ScreenMediaController().publish(vi.fn(), {...defaultScreenSettings, codec: "VP9"})).rejects.toThrow(/negotiated VP8/);
+        await expect(controller.publish(vi.fn(), {...defaultScreenSettings, codec: "VP9"})).rejects.toThrow(/negotiated VP8/);
         expect(desktopAPI.stopScreen).toHaveBeenCalledWith("1");
         expect(track.stop).toHaveBeenCalledOnce();
     });
@@ -117,7 +130,6 @@ describe("screen publisher lifecycle", () => {
     it("releases capture selected after cancellation", async () => {
         const selected = deferred<any>();
         getDisplayMedia.mockReturnValueOnce(selected.promise);
-        const controller = new ScreenMediaController();
         const publishing = controller.publish(vi.fn());
         const assertion = expect(publishing).rejects.toMatchObject({name: "AbortError"});
         await controller.stopPublishing();
@@ -130,27 +142,70 @@ describe("screen publisher lifecycle", () => {
     it("checks the server H.264 level as well as the browser level", async () => {
         vi.stubGlobal("RTCRtpSender", {getCapabilities: () => ({codecs: [{mimeType: "video/H264", clockRate: 90000, sdpFmtpLine: "packetization-mode=1;profile-level-id=42e034"}]})});
         vi.mocked(desktopAPI.screenCapabilities).mockResolvedValue({codecs: [{mimeType: "video/H264", sdpFmtpLine: "packetization-mode=1;profile-level-id=42e01f", payloadType: 102}]});
-        await expect(new ScreenMediaController().publish(vi.fn(), {...defaultScreenSettings, codec: "H264"})).rejects.toThrow(/profile\/level/);
+        await expect(controller.publish(vi.fn(), {...defaultScreenSettings, codec: "H264"})).rejects.toThrow(/profile\/level/);
         expect(desktopAPI.publishScreen).not.toHaveBeenCalled();
+    });
+
+    it("offers the verified H.264 level for 1080p60 without modifying codec preferences", async () => {
+        const original = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f";
+        const h264 = {mimeType: "video/H264", clockRate: 90000, sdpFmtpLine: original};
+        vi.stubGlobal("RTCRtpSender", {getCapabilities: () => ({codecs: [h264]})});
+        vi.stubGlobal("navigator", {mediaDevices: {getDisplayMedia}, mediaCapabilities: {
+            encodingInfo: vi.fn().mockResolvedValue({supported: true}),
+        }});
+        track.getSettings.mockReturnValue({width: 1920, height: 1080, frameRate: 60});
+        offerSDP = `v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 102\r\na=rtpmap:102 H264/90000\r\na=fmtp:102 ${original}\r\n`;
+        vi.mocked(desktopAPI.screenCapabilities).mockResolvedValue({codecs: [
+            {...h264, sdpFmtpLine: original.replace("42e01f", "42e034"), payloadType: 102},
+        ]});
+        vi.mocked(desktopAPI.publishScreen).mockImplementation((offer) =>
+            Promise.resolve({streamId: "1", answer: offer}) as ReturnType<typeof desktopAPI.publishScreen>);
+        await controller.publish(vi.fn(), {...defaultScreenSettings, codec: "H264", fps: 60});
+        expect(desktopAPI.publishScreen).toHaveBeenCalledWith(expect.objectContaining({
+            sdp: expect.stringContaining("profile-level-id=42e02a"),
+        }));
+        expect(preferences).toHaveBeenCalledWith([h264]);
+        expect(h264.sdpFmtpLine).toBe(original);
+        await controller.close();
+    });
+
+    it("releases capture if it ends during an asynchronous H.264 capability query", async () => {
+        const query = deferred<any>();
+        const h264 = {mimeType: "video/H264", clockRate: 90000, sdpFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"};
+        const encodingInfo = vi.fn(() => query.promise);
+        vi.stubGlobal("RTCRtpSender", {getCapabilities: () => ({codecs: [h264]})});
+        vi.stubGlobal("navigator", {mediaDevices: {getDisplayMedia}, mediaCapabilities: {encodingInfo}});
+        vi.mocked(desktopAPI.screenCapabilities).mockResolvedValue({codecs: [{...h264,
+            sdpFmtpLine: h264.sdpFmtpLine.replace("42e01f", "42e034"), payloadType: 102}]});
+        const publishing = controller.publish(vi.fn(), {...defaultScreenSettings, codec: "H264"});
+        const rejected = expect(publishing).rejects.toMatchObject({name: "AbortError"});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(encodingInfo).toHaveBeenCalledOnce();
+        track.readyState = "ended";
+        track.onended?.();
+        query.resolve({supported: true});
+        await rejected;
+        expect(preferences).not.toHaveBeenCalled();
+        expect(desktopAPI.publishScreen).not.toHaveBeenCalled();
+        expect(track.stop).toHaveBeenCalledOnce();
+        expect(vi.getTimerCount()).toBe(0);
     });
 
     it("does not negotiate a different AV1 profile by matching only MIME", async () => {
         vi.stubGlobal("RTCRtpSender", {getCapabilities: () => ({codecs: [{mimeType: "video/AV1", clockRate: 90000, sdpFmtpLine: "profile=0"}]})});
         vi.mocked(desktopAPI.screenCapabilities).mockResolvedValue({codecs: [{mimeType: "video/AV1", sdpFmtpLine: "profile=1", payloadType: 104}]});
-        await expect(new ScreenMediaController().publish(vi.fn(), {...defaultScreenSettings, codec: "AV1"})).rejects.toThrow(/unavailable/);
+        await expect(controller.publish(vi.fn(), {...defaultScreenSettings, codec: "AV1"})).rejects.toThrow(/unavailable/);
         expect(desktopAPI.publishScreen).not.toHaveBeenCalled();
     });
 
     it("sets an encoder FPS ceiling when the capture backend rejects constraints", async () => {
         track.applyConstraints.mockRejectedValueOnce(new Error("capture backend refuses constraints"));
-        const controller = new ScreenMediaController();
         await controller.publish(vi.fn(), {...defaultScreenSettings, fps: 10});
         expect(sendEncodings).toEqual([{maxBitrate: 2_000_000, maxFramerate: 10}]);
         await controller.close();
     });
 
     it("cancels the disconnect timer even if browser close emits no event", async () => {
-        const controller = new ScreenMediaController();
         await controller.publish(vi.fn());
         const publishingTimers = vi.getTimerCount(); // includes the stats diagnostics interval
         pcs[0].connectionState = "disconnected";
@@ -165,6 +220,55 @@ describe("screen publisher lifecycle", () => {
 });
 
 describe("screen viewer lifecycle", () => {
+    it("does not spend the video timeout while waiting for capabilities", async () => {
+        const capabilities = deferred<any>();
+        vi.mocked(desktopAPI.screenCapabilities).mockReturnValueOnce(capabilities.promise);
+        const controller = new ScreenMediaController();
+        const subscribing = controller.subscribe("1");
+        await vi.advanceTimersByTimeAsync(30_000);
+        expect(desktopAPI.subscribeScreen).not.toHaveBeenCalled();
+        expect(vi.getTimerCount()).toBe(0);
+        capabilities.resolve({legacy: true});
+        expect(await subscribing).toBe(capture);
+        await controller.close();
+    });
+
+    it("does not apply an answer received after cancellation and cleans up the subscription", async () => {
+        const response = deferred<any>();
+        vi.mocked(desktopAPI.subscribeScreen).mockReturnValueOnce(response.promise as ReturnType<typeof desktopAPI.subscribeScreen>);
+        const applyAnswer = vi.spyOn(FakePC.prototype, "setRemoteDescription");
+        const controller = new ScreenMediaController();
+        const subscribing = controller.subscribe("1");
+        const rejected = expect(subscribing).rejects.toMatchObject({name: "AbortError"});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(desktopAPI.subscribeScreen).toHaveBeenCalledOnce();
+        await controller.unsubscribe();
+        response.resolve({answer: {type: "answer", sdp: answerSDP}});
+        await rejected;
+        expect(applyAnswer).not.toHaveBeenCalled();
+        expect(desktopAPI.unsubscribeScreen).toHaveBeenCalledWith("1", expect.any(String));
+        expect(vi.getTimerCount()).toBe(0);
+        applyAnswer.mockRestore();
+    });
+
+    it("offers an upgraded receive level only after a positive decoder query", async () => {
+        const original = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f";
+        const h264 = {mimeType: "video/H264", clockRate: 90000, sdpFmtpLine: original};
+        vi.stubGlobal("RTCRtpReceiver", {getCapabilities: () => ({codecs: [h264]})});
+        vi.stubGlobal("navigator", {mediaCapabilities: {decodingInfo: vi.fn().mockResolvedValue({supported: true})}});
+        vi.mocked(desktopAPI.screenCapabilities).mockResolvedValue({codecs: [
+            {...h264, sdpFmtpLine: original.replace("42e01f", "42e034"), payloadType: 102},
+        ]});
+        offerSDP = `v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 102\r\na=rtpmap:102 H264/90000\r\na=fmtp:102 ${original}\r\n`;
+        const controller = new ScreenMediaController();
+        await controller.subscribe("1");
+        expect(desktopAPI.subscribeScreen).toHaveBeenCalledWith("1", expect.any(String), expect.objectContaining({
+            sdp: expect.stringContaining("profile-level-id=42e034"),
+        }));
+        expect(preferences).toHaveBeenCalledWith([h264]);
+        await controller.close();
+    });
+
     it("cancels even when disposed before the first awaited cleanup resumes", async () => {
         const controller = new ScreenMediaController();
         const subscribing = controller.subscribe("1");

@@ -19,10 +19,16 @@ export function canEditAccount(viewer: AdminViewer, account: AdminAccount): bool
 }
 
 export function canTogglePermission(viewer: AdminViewer, account: AdminAccount, permission: AdminPermission): boolean {
-    if (!canEditAccount(viewer, account)) return false;
+    if (!canEditAccountPermissions(viewer, account)) return false;
     if (viewer.isOwner) return true;
     const held: Record<AdminPermission, boolean> = {kick: viewer.canKick, ban: viewer.canBan, drag: viewer.canDrag, admin: false};
     return held[permission];
+}
+
+// The owner may edit their own permissions, while level, ban and deletion
+// continue to use the stricter account hierarchy.
+export function canEditAccountPermissions(viewer: AdminViewer, account: AdminAccount): boolean {
+    return (viewer.isOwner && account.owner && account.id === viewer.userId) || canEditAccount(viewer, account);
 }
 
 export function canBan(viewer: AdminViewer, account: AdminAccount): boolean {

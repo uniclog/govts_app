@@ -76,31 +76,31 @@ const paletteVariables: Record<PaletteToken, string> = {
 };
 
 export const darkPalette: ThemePalette = {
-    window: "#081727",
-    card: "#0c1d30",
-    cardStrong: "#142c44",
-    line: "#203b54",
-    text: "#dce7f3",
-    muted: "#89a1b9",
-    accent: "#16ddb0",
-    accentBlue: "#48c7eb",
-    danger: "#ff6c7a",
-    warning: "#e8b36d",
-    onAccent: "#06241c",
+    window: "#0d0f12",
+    card: "#15181e",
+    cardStrong: "#1e222a",
+    line: "#292e38",
+    text: "#f1f2f3",
+    muted: "#9399a5",
+    accent: "#4bc49a",
+    accentBlue: "#ff7942",
+    danger: "#ff5672",
+    warning: "#f2c35d",
+    onAccent: "#10261f",
 };
 
 export const lightPalette: ThemePalette = {
-    window: "#c5ced8",
-    card: "#d7e0e8",
-    cardStrong: "#ced7e1",
-    line: "#b7c2cd",
-    text: "#1c2430",
-    muted: "#4c5d70",
-    accent: "#0c7563",
-    accentBlue: "#0d6eaa",
-    danger: "#c23346",
-    warning: "#8d5a1a",
-    onAccent: "#f4fffb",
+    window: "#f2f0eb",
+    card: "#ffffff",
+    cardStrong: "#ece9e2",
+    line: "#e4e1da",
+    text: "#25272b",
+    muted: "#858890",
+    accent: "#2ba97c",
+    accentBlue: "#e56f38",
+    danger: "#db3653",
+    warning: "#b88712",
+    onAccent: "#ffffff",
 };
 
 export const themePalettes: Record<BuiltinTheme, ThemePalette> = {

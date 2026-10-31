@@ -143,6 +143,7 @@ func main() {
 
 	mainWindow = app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            fmt.Sprintf("SRX %s", applicationVersion()),
+		Frameless:        true,
 		Width:            1180,
 		Height:           760,
 		MinWidth:         900,

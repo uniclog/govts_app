@@ -34,23 +34,25 @@ type ConnectRequest struct {
 	Name             string `json:"name"`
 	Server           string `json:"server"`
 	MinServerVersion string `json:"minServerVersion,omitempty"`
+	SkipHistory      bool   `json:"skipHistory,omitempty"`
 }
 
 type Service struct {
-	client           *clientapp.App
-	settings         *clientsettings.Store
-	settingsMu       sync.RWMutex
-	displayName      string
-	serverAddress    string
-	trustedMediaKeys map[string]string
-	theme            string
-	locale           string
-	closeToTray      bool
-	connectionMu     sync.Mutex
-	recentServers    []clientsettings.RecentServer
-	recordedVisit    string
-	serverStatus     *serverstatus.Cache
-	statusChanged    func()
+	client            *clientapp.App
+	settings          *clientsettings.Store
+	settingsMu        sync.RWMutex
+	displayName       string
+	serverAddress     string
+	trustedMediaKeys  map[string]string
+	theme             string
+	locale            string
+	closeToTray       bool
+	connectionMu      sync.Mutex
+	recentServers     []clientsettings.RecentServer
+	recordedVisit     string
+	skipServerHistory bool
+	serverStatus      *serverstatus.Cache
+	statusChanged     func()
 	// audioSwitchMu orders microphone and speaker clicks with their cues.
 	audioSwitchMu     sync.Mutex
 	hotkeyKeys        map[string]string
@@ -96,6 +98,12 @@ func (s *Service) Connect(request ConnectRequest) error {
 	return s.connect(request)
 }
 
+func (s *Service) TrustServerIdentity(endpoint, fingerprint string) error {
+	s.connectionMu.Lock()
+	defer s.connectionMu.Unlock()
+	return s.client.TrustServerIdentity(endpoint, fingerprint)
+}
+
 func (s *Service) connect(request ConnectRequest) error {
 	request.Name = strings.TrimSpace(request.Name)
 	request.Server = strings.TrimSpace(request.Server)
@@ -124,46 +132,123 @@ func (s *Service) connect(request ConnectRequest) error {
 	s.settingsMu.Lock()
 	s.serverAddress = request.Server
 	s.recordedVisit = ""
+	s.skipServerHistory = request.SkipHistory
 	s.settingsMu.Unlock()
 	return nil
 }
 
 type MediaTrustDTO struct {
-	Fingerprint string `json:"fingerprint"`
-	Trusted     bool   `json:"trusted"`
-	Known       bool   `json:"known"`
+	Fingerprint         string `json:"fingerprint"`
+	Trusted             bool   `json:"trusted"`
+	Known               bool   `json:"known"`
+	Server              string `json:"server"`
+	SessionID           string `json:"sessionId"`
+	Context             string `json:"context"`
+	PreviousFingerprint string `json:"previousFingerprint"`
 }
 
 func (s *Service) MediaServerIdentity() (MediaTrustDTO, error) {
+	s.connectionMu.Lock()
+	defer s.connectionMu.Unlock()
+	return s.mediaServerIdentity()
+}
+
+func (s *Service) mediaTrustState() (MediaTrustDTO, error) {
+	view := s.client.Snapshot()
+	if connectionStatus(view.ConnectionStatus) != "connected" || view.SessionID == 0 {
+		return MediaTrustDTO{}, errors.New("media-key-confirmation-expired")
+	}
+	s.settingsMu.RLock()
+	server := mediaTrustServerKey(s.serverAddress)
+	previous := s.mediaPinStateLocked(server)
+	s.settingsMu.RUnlock()
+	return MediaTrustDTO{Server: server, SessionID: formatUint64(view.SessionID), Context: s.client.ChatContext(), PreviousFingerprint: previous}, nil
+}
+
+func sameMediaTrustState(a, b MediaTrustDTO) bool {
+	return a.Server == b.Server && a.SessionID == b.SessionID && a.Context == b.Context && a.PreviousFingerprint == b.PreviousFingerprint
+}
+
+func (s *Service) mediaServerIdentity() (MediaTrustDTO, error) {
+	identity, err := s.mediaTrustState()
+	if err != nil {
+		return MediaTrustDTO{}, err
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 	fingerprint, err := s.client.MediaServerFingerprint(ctx)
 	if err != nil {
 		return MediaTrustDTO{}, err
 	}
-	s.settingsMu.RLock()
-	trusted := s.trustedMediaKeys[s.serverAddress]
-	s.settingsMu.RUnlock()
-	return MediaTrustDTO{Fingerprint: fingerprint, Trusted: trusted == fingerprint, Known: trusted != ""}, nil
+	current, err := s.mediaTrustState()
+	if err != nil || !sameMediaTrustState(identity, current) {
+		return MediaTrustDTO{}, errors.New("media-key-confirmation-expired")
+	}
+	identity.Fingerprint = fingerprint
+	identity.Trusted = identity.PreviousFingerprint == fingerprint
+	identity.Known = identity.PreviousFingerprint != ""
+	log.Printf("media trust check: server=%s session_id=%s saved=%q presented=%s trusted=%t", identity.Server, identity.SessionID, identity.PreviousFingerprint, fingerprint, identity.Trusted)
+	return identity, nil
 }
 
+// TrustMediaServer retains first-use compatibility. Replacing an existing pin
+// requires the server, session and previous fingerprint shown in the dialog.
 func (s *Service) TrustMediaServer(fingerprint string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
-	defer cancel()
-	actual, err := s.client.MediaServerFingerprint(ctx)
+	s.connectionMu.Lock()
+	defer s.connectionMu.Unlock()
+	identity, err := s.mediaServerIdentity()
 	if err != nil {
 		return err
 	}
-	if actual != strings.TrimSpace(fingerprint) {
-		return errors.New("отпечаток media-сервера изменился")
+	if identity.Fingerprint != strings.TrimSpace(fingerprint) {
+		return errors.New("media-key-changed-again")
+	}
+	if identity.Known && !identity.Trusted {
+		return errors.New("media-key-confirmation-required")
+	}
+	return s.confirmMediaServerIdentity(identity)
+}
+
+func (s *Service) ConfirmMediaServerIdentity(request MediaTrustDTO) error {
+	s.connectionMu.Lock()
+	defer s.connectionMu.Unlock()
+	return s.confirmMediaServerIdentity(request)
+}
+
+func (s *Service) confirmMediaServerIdentity(request MediaTrustDTO) error {
+	current, err := s.mediaTrustState()
+	if err != nil || !sameMediaTrustState(request, current) {
+		return errors.New("media-key-confirmation-expired")
+	}
+	actual, err := s.mediaServerIdentity()
+	if err != nil {
+		return err
+	}
+	if !sameMediaTrustState(request, actual) {
+		return errors.New("media-key-confirmation-expired")
+	}
+	if actual.Fingerprint != request.Fingerprint {
+		return errors.New("media-key-changed-again")
 	}
 	s.settingsMu.Lock()
+	previousPins := cloneStringMap(s.trustedMediaKeys)
 	if s.trustedMediaKeys == nil {
 		s.trustedMediaKeys = make(map[string]string)
 	}
-	s.trustedMediaKeys[s.serverAddress] = actual
+	for address := range s.trustedMediaKeys {
+		if mediaTrustServerKey(address) == request.Server {
+			delete(s.trustedMediaKeys, address)
+		}
+	}
+	s.trustedMediaKeys[request.Server] = actual.Fingerprint
 	s.settingsMu.Unlock()
-	return s.saveSettings()
+	if err := s.saveSettings(); err != nil {
+		s.settingsMu.Lock()
+		s.trustedMediaKeys = previousPins
+		s.settingsMu.Unlock()
+		return errors.New("media-key-save-failed")
+	}
+	return nil
 }
 
 func (s *Service) ScreenCapabilities() (json.RawMessage, error) {
@@ -177,7 +262,9 @@ func (s *Service) ScreenCapabilities() (json.RawMessage, error) {
 }
 
 func (s *Service) PublishScreen(offer mediasignal.SessionDescription) (clientapp.MediaPublishResult, error) {
-	pin, err := s.mediaPin()
+	s.connectionMu.Lock()
+	defer s.connectionMu.Unlock()
+	pin, err := s.verifiedMediaPin()
 	if err != nil {
 		return clientapp.MediaPublishResult{}, err
 	}
@@ -187,7 +274,9 @@ func (s *Service) PublishScreen(offer mediasignal.SessionDescription) (clientapp
 }
 
 func (s *Service) SubscribeScreen(streamID, subscriberID string, offer mediasignal.SessionDescription) (clientapp.MediaSubscribeResult, error) {
-	pin, err := s.mediaPin()
+	s.connectionMu.Lock()
+	defer s.connectionMu.Unlock()
+	pin, err := s.verifiedMediaPin()
 	if err != nil {
 		return clientapp.MediaSubscribeResult{}, err
 	}
@@ -248,7 +337,10 @@ func (s *Service) OpenScreenWindow(streamID, ownerName string) error {
 func (s *Service) mediaPin() (string, error) {
 	s.settingsMu.RLock()
 	defer s.settingsMu.RUnlock()
-	pin := s.trustedMediaKeys[s.serverAddress]
+	pin := s.mediaPinStateLocked(s.serverAddress)
+	if strings.Contains(pin, "\n") {
+		return "", errors.New("media-key-confirmation-required")
+	}
 	if pin == "" {
 		return "", errors.New("media-сервер ещё не подтверждён")
 	}
@@ -389,6 +481,7 @@ func (s *Service) Snapshot() ClientViewDTO {
 	s.connectionMu.Lock()
 	defer s.connectionMu.Unlock()
 	dto := viewDTO(s.client.Snapshot(), s.client.LastError())
+	dto.ServerIdentityChange = s.client.ServerIdentityChange()
 	dto.ChatContext = s.client.ChatContext() + "|" + dto.UserID
 	s.recordServerVisit(dto)
 	return dto

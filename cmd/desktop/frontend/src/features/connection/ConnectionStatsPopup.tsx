@@ -89,7 +89,7 @@ export function ConnectionStatsPopup({sessionId, status, channelId, sharing, scr
     return <div className="connection-stats-anchor">
         <button ref={buttonRef} type="button" className={`status-pill ${status}`} aria-label={m.connection.statsButton(statusLabel)}
                 aria-expanded={open} aria-controls="connection-stats-popup" onClick={() => setOpen((value) => !value)}>
-            <span className="status-dot"/>{statusLabel}
+            <span className="status-dot"/><span className="status-label">{statusLabel}</span>
         </button>
         {open && <div ref={popupRef} id="connection-stats-popup" className="connection-stats-popup" role="region" aria-label={m.connection.statsRegion}>
             <h2>{m.connection.statsTitle}</h2>

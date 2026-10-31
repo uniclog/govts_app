@@ -161,6 +161,8 @@ type ClientViewDTO struct {
 	MuteOnAway       bool              `json:"muteOnAway"`
 	DeafenOnAway     bool              `json:"deafenOnAway"`
 	SoundCues        map[string]bool   `json:"soundCues"`
+
+	ServerIdentityChange *clientapp.ServerIdentityChange `json:"serverIdentityChange,omitempty"`
 }
 
 type ClientEventDTO struct {

@@ -22,6 +22,10 @@ func (s *Service) recordServerVisit(view ClientViewDTO) {
 		return
 	}
 	s.settingsMu.Lock()
+	if s.skipServerHistory {
+		s.settingsMu.Unlock()
+		return
+	}
 	address := s.serverAddress
 	endpoint, err := clientapp.ParseServerEndpoint(address)
 	if err != nil {
@@ -47,6 +51,7 @@ func (s *Service) recordServerVisit(view ClientViewDTO) {
 		index = len(s.recentServers) - 1
 	}
 	s.recentServers[index].LastVisited = time.Now().UnixMilli()
+	s.recentServers[index].Version = view.Server.Version
 	sort.SliceStable(s.recentServers, func(i, j int) bool {
 		left, right := s.recentServers[i], s.recentServers[j]
 		if left.Favorite != right.Favorite {
@@ -88,8 +93,12 @@ func (s *Service) RecentServers() []RecentServerDTO {
 		if err != nil {
 			status = serverstatus.Status{Status: "unavailable"}
 		}
+		if status.ServerVersion != "" {
+			server.Version = status.ServerVersion
+		}
 		current := err == nil && view.ConnectionStatus == "connected" && address == endpoint
 		if current && view.SnapshotFresh {
+			server.Version = view.Server.Version
 			count := uint32(len(view.Participants))
 			status = serverstatus.Status{OnlineCount: &count, Status: "available"}
 		} else if current {
@@ -189,6 +198,7 @@ func (s *Service) ReconnectServer(address string) error {
 	s.settingsMu.RLock()
 	current, _ := clientapp.ParseServerEndpoint(s.serverAddress)
 	name := s.displayName
+	skipHistory := s.skipServerHistory
 	found := false
 	for _, server := range s.recentServers {
 		if server.Address == endpoint.String() {
@@ -215,5 +225,5 @@ func (s *Service) ReconnectServer(address string) error {
 	if err := s.disconnect(); err != nil {
 		return err
 	}
-	return s.connect(ConnectRequest{Name: name, Server: endpoint.String()})
+	return s.connect(ConnectRequest{Name: name, Server: endpoint.String(), SkipHistory: skipHistory})
 }

@@ -13,7 +13,6 @@ export type {
     AudioMeterDTO,
     ChannelDTO,
     ClientEventDTO,
-    ClientViewDTO,
     ConnectionStatsDTO,
     ConnectRequest,
     ParticipantDTO,
@@ -26,6 +25,12 @@ export type {
 } from "../bindings/uniclog.io/sonoryx/internal/ui/wails";
 
 import type {AudioMeterDTO, ConnectRequest, ChatRequestDTO} from "../bindings/uniclog.io/sonoryx/internal/ui/wails";
+
+export type ServerIdentityChange = {endpoint: string; previousFingerprint: string; newFingerprint: string};
+export type MediaServerIdentity = {fingerprint: string; trusted: boolean; known: boolean; server: string; sessionId: string; context: string; previousFingerprint: string};
+export type ClientViewDTO = import("../bindings/uniclog.io/sonoryx/internal/ui/wails").ClientViewDTO & {
+    serverIdentityChange?: ServerIdentityChange | null;
+};
 
 export type AdminPermission = "kick" | "ban" | "drag" | "admin";
 export type AdminAccount = {id: string; name: string; fingerprint: string; joinLevel: number; kick: boolean; ban: boolean; drag: boolean;
@@ -40,7 +45,7 @@ const adminCall = <T>(method: string, ...args: unknown[]): Promise<T> =>
     Call.ByName(`uniclog.io/sonoryx/internal/ui/wails.Service.${method}`, ...args) as Promise<T>;
 
 let diagnosticsInFlight = 0;
-export type RecentServer = {address: string; alias?: string; favorite: boolean; lastVisited: number; current: boolean;
+export type RecentServer = {address: string; alias?: string; version?: string; favorite: boolean; lastVisited: number; current: boolean;
     onlineCount: number | null; status: "unknown" | "available" | "unavailable"; updatedAt: number; lastAttemptAt: number};
 export function logDiagnostic(operation: string, message: unknown): void {
     if (diagnosticsInFlight >= 16) return;
@@ -96,6 +101,8 @@ export const desktopAPI = {
     eventsAfter: (sequence: string) => Service.EventsAfter(sequence),
     savedDisplayName: () => Service.SavedDisplayName(),
     connect: (request: ConnectRequest) => Service.Connect(request),
+    trustServerIdentity: (endpoint: string, fingerprint: string): Promise<void> =>
+        Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.TrustServerIdentity", endpoint, fingerprint),
     disconnect: () => Service.Disconnect(),
     joinChannel: (channelID: string) => Service.JoinChannel(channelID),
     kick: (sessionID: string) => Service.Kick(sessionID),
@@ -142,7 +149,8 @@ export const desktopAPI = {
     setLocale: (value: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetLocale", value),
     closeToTray: (): Promise<boolean> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.CloseToTray"),
     setCloseToTray: (value: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetCloseToTray", value),
-    mediaServerIdentity: () => Service.MediaServerIdentity(),
+    mediaServerIdentity: (): Promise<MediaServerIdentity> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.MediaServerIdentity"),
+    confirmMediaServerIdentity: (identity: MediaServerIdentity): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.ConfirmMediaServerIdentity", identity),
     screenCapabilities: () => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.ScreenCapabilities") as Promise<{legacy?: boolean; codecs?: {mimeType: string; sdpFmtpLine: string; payloadType: number}[]; audio?: {mimeType: string; sdpFmtpLine: string; payloadType: number}[]}>,
     screenAudioSupported: (): Promise<boolean> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.ScreenAudioSupported"),
     screenAudioApps: (): Promise<{pid: number; name: string; title: string}[] | null> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.ScreenAudioApps"),

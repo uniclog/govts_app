@@ -2,10 +2,10 @@ import {useLayoutEffect, useRef, useState} from "react";
 import type {CSSProperties, KeyboardEvent, PointerEvent} from "react";
 import {useLocale} from "../locales/Locale";
 
-type Side = "browser" | "info";
-const defaults = {browser: 210, info: 245};
-const dividerWidth = 6;
-const minimumCenterWidth = 520;
+type Side = "browser" | "chat";
+const defaults = {browser: 240, chat: 288};
+const dividerWidth = 8;
+const minimumCenterWidth = 280;
 
 export function useWorkspaceResize(showInfo: boolean) {
     const {m} = useLocale();
@@ -24,22 +24,19 @@ export function useWorkspaceResize(showInfo: boolean) {
         return () => observer.disconnect();
     }, []);
 
-    const overlay = availableWidth <= 850;
-    const browserMin = Math.min(160, availableWidth / 3);
-    const infoMin = Math.min(180, availableWidth / 3);
-    const centerMin = Math.min(minimumCenterWidth, Math.max(0, availableWidth - browserMin - dividerWidth -
-        (showInfo && !overlay ? infoMin + dividerWidth : 0)));
-    const infoWidth = Math.max(infoMin, Math.min(preferredWidths.info,
-        availableWidth - centerMin - (overlay ? dividerWidth : browserMin + 2 * dividerWidth)));
-    const browserMax = Math.max(browserMin, availableWidth - centerMin - dividerWidth -
-        (showInfo && !overlay ? infoWidth + dividerWidth : 0));
-    const browserWidth = Math.max(browserMin, Math.min(preferredWidths.browser, browserMax));
-    const infoMax = Math.max(infoMin, availableWidth - centerMin -
-        (overlay ? dividerWidth : browserWidth + 2 * dividerWidth));
+    const layoutWidth = Math.max(0, availableWidth - 2 * dividerWidth);
+    const browserMin = Math.min(192, layoutWidth / 3);
+    const chatMin = Math.min(240, layoutWidth / 3);
+    const centerMin = Math.min(minimumCenterWidth, Math.max(0, layoutWidth - browserMin - chatMin));
+    const browserLimit = Math.max(browserMin, layoutWidth - chatMin - centerMin);
+    const browserWidth = Math.max(browserMin, Math.min(preferredWidths.browser, browserLimit));
+    const chatMax = Math.max(chatMin, layoutWidth - browserWidth - centerMin);
+    const chatWidth = Math.max(chatMin, Math.min(preferredWidths.chat, chatMax));
+    const browserMax = Math.max(browserMin, layoutWidth - chatWidth - centerMin);
 
-    const widths = {browser: browserWidth, info: infoWidth};
-    const minimums = {browser: browserMin, info: infoMin};
-    const maximums = {browser: browserMax, info: infoMax};
+    const widths = {browser: browserWidth, chat: chatWidth};
+    const minimums = {browser: browserMin, chat: chatMin};
+    const maximums = {browser: browserMax, chat: chatMax};
     const resize = (side: Side, value: number) => {
         const next = Math.max(minimums[side], Math.min(value, maximums[side]));
         setPreferredWidths((current) => ({...current, [side]: next}));
@@ -49,8 +46,8 @@ export function useWorkspaceResize(showInfo: boolean) {
         role: "separator" as const,
         tabIndex: 0,
         "aria-orientation": "vertical" as const,
-        "aria-label": side === "browser" ? m.channels.resizeChannels : m.channels.resizeInfo,
-        "aria-controls": side === "browser" ? "channel-browser-pane" : "channel-info-pane",
+        "aria-label": side === "browser" ? m.channels.resizeChannels : showInfo ? m.channels.resizeInfo : m.channels.resizeChat,
+        "aria-controls": side === "browser" ? "channel-browser-pane" : showInfo ? "channel-info-pane" : "server-content-pane",
         "aria-valuemin": Math.round(minimums[side]),
         "aria-valuemax": Math.round(maximums[side]),
         "aria-valuenow": Math.round(widths[side]),
@@ -85,6 +82,6 @@ export function useWorkspaceResize(showInfo: boolean) {
 
     return {layoutRef, resizing, separatorProps, style: {
         "--channel-browser-width": `${browserWidth}px`,
-        "--channel-info-width": `${infoWidth}px`,
+        "--channel-chat-width": `${chatWidth}px`,
     } as CSSProperties};
 }

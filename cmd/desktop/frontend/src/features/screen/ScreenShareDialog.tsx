@@ -2,6 +2,8 @@ import {useEffect, useRef, useState} from "react";
 import type {ClientViewDTO} from "../../api";
 import {desktopAPI, logDiagnostic} from "../../api";
 import {ScreenMediaController, ScreenCodecLimitError, senderCodecAvailable, senderH264Level, h264SettingsFit, h264SupportedSettings} from "./screenMedia";
+import {logScreenCodecCapabilities} from "./screenCodecDiagnostics";
+import {supportedH264Options, type H264Option} from "./screenH264";
 import {loadScreenSettings, screenBitrates, type ScreenSettings} from "./screenProfiles";
 import {loadScreenAudioApp, loadScreenAudioSource, saveScreenAudioApp, saveScreenAudioSource, type ScreenAudioChoice, type ScreenAudioSource} from "./screenAudio";
 import {Select} from "../../components/Select";
@@ -29,6 +31,7 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
     };
     const buttonRef = useRef<HTMLButtonElement>(null);
     const busy = useRef(false);
+    const dialogGeneration = useRef(0);
     const context = `${view.sessionId}:${view.channelId}:${view.connectionStatus}`;
     const currentContext = useRef(context);
     currentContext.current = context;
@@ -37,6 +40,7 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
     const active = publishing || own;
 
     useEffect(() => {
+        ++dialogGeneration.current;
         setOpen(false);
         setError("");
         setCodecLimit(null);
@@ -47,6 +51,7 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
     }, [context, controller]);
 
     const close = () => {
+        ++dialogGeneration.current;
         setOpen(false);
         if (busy.current) void controller.stopPublishing().catch((reason) => logDiagnostic("screen_cancel_cleanup", reason));
     };
@@ -56,13 +61,20 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
         if (busy.current || !available) return;
         busy.current = true; setPending(true); setError(""); setCodecLimit(null); setOpen(false);
         const startedIn = context;
+        const generation = ++dialogGeneration.current;
+        const stillCurrent = () => currentContext.current === startedIn && dialogGeneration.current === generation;
         try {
-            await controller.publish(() => { if (currentContext.current === startedIn) setPublishing(false); }, settings, () => currentContext.current === startedIn, sound);
-            if (currentContext.current === startedIn) { setPublishing(true); setOpen(false); }
+            if (!controller.publishingPrepared()) {
+                await controller.preparePublishing();
+                if (stillCurrent()) setOpen(true);
+                return; // Capture requires a new, explicit Start click.
+            }
+            await controller.publish(() => { if (currentContext.current === startedIn) setPublishing(false); }, settings, stillCurrent, sound);
+            if (stillCurrent()) { setPublishing(true); setOpen(false); }
         } catch (reason) {
             const cancelled = reason instanceof DOMException && ["NotAllowedError", "AbortError"].includes(reason.name)
                 || /permission denied by user|user cancel(?:led|ed)/i.test(String(reason));
-            if (currentContext.current === startedIn) {
+            if (stillCurrent()) {
                 setOpen(true);
                 if (!cancelled) {
                     if (reason instanceof ScreenCodecLimitError) setCodecLimit(reason.level);
@@ -73,11 +85,22 @@ export function useScreenSharing(view: ClientViewDTO, controller: ScreenMediaCon
     };
     const toggle = async () => {
         if (busy.current || !available) return;
-        if (!active) { setError(""); setOpen(true); return; }
         busy.current = true; setPending(true);
-        try { await controller.stopPublishing(); }
-        catch (reason) { onError(reason instanceof Error ? reason.message : String(reason)); }
-        finally { setPublishing(false); busy.current = false; setPending(false); }
+        const startedIn = context;
+        try {
+            if (active) {
+                await controller.stopPublishing();
+                setPublishing(false);
+            } else {
+                setError("");
+                await controller.preparePublishing();
+                if (currentContext.current === startedIn) setOpen(true);
+            }
+        }
+        catch (reason) {
+            if (!(reason instanceof DOMException && reason.name === "AbortError")) onError(reason instanceof Error ? reason.message : String(reason));
+        }
+        finally { busy.current = false; setPending(false); }
     };
     return {open, pending, active, available, settings, selectSettings, soundSource, selectSound, soundApp, setSoundApp, nativeSound, setNativeSound, error, codecLimit, buttonRef, close, start, toggle};
 }
@@ -90,18 +113,43 @@ export function ScreenShareDialog({sharing}: {sharing: ScreenSharingState}) {
     const restoreFocus = useRef(false);
     const [serverCodecs, setServerCodecs] = useState<Awaited<ReturnType<typeof desktopAPI.screenCapabilities>>>();
     const [checkingCodecs, setCheckingCodecs] = useState(false);
+    const [verifiedH264, setVerifiedH264] = useState<{server: typeof serverCodecs; bitrate: number; options: H264Option[]} | null>(null);
     useEffect(() => {
         if (!sharing.open) return;
         let cancelled = false;
         setServerCodecs(undefined);
         setCheckingCodecs(true);
         void desktopAPI.screenCapabilities().then((result) => {
-            if (!cancelled) setServerCodecs(result);
-        }).catch(() => { /* Publishing performs the authenticated check again. */ }).finally(() => {
+            if (!cancelled) {
+                setServerCodecs(result);
+                void logScreenCodecCapabilities(result).catch((reason) => logDiagnostic("screen_h264_capabilities_failed", reason));
+            }
+        }).catch((reason) => {
+            // Publishing performs the authenticated check again.
+            if (!cancelled) {
+                logDiagnostic("screen_capabilities_failed", reason);
+                void logScreenCodecCapabilities().catch((error) => logDiagnostic("screen_h264_capabilities_failed", error));
+            }
+        }).finally(() => {
             if (!cancelled) setCheckingCodecs(false);
         });
         return () => { cancelled = true; };
     }, [sharing.open]);
+    useEffect(() => {
+        if (!sharing.open || !serverCodecs) return;
+        let cancelled = false;
+        const abort = new AbortController();
+        const bitrate = sharing.settings.bitrate;
+        void supportedH264Options(serverCodecs, bitrate, abort.signal).then((options) => {
+            if (!cancelled) setVerifiedH264({server: serverCodecs, bitrate, options});
+        }).catch((reason) => {
+            if (!cancelled) {
+                logDiagnostic("screen_h264_options_failed", reason);
+                setVerifiedH264({server: serverCodecs, bitrate, options: []});
+            }
+        });
+        return () => { cancelled = true; abort.abort(); };
+    }, [sharing.open, serverCodecs, sharing.settings.bitrate]);
     const [soundApps, setSoundApps] = useState<{pid: number; name: string; title: string}[]>([]);
     const {nativeSound, setNativeSound, soundApp, setSoundApp} = sharing;
     useEffect(() => {
@@ -132,12 +180,24 @@ export function ScreenShareDialog({sharing}: {sharing: ScreenSharingState}) {
     const soundAvailable = serverSound && nativeSound !== false;
     const effectiveSound: ScreenAudioChoice = !soundAvailable || soundValue === "app" && !soundApp ? {source: "off"} : {source: soundValue, pid: soundApp};
     const h264Level = sharing.codecLimit ?? senderH264Level(serverCodecs);
-    const h264Options = h264SupportedSettings(h264Level);
+    const verifiedOptions = verifiedH264?.server === serverCodecs && verifiedH264?.bitrate === sharing.settings.bitrate ? verifiedH264.options : null;
+    const checkingH264 = Boolean(serverCodecs && !verifiedOptions);
+    const checkingCompatibility = checkingCodecs || checkingH264;
+    const fallbackH264 = h264SupportedSettings(h264Level).flatMap((option) =>
+        ([60, 30, 15, 10] as const).filter((fps) => fps <= option.fps).map((fps) => ({...option, fps})));
+    const allowedH264 = (verifiedOptions ?? fallbackH264).filter((option) =>
+        sharing.codecLimit === null || h264SettingsFit({...sharing.settings, ...option}, sharing.codecLimit) !== false);
+    const h264Options = allowedH264.filter((option, index) => allowedH264.findIndex((candidate) => candidate.resolution === option.resolution) === index);
     const h264Selected = sharing.settings.codec === "H264";
-    const incompatible = h264Selected && !checkingCodecs && h264SettingsFit(sharing.settings, h264Level) === false;
+    const fitsH264 = sharing.settings.resolution === "native" || !verifiedOptions
+        ? h264SettingsFit(sharing.settings, h264Level) !== false
+        : verifiedOptions.some((option) => option.resolution === sharing.settings.resolution && option.fps === sharing.settings.fps);
+    const incompatible = h264Selected && !checkingCompatibility && !fitsH264;
     const codecWarning = incompatible || sharing.codecLimit !== null;
     const currentHeight = sharing.settings.resolution === "native" ? Infinity : Number(sharing.settings.resolution.slice(0, -1));
-    const suggestion = [...h264Options].reverse().find((option) => Number(option.resolution.slice(0, -1)) <= currentHeight);
+    const suggestions = allowedH264.filter((option) => option.fps <= sharing.settings.fps);
+    const suggestion = suggestions.filter((option, index) => suggestions.findIndex((candidate) => candidate.resolution === option.resolution) === index)
+        .reverse().find((option) => Number(option.resolution.slice(0, -1)) <= currentHeight);
     const useSuggestion = () => {
         if (suggestion) sharing.selectSettings({...sharing.settings, resolution: suggestion.resolution, fps: Math.min(sharing.settings.fps, suggestion.fps) as ScreenSettings["fps"]});
     };
@@ -190,8 +250,8 @@ export function ScreenShareDialog({sharing}: {sharing: ScreenSharingState}) {
         {/* Hidden, not removed, while it has nothing to say (VP9/AV1 once the
             server is checked), so the live region keeps announcing changes. */}
         <div id="screen-codec-help" className={`screen-codec-help${codecWarning ? " screen-codec-warning" : ""}`} aria-live="polite"
-            hidden={!(checkingCodecs || codecWarning || !serverCodecs || h264Selected || sharing.settings.codec === "auto" || sharing.settings.codec === "VP8")}>
-            {checkingCodecs ? <p>{m.screen.compatibility.checking}</p> : <>
+            hidden={!(checkingCompatibility || codecWarning || !serverCodecs || h264Selected || sharing.settings.codec === "auto" || sharing.settings.codec === "VP8")}>
+            {checkingCompatibility ? <p>{m.screen.compatibility.checking}</p> : <>
                 {sharing.settings.codec === "auto" ? <p>{m.screen.compatibility.auto}</p> : sharing.settings.codec === "VP8" ? <p>{m.screen.compatibility.vp8}</p> : h264Selected && <p>{m.screen.compatibility.h264}</p>}
                 {h264Selected && h264Options.length > 0 && <p>{serverCodecs ? m.screen.compatibility.connectionLimits : m.screen.compatibility.clientLimits} {h264Options.map((option) => `${option.resolution} / ${option.fps} FPS`).join(" · ")}</p>}
                 {h264Selected && sharing.settings.resolution === "native" && <p>{m.screen.compatibility.native}</p>}
@@ -209,7 +269,7 @@ export function ScreenShareDialog({sharing}: {sharing: ScreenSharingState}) {
         {sharing.error && <p className="screen-error" role="alert">{errorText(sharing.error, m)}</p>}
         <div className="screen-dialog-actions">
             <button type="button" onClick={sharing.close}>{m.screen.cancel}</button>
-            <button className="primary-button" type="button" disabled={sharing.pending || !sharing.available || incompatible || sharing.codecLimit !== null}
+            <button className="primary-button" type="button" disabled={sharing.pending || !sharing.available || incompatible || sharing.codecLimit !== null || h264Selected && checkingCompatibility}
                 onClick={() => {
                     // Remove the modal top layer before WebView2 opens its capture
                     // picker, while keeping getDisplayMedia in the click call chain.

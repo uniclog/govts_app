@@ -1,10 +1,11 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {FileAdmin} from "./FileAdmin";
 import {desktopAPI, type AdminAccount, type AdminAuditEntry, type AdminChannelInput, type AdminPermission, type ChannelDTO, type ClientViewDTO} from "../../api";
+import {Icon} from "../../components/Icon";
 import {Select} from "../../components/Select";
 import {errorText} from "../../locales";
 import {useLocale} from "../../locales/Locale";
-import {canBan, canEditAccount, canEditChannelLevel, canTogglePermission, channelEditingServerVersion, channelTree, descendantIDs, levelAllowed, parseLevel, reorderPositions, versionAtLeast} from "./adminRules";
+import {canBan, canEditAccount, canEditAccountPermissions, canEditChannelLevel, canTogglePermission, channelEditingServerVersion, channelTree, descendantIDs, levelAllowed, parseLevel, reorderPositions, versionAtLeast} from "./adminRules";
 
 type Section = "accounts" | "channels" | "audit" | "files";
 
@@ -17,10 +18,10 @@ export function AdminPanel({view}: {view: ClientViewDTO}) {
         <div className="settings-heading"><p className="eyebrow">{view.server.name || m.connection.server}</p><h2>{m.admin.title}</h2></div>
         <div className="settings-layout">
             <nav className="settings-nav" aria-label={m.admin.sections}>
-                <button type="button" aria-current={section === "accounts" ? "page" : undefined} onClick={() => setSection("accounts")}>{m.admin.accounts}</button>
-                <button type="button" aria-current={section === "channels" ? "page" : undefined} onClick={() => setSection("channels")}>{m.admin.channels}</button>
-                <button type="button" aria-current={section === "audit" ? "page" : undefined} onClick={() => setSection("audit")}>{m.admin.audit}</button>
-                <button type="button" aria-current={section === "files" ? "page" : undefined} onClick={() => setSection("files")}>{m.files.admin}</button>
+                <button type="button" aria-current={section === "accounts" ? "page" : undefined} onClick={() => setSection("accounts")}><Icon name="users"/>{m.admin.accounts}</button>
+                <button type="button" aria-current={section === "channels" ? "page" : undefined} onClick={() => setSection("channels")}><Icon name="channels"/>{m.admin.channels}</button>
+                <button type="button" aria-current={section === "audit" ? "page" : undefined} onClick={() => setSection("audit")}><Icon name="shield"/>{m.admin.audit}</button>
+                <button type="button" aria-current={section === "files" ? "page" : undefined} onClick={() => setSection("files")}><Icon name="file"/>{m.files.admin}</button>
             </nav>
             <div className="settings-content">
                 {section === "accounts" && <AccountsSection view={view}/>}
@@ -126,6 +127,7 @@ function AccountCard({view, account, onChange, onDelete}: {view: ClientViewDTO; 
     const [level, setLevel] = useState(String(account.joinLevel));
     const [reason, setReason] = useState("");
     const editable = canEditAccount(view, account);
+    const permissionsEditable = canEditAccountPermissions(view, account);
     const banAllowed = canBan(view, account);
     const parsedLevel = parseLevel(level);
     const levelValid = levelAllowed(view, parsedLevel);
@@ -147,7 +149,7 @@ function AccountCard({view, account, onChange, onDelete}: {view: ClientViewDTO; 
         <h3>{account.name} <span className="admin-account-id">#{account.id}</span></h3>
         <p className="device-hint admin-fingerprint">{m.admin.fingerprint}: <code>{account.fingerprint}</code></p>
         <AccountBadges account={account}/>
-        {!editable && <p className="device-hint">{m.admin.protected}</p>}
+        {!editable && <p className="device-hint">{permissionsEditable ? m.admin.ownerPermissionsHint : m.admin.protected}</p>}
         {error && <div className="device-error" role="alert">{error}</div>}
 
         {permissions.map((permission) => <div key={permission.id} className="setting-toggle">
@@ -156,7 +158,7 @@ function AccountCard({view, account, onChange, onDelete}: {view: ClientViewDTO; 
                                              onChange={(event) => void update(() => desktopAPI.adminSetPermission(account.id, permission.id, event.target.checked))}/><span/></label>
         </div>)}
 
-        <AccountFileRights key={`${view.chatContext}:${account.id}`} context={view.chatContext} accountID={account.id} editable={editable} accountBusy={busy}/>
+        <AccountFileRights key={`${view.chatContext}:${account.id}`} context={view.chatContext} accountID={account.id} editable={permissionsEditable} accountBusy={busy}/>
 
         <form className="admin-inline-form" onSubmit={(event) => {
             event.preventDefault();
