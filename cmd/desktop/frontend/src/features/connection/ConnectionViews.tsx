@@ -100,9 +100,11 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
         <section className="connection-card connection-hero">
         <div className="connection-rings" aria-hidden="true"><i/><i/><i/><i/></div>
         <div className="connection-content">
+        <div className="connection-intro">
         <div className="connection-brand"><span className="connection-logo"><VoiceMark/></span><strong>SRX</strong></div>
         <h1>{m.connection.heroLineOne}<br/>{m.connection.heroLineTwo}</h1>
         <p className="lead">{m.connection.heroLead}</p>
+        </div>
         <form className="connection-form" onSubmit={(event) => { event.preventDefault(); void connect(server); }}>
             <label><span>{m.connection.address}</span><span className="connection-input"><Icon name="globe"/><input id="server-address" autoFocus value={server} onChange={(event) => {
                 setServer(event.target.value); rememberServerAddress(event.target.value);
