@@ -147,7 +147,7 @@ func main() {
 		Width:            1180,
 		Height:           760,
 		MinWidth:         900,
-		MinHeight:        680,
+		MinHeight:        720,
 		BackgroundColour: application.NewRGB(28, 37, 57),
 		URL:              "/",
 	})

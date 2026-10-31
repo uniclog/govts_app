@@ -205,7 +205,7 @@
 .voice-bars i:nth-child(2n) { height: 14px; animation-delay: -.3s; }
 .voice-bars i:nth-child(3n) { height: 11px; animation-delay: -.5s; }
 @keyframes voice-pulse { to { transform: scaleY(.4); } }
-@media (prefers-reduced-motion: reduce) { .voice-bars i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { :root:not([data-force-motion]) .voice-bars i { animation: none; } }
 .stage-empty { z-index: 1; margin-top: 38px; color: var(--muted); font-size: 0.75rem; }
 .channel-content { display: grid; grid-template-rows: 44px minmax(0, 1fr); min-width: 0; min-height: 0; margin-top: 12px; padding: 6px 14px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); overflow: hidden; }
 .channel-content > [role="tabpanel"] { width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; }
@@ -433,7 +433,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .file-image-download:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .file-image-download svg { width: 16px; height: 16px; }
 @media (hover: none) { .file-image-toolbar { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .file-image-toolbar { transition: none; } }
+@media (prefers-reduced-motion: reduce) { :root:not([data-force-motion]) .file-image-toolbar { transition: none; } }
 .file-card-image .file-thumbnail { display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; cursor: zoom-in; }
 .file-thumbnail img { display: block; width: 100%; height: auto; max-height: 180px; object-fit: contain; }
 .file-thumbnail:focus-visible { outline-offset: -3px; }

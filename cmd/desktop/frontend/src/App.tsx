@@ -32,6 +32,7 @@ import {InterfaceSettings} from "./features/settings/InterfaceSettings";
 import {AdminPanel} from "./features/admin/AdminPanel";
 import {StageScene} from "./features/settings/StageScene";
 import {HotkeySettings} from "./features/settings/HotkeySettings";
+import {loadForceMotion, saveForceMotion} from "./features/settings/motion";
 
 const contentTabs = ["chat", "events"] as const;
 type ContentTab = typeof contentTabs[number] | `direct:${string}`;
@@ -804,6 +805,7 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
     updates: UpdatesState;
 }) {
     const {m} = useLocale();
+    const [forceMotion, setForceMotion] = useState(loadForceMotion);
     const [sensitivity, setSensitivity] = useState(view.audio.vadSensitivity);
     useEffect(() => setSensitivity(view.audio.vadSensitivity), [view.audio.vadSensitivity]);
     const [rnnoiseSensitivity, setRNNoiseSensitivity] = useState(view.audio.rnnoiseSensitivity);
@@ -956,6 +958,8 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                         <LocaleSwitch labelledBy="locale-label"/>
                     </div>
                     <InterfaceSettings appearance={appearance} onTheme={(value) => invoke(() => setTheme(value))} onCreate={createCustomTheme} onChange={updateAppearance} onOpenSaved={openSavedTheme} onSave={saveNamedTheme} onImport={importThemeFile} onExport={exportTheme} onDelete={deleteSavedTheme}/>
+                    <SettingToggle title={m.settings.forceMotion} description={m.settings.forceMotionHint} checked={forceMotion}
+                                   onChange={async (value) => { saveForceMotion(value); setForceMotion(value); }}/>
                 </section>
                 <section className="settings-card"><h3>{m.settings.sounds}</h3>
                     <Select id="sound-pack" label={m.settings.soundPack} hint={m.settings.soundPackHint}

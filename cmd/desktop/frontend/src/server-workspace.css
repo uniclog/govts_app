@@ -218,7 +218,7 @@
 .server-shell .workspace-primary-tabs > button[aria-selected="true"] { color: var(--text); background: var(--card-strong); }
 .server-shell .workspace-primary-tabs > button > svg { display: none; }
 .server-shell .workspace-primary-tabs .count-badge { flex-shrink: 0; min-width: 14px; height: 16px; padding: 0 4px; font-size: .625rem; }
-.workspace-direct-tabs { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; max-height: 96px; overflow-y: auto; scrollbar-width: thin; }
+.workspace-direct-tabs { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; max-height: 96px; overflow-y: auto; }
 .server-shell .workspace-direct-tabs .direct-tab { flex: 1 1 calc(50% - 4px); min-width: 0; max-width: 100%; min-height: 28px; padding: 2px 4px; background: var(--window); }
 .server-shell .workspace-direct-tabs .direct-tab[data-active="true"] { background: var(--card-strong); }
 .server-shell .workspace-direct-tabs .direct-tab > button[role="tab"] { flex: 1; min-width: 0; padding: 2px 4px; }

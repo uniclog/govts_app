@@ -98,7 +98,7 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
     };
     return <div className="connection-page"><div className="connection-layout">
         <section className="connection-card connection-hero">
-        <div className="connection-rings" aria-hidden="true"><i/><i/><i/><i/></div>
+        <div className="connection-rings" aria-hidden="true"><i/><i/><i/><i/><i/></div>
         <div className="connection-content">
         <div className="connection-intro">
         <div className="connection-brand"><span className="connection-logo"><VoiceMark/></span><strong>SRX</strong></div>
@@ -123,6 +123,11 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
             <button className="primary-button" disabled={pending || !server.trim() || !name.trim()}
                 type="submit"><Icon name="arrowRight"/>{pending ? m.connection.connecting : m.connection.connect}</button>
         </form>
+        <div className="connection-tail"><ul className="connection-features">
+            <li><span><Icon name="mic"/></span><strong>{m.connection.featureVoice}</strong><small>{m.connection.featureVoiceHint}</small></li>
+            <li><span><Icon name="lock"/></span><strong>{m.connection.featureSecurity}</strong><small>{m.connection.featureSecurityHint}</small></li>
+            <li><span><Icon name="screen"/></span><strong>{m.connection.featureScreen}</strong><small>{m.connection.featureScreenHint}</small></li>
+        </ul></div>
         </div>
         </section>
         <aside className="connection-card connection-server-card">

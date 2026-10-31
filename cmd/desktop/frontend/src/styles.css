@@ -1,5 +1,8 @@
 * { box-sizing: border-box; }
-* { scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
+/* Chromium ignores ::-webkit-scrollbar (and shows native arrows) once the standard properties are set. */
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
+}
 *::-webkit-scrollbar { width: 7px; height: 7px; }
 *::-webkit-scrollbar-track, *::-webkit-scrollbar-corner { background: transparent; }
 *::-webkit-scrollbar-thumb { min-height: 34px; border-radius: 99px; background: var(--scrollbar); }
@@ -51,7 +54,7 @@ select:hover:not(:disabled), select:focus { background-image: var(--field-chevro
   to { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-blue) 28%, transparent); }
 }
 @media (prefers-reduced-motion: reduce) {
-  input, textarea, select, .app-select-trigger, .app-select-trigger::after { transition: none; animation: none; }
+  :root:not([data-force-motion]) :is(input, textarea, select, .app-select-trigger, .app-select-trigger::after) { transition: none; animation: none; }
 }
 
 .eyebrow { margin: 0 0 5px; color: var(--muted); font-size: 0.6875rem; font-weight: 800; letter-spacing: .14em; }
