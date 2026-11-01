@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"uniclog.io/sonoryx/internal/domain"
 	"uniclog.io/sonoryx/internal/protocol"
@@ -18,11 +19,13 @@ type chatJob struct {
 	addr    *net.UDPAddr
 	request protocol.ChatRequest
 	user    int64
+	// unchanged marks a repeated reaction: there is nothing to announce.
+	unchanged bool
 }
 
 type chatRate struct {
-	at              time.Time
-	requests, sends int
+	at                         time.Time
+	requests, sends, reactions int
 }
 
 type chatWorker struct {
@@ -64,13 +67,36 @@ func (w *chatWorker) enqueue(packet protocol.VoicePacket, addr *net.UDPAddr) err
 	if now.Sub(rate.at) >= time.Minute {
 		rate = chatRate{at: now}
 	}
-	if w.pending[s.UserID] >= 4 || rate.requests >= 240 || (r.Operation == protocol.ChatSend && rate.sends >= 30) || (!known && len(w.rate) >= 8192) {
+	// A momentary backlog is not abuse: clients pause for a minute on the limit text below.
+	if w.pending[s.UserID] >= 4 {
 		w.mu.Unlock()
-		return SendError(w.conn, addr, packet.SessionID, packet.RequestID, "лимит запросов чата; повторите позже")
+		return SendError(w.conn, addr, packet.SessionID, packet.RequestID, "чат занят; повторите позже")
 	}
-	rate.requests++
-	if r.Operation == protocol.ChatSend {
+	// Messages and reactions have their own budgets, so polling cannot block them.
+	// Clients pause background reads for a minute on the read limit text only.
+	limit := ""
+	switch {
+	case !known && len(w.rate) >= 8192:
+		limit = "лимит запросов чата; повторите позже"
+	case r.Operation == protocol.ChatSend:
+		if rate.sends >= 30 {
+			limit = "лимит сообщений чата; повторите позже"
+		}
 		rate.sends++
+	case r.Operation == protocol.ChatReact:
+		if rate.reactions >= 120 {
+			limit = "лимит сообщений чата; повторите позже"
+		}
+		rate.reactions++
+	default:
+		if rate.requests >= 240 {
+			limit = "лимит запросов чата; повторите позже"
+		}
+		rate.requests++
+	}
+	if limit != "" {
+		w.mu.Unlock()
+		return SendError(w.conn, addr, packet.SessionID, packet.RequestID, limit)
 	}
 	w.rate[s.UserID] = rate
 	w.pending[s.UserID]++
@@ -186,6 +212,13 @@ func (w *chatWorker) handle(parent context.Context, job chatJob) {
 			var message domain.ChatMessage
 			message, err = w.auth.store.DeleteChat(ctx, actor.UserID, r.Target, r.Cursor, fileID)
 			page = domain.ChatPage{UserID: actor.UserID, Messages: []domain.ChatMessage{message}}
+		case protocol.ChatReact:
+			code, _ := domain.ChatReactionCode(r.Text)
+			var message domain.ChatMessage
+			var changed bool
+			message, changed, err = w.auth.store.ReactChat(ctx, actor.UserID, r.Target, r.Cursor, code, r.Forward)
+			job.unchanged = !changed
+			page = domain.ChatPage{UserID: actor.UserID, Messages: []domain.ChatMessage{message}}
 		case protocol.ChatDialogs:
 			page, err = w.auth.store.ChatDialogs(ctx, actor.UserID, r.Cursor)
 		case protocol.ChatRead:
@@ -235,7 +268,10 @@ func (w *chatWorker) complete(ctx context.Context, job chatJob, actor Session, p
 	if err := w.conn.WritePacket(actor.ID, job.addr, ack); err != nil {
 		log.Printf("chat ack failed: session_id=%d error=%v", actor.ID, err)
 	}
-	if job.request.Operation != protocol.ChatSend && job.request.Operation != protocol.ChatRead && job.request.Operation != protocol.ChatDelete && job.request.Operation != protocol.ChatDeleteFile {
+	if job.request.Operation != protocol.ChatSend && job.request.Operation != protocol.ChatRead && job.request.Operation != protocol.ChatDelete && job.request.Operation != protocol.ChatDeleteFile && job.request.Operation != protocol.ChatReact {
+		return
+	}
+	if job.unchanged {
 		return
 	}
 	// Notifications are hints; periodic cursor reconciliation recovers packet loss.
@@ -248,7 +284,8 @@ func (w *chatWorker) complete(ctx context.Context, job chatJob, actor Session, p
 				eligible = eligible || recipient.UserID == job.request.Target.ID
 			}
 		}
-		if eligible {
+		// The reacting session already holds the new state in its ack.
+		if eligible && (job.request.Operation != protocol.ChatReact || recipient.ID != actor.ID) {
 			_ = w.conn.WritePacket(recipient.ID, recipient.Addr, protocol.VoicePacket{Type: protocol.PacketChatChanged, SessionID: recipient.ID})
 		}
 	}
@@ -278,6 +315,14 @@ func fitChatPage(p *domain.ChatPage, r protocol.ChatRequest) ([]byte, error) {
 		if len(p.Dialogs) > 1 {
 			p.Dialogs = p.Dialogs[:len(p.Dialogs)-1]
 			p.HasMore = true
+			continue
+		}
+		// A full message that also carries a revision and reactions can exceed one
+		// datagram. Shortening the display name keeps it deliverable.
+		if len(p.Messages) == 1 && p.Messages[0].SenderName != "" && errors.Is(err, protocol.ErrPayloadTooLarge) {
+			name := p.Messages[0].SenderName
+			_, size := utf8.DecodeLastRuneInString(name)
+			p.Messages[0].SenderName = name[:len(name)-size]
 			continue
 		}
 		return nil, err

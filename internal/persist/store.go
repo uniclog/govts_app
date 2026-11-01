@@ -257,6 +257,11 @@ func (s *Store) initialize() error {
 			}
 		}
 	}
+	if version < 10 {
+		if err = migrateChatReactions(ctx, tx); err != nil {
+			return err
+		}
+	}
 	return tx.Commit()
 }
 
@@ -469,6 +474,8 @@ func (s *Store) DeleteAccountBy(ctx context.Context, actor string, id int64) err
 	}{
 		{`UPDATE users SET public_key=?,join_level=0,permissions=0,admin=0,deleted=1 WHERE id=?`, []any{key[:], id}},
 		{`DELETE FROM chat_messages WHERE recipient_id=? OR (sender_id=? AND recipient_id IS NOT NULL)`, []any{id, id}},
+		{`INSERT OR REPLACE INTO chat_changes(message_id) SELECT DISTINCT message_id FROM chat_reactions WHERE user_id=?`, []any{id}},
+		{`DELETE FROM chat_reactions WHERE user_id=?`, []any{id}},
 		{`DELETE FROM chat_dialogs WHERE user_low=? OR user_high=?`, []any{id, id}},
 		{`DELETE FROM chat_reads WHERE user_id=? OR (kind=2 AND target_id=?)`, []any{id, id}},
 		{`INSERT INTO audit(happened_at,actor,action,target_user_id,detail) VALUES(?,?,?,?,?)`, []any{time.Now().UTC().Format(time.RFC3339Nano), actor, "delete-account", id, name}},

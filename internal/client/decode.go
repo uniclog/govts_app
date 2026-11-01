@@ -220,6 +220,9 @@ func DecodeLoop(
 			if len(states) > 0 && !states[0].ObserveSpeaking(frame.SenderID, pcmFrame.Samples, time.Now()) {
 				continue
 			}
+			if len(states) > 0 && !states[0].ParticipantVolumeReady(frame.SenderID) {
+				continue
+			}
 			if len(states) > 0 {
 				deafened, epoch := states[0].Audio.PlaybackSnapshot()
 				if deafened {

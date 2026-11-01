@@ -753,6 +753,10 @@ func (a *App) SavedDeafened() bool { return a.state.Audio.SavedDeafened() }
 
 func (a *App) ParticipantVolume(id uint64) float32 { return a.state.Audio.ParticipantVolume(id) }
 
+func (a *App) SetSavedParticipantVolumes(saved map[int64]map[int64]float32) {
+	a.state.SetSavedParticipantVolumes(saved)
+}
+
 func (a *App) SetParticipantVolume(id uint64, value float32) error {
 	if id == a.state.SessionID() {
 		return errors.New("cannot change local participant playback volume")

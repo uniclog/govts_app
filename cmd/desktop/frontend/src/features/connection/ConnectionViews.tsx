@@ -7,7 +7,6 @@ import {Icon} from "../../components/Icon";
 import {errorCode, errorText, rawError} from "../../locales";
 import {LocaleSwitch, useLocale} from "../../locales/Locale";
 import type {ScreenSharingState} from "../screen/ScreenShareDialog";
-import type {ScreenMediaController} from "../screen/screenMedia";
 
 export type Page = "channels" | "settings" | "admin";
 const serverAddressStorageKey = "sonoryx.serverAddress";
@@ -47,8 +46,6 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
     const [name, setName] = useState("");
     const [pending, setPending] = useState(false);
     const [remember, setRemember] = useState(shouldRememberAddress);
-    const [invitation, setInvitation] = useState("");
-    const [invitationError, setInvitationError] = useState("");
     const connecting = useRef(false);
     useEffect(() => {
         let active = true;
@@ -79,30 +76,15 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
         }
     };
     const selectServer = (address: string) => { setServer(address); rememberServerAddress(address); };
-    const applyInvitation = (value: string) => {
-        setInvitation(value);
-        const address = value.trim().replace(/^srx:\/\//i, "");
-        // Only direct server addresses are supported; invite tokens need a resolver.
-        if (!address || /[\s/?#@]/.test(address) || !/^(?:\[[\da-f:]+\]|[\p{L}\d._-]+):\d{1,5}$/iu.test(address)) {
-            setInvitationError(m.connection.inviteUnsupported);
-            return;
-        }
-        setInvitationError("");
-        selectServer(address);
-        document.getElementById("display-name")?.focus();
-    };
-    const pasteInvitation = async () => {
-        if (invitation.trim()) { applyInvitation(invitation); return; }
-        try { applyInvitation(await navigator.clipboard.readText()); }
-        catch { setInvitationError(m.connection.pasteHint); }
-    };
     return <div className="connection-page"><div className="connection-layout">
         <section className="connection-card connection-hero">
-        <div className="connection-rings" aria-hidden="true"><i/><i/><i/><i/></div>
+        <div className="connection-rings" aria-hidden="true"><i/><i/><i/><i/><i/></div>
         <div className="connection-content">
+        <div className="connection-intro">
         <div className="connection-brand"><span className="connection-logo"><VoiceMark/></span><strong>SRX</strong></div>
         <h1>{m.connection.heroLineOne}<br/>{m.connection.heroLineTwo}</h1>
         <p className="lead">{m.connection.heroLead}</p>
+        </div>
         <form className="connection-form" onSubmit={(event) => { event.preventDefault(); void connect(server); }}>
             <label><span>{m.connection.address}</span><span className="connection-input"><Icon name="globe"/><input id="server-address" autoFocus value={server} onChange={(event) => {
                 setServer(event.target.value); rememberServerAddress(event.target.value);
@@ -121,18 +103,21 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
             <button className="primary-button" disabled={pending || !server.trim() || !name.trim()}
                 type="submit"><Icon name="arrowRight"/>{pending ? m.connection.connecting : m.connection.connect}</button>
         </form>
+        <div className="connection-tail"><ul className="connection-features">
+            <li><span><Icon name="mic"/></span><strong>{m.connection.featureVoice}</strong><small>{m.connection.featureVoiceHint}</small></li>
+            <li><span><Icon name="lock"/></span><strong>{m.connection.featureSecurity}</strong><small>{m.connection.featureSecurityHint}</small></li>
+            <li><span><Icon name="screen"/></span><strong>{m.connection.featureScreen}</strong><small>{m.connection.featureScreenHint}</small></li>
+        </ul></div>
         </div>
         </section>
         <aside className="connection-card connection-server-card">
             <RecentServers view={view} expanded={true} onToggle={() => {}} standalone disabled={pending} selectedAddress={server.replace(/^srx:\/\//i, "").trim()}
                 refreshingServers={refreshingServers} onRefreshServers={onRefreshServers}
                 onSelect={selectServer} onReconnect={connect} onError={onError}/>
-            <form className="connection-invitation" onSubmit={(event) => { event.preventDefault(); void pasteInvitation(); }}>
-                <label htmlFor="server-invitation">{m.connection.inviteLabel}</label>
-                <div className="connection-invitation-row"><span className="connection-input"><Icon name="globe"/><input id="server-invitation" value={invitation} onChange={(event) => { setInvitation(event.target.value); setInvitationError(""); }} placeholder="srx://host:port" spellCheck={false} disabled={pending}/></span>
-                <button type="submit" disabled={pending}>{m.connection.paste}</button></div>
-                {invitationError && <p className="connection-invite-error" role="alert">{invitationError}</p>}
-            </form>
+            <div className="connection-server-guide">
+                <p>{m.connection.serverGuideHint}</p>
+                <button type="button" disabled title={m.connection.serverGuideSoon}><Icon name="server"/>{m.connection.serverGuide}</button>
+            </div>
         </aside>
     </div></div>;
 }
@@ -158,13 +143,9 @@ export function LobbyBar({version, updateAction, onPageChange}: {
     </header>;
 }
 
-export function StatusBar({view, onPageChange, sharing, screenMedia, updateAction, invoke}: {
-    invoke: (operation: () => Promise<unknown>) => Promise<void>;
+export function StatusBar({view, updateAction}: {
     updateAction?: ReactNode;
     view: ClientViewDTO;
-    onPageChange: (page: Page) => void;
-    sharing: ScreenSharingState;
-    screenMedia: ScreenMediaController;
 }) {
     const {m} = useLocale();
     const channel = view.channels?.find((item) => item.id === view.channelId);

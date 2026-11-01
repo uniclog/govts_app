@@ -68,6 +68,11 @@ func (s *Store) DeleteChat(ctx context.Context, user int64, target domain.ChatTa
 	if banned {
 		return m, domain.ChatRejection("доступ к чату запрещён")
 	}
+	page := []domain.ChatMessage{m}
+	if err = loadChatReactions(ctx, tx, user, page); err != nil {
+		return m, err
+	}
+	m = page[0]
 	if attachmentID != 0 {
 		var deleted bool
 		if err = tx.QueryRowContext(ctx, `SELECT a.deleted FROM file_attachments a JOIN chat_message_files f ON f.attachment_id=a.id WHERE f.message_id=? AND a.id=? AND a.user_id=?`, id, attachmentID, user).Scan(&deleted); err == sql.ErrNoRows {
@@ -102,7 +107,11 @@ func (s *Store) DeleteChat(ctx context.Context, user int64, target domain.ChatTa
 	if err != nil {
 		return m, err
 	}
-	return m, tx.Commit()
+	page[0] = m
+	if err = loadChatReactions(ctx, tx, user, page); err != nil {
+		return m, err
+	}
+	return page[0], tx.Commit()
 }
 
 func (s *Store) ChatChanges(ctx context.Context, user int64, target domain.ChatTarget, cursor int64) (domain.ChatPage, error) {
@@ -126,7 +135,12 @@ func (s *Store) ChatChanges(ctx context.Context, user int64, target domain.ChatT
 		p.Messages = append(p.Messages, m)
 		p.Cursor = m.Revision
 	}
-	return p, rows.Err()
+	if err := rows.Err(); err != nil {
+		return p, err
+	}
+	// The store holds one connection; the next query needs it released.
+	rows.Close()
+	return p, loadChatReactions(ctx, s.db, user, p.Messages)
 }
 
 func (s *Store) ChatChangeWatermark(ctx context.Context, user int64, target domain.ChatTarget) (domain.ChatPage, error) {

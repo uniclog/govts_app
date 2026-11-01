@@ -48,6 +48,12 @@ type Settings struct {
 	// HotkeysEnabled arms the shortcuts. A missing field means off, so an
 	// update does not start capturing keys that the user never turned on.
 	HotkeysEnabled bool `json:"hotkeysEnabled"`
+	// RememberParticipantVolumes restores participant volumes on the next
+	// connection. A missing field means on.
+	RememberParticipantVolumes bool `json:"rememberParticipantVolumes"`
+	// ParticipantVolumes maps "server|local user id" to the volume of each
+	// remote user id. Zero is a muted participant; the default volume is absent.
+	ParticipantVolumes map[string]map[string]float32 `json:"participantVolumes,omitempty"`
 }
 
 type RecentServer struct {
@@ -305,6 +311,9 @@ func (store *Store) Load() (Settings, error) {
 		}
 		if _, exists := fields["hotkeyNotifications"]; !exists {
 			persisted.HotkeyNotifications = true
+		}
+		if _, exists := fields["rememberParticipantVolumes"]; !exists {
+			persisted.RememberParticipantVolumes = true
 		}
 	}
 	if persisted.VoiceUplinkReserveKiB < 1 || persisted.VoiceUplinkReserveKiB > 1048576 {

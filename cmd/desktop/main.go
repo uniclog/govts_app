@@ -120,6 +120,7 @@ func main() {
 	var shutdownOnce sync.Once
 	shutdown := func() {
 		shutdownOnce.Do(func() {
+			wailsui.FlushParticipantVolumes(service)
 			wailsui.StopHotkeys(service)
 			popupLifecycle.Lock()
 			popupStopped = true
@@ -147,9 +148,11 @@ func main() {
 		Width:            1180,
 		Height:           760,
 		MinWidth:         900,
-		MinHeight:        620,
+		MinHeight:        680,
 		BackgroundColour: application.NewRGB(28, 37, 57),
 		URL:              "/",
+		// Without this the Wails runtime answers every external file drag with "no drop".
+		EnableFileDrop: true,
 	})
 	// Cancelling the close keeps the process alive. The default listener otherwise
 	// destroys the window and quits the client.
@@ -168,6 +171,7 @@ func main() {
 	})
 	installTray(app, mainWindow, client, service, &quitting)
 	trackMainWindowVisibility(mainWindow, service)
+	fitWindowToScreen(mainWindow)
 	wailsui.ConfigureHotkeyNotifications(service,
 		func() bool { return mainWindowHidden.Load() },
 		func(title, body string) error {
@@ -192,6 +196,26 @@ func main() {
 // handler reads it while shutdown, which runs on the main thread, may be
 // waiting for that handler; a window call would wait for the main thread too.
 var mainWindowHidden atomic.Bool
+
+// fitWindowToScreen keeps the default window size inside the work area of a
+// small screen, such as 1280x720 without the taskbar.
+func fitWindowToScreen(window *application.WebviewWindow) {
+	var once sync.Once
+	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
+		once.Do(func() {
+			screen, err := window.GetScreen()
+			if err != nil || screen == nil {
+				return
+			}
+			width, height := window.Size()
+			fitWidth, fitHeight := min(width, screen.WorkArea.Width), min(height, screen.WorkArea.Height)
+			if fitWidth != width || fitHeight != height {
+				window.SetSize(fitWidth, fitHeight)
+				window.Center()
+			}
+		})
+	})
+}
 
 func trackMainWindowVisibility(window *application.WebviewWindow, service *wailsui.Service) {
 	hide := func(*application.WindowEvent) {

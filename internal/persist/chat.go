@@ -35,6 +35,10 @@ func migrateChat(ctx context.Context, tx *sql.Tx) error {
 	return nil
 }
 
+// chatUnreadLimit bounds the unread count that every history poll computes, so
+// a long unread backlog cannot hold the store's single connection.
+const chatUnreadLimit = "1000"
+
 const chatColumns = `id,COALESCE(channel_id,0),sender_id,COALESCE(recipient_id,0),client_id,sender_name,text,sent_at_ms,(SELECT COALESCE(group_concat(attachment_id,','),'') FROM (SELECT attachment_id FROM chat_message_files WHERE message_id=chat_messages.id AND hidden=0 ORDER BY position)),deleted,COALESCE((SELECT seq FROM chat_changes WHERE message_id=chat_messages.id),0)`
 
 type chatScanner interface{ Scan(...any) error }
@@ -98,7 +102,11 @@ func (s *Store) SaveChatFiles(ctx context.Context, user int64, name string, targ
 		if (m.Revision == 0 && (!slices.Equal(m.AttachmentIDs, attachments) || m.Text != text)) || (target.Kind == domain.ChatChannel && (m.ChannelID != target.ID || m.RecipientID != 0)) || (target.Kind == domain.ChatDirect && (m.RecipientID != target.ID || m.ChannelID != 0)) {
 			return m, domain.ChatRejection("идентификатор уже использован для другого сообщения")
 		}
-		return m, tx.Commit()
+		page := []domain.ChatMessage{m}
+		if err = loadChatReactions(ctx, tx, user, page); err != nil {
+			return m, err
+		}
+		return page[0], tx.Commit()
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return m, err
@@ -175,7 +183,7 @@ func (s *Store) ChatHistory(ctx context.Context, user int64, target domain.ChatT
 	}
 	unreadArgs := append(append([]any(nil), args...), user, p.ReadID, p.LatestID)
 	var unread int64
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM chat_messages WHERE `+where+` AND sender_id!=? AND deleted=0 AND id>? AND id<=?`, unreadArgs...).Scan(&unread); err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM (SELECT 1 FROM chat_messages WHERE `+where+` AND sender_id!=? AND deleted=0 AND id>? AND id<=? LIMIT `+chatUnreadLimit+`)`, unreadArgs...).Scan(&unread); err != nil {
 		return p, err
 	}
 	if unread > int64(^uint32(0)) {
@@ -206,7 +214,12 @@ func (s *Store) ChatHistory(ctx context.Context, user int64, target domain.ChatT
 		}
 		p.Messages = append(p.Messages, m)
 	}
-	return p, rows.Err()
+	if err := rows.Err(); err != nil {
+		return p, err
+	}
+	// The store holds one connection; the next query needs it released.
+	rows.Close()
+	return p, loadChatReactions(ctx, s.db, user, p.Messages)
 }
 
 func (s *Store) ReadChat(ctx context.Context, user int64, target domain.ChatTarget, cursor int64) error {
@@ -224,7 +237,7 @@ func (s *Store) ChatDialogs(ctx context.Context, user, cursor int64) (domain.Cha
 	p := domain.ChatPage{UserID: user, Cursor: cursor}
 	rows, err := s.db.QueryContext(ctx, `WITH peers AS (SELECT CASE WHEN user_low=? THEN user_high ELSE user_low END AS peer FROM chat_dialogs WHERE user_low=? OR user_high=?)
 	 SELECT u.id,u.display_name,COALESCE((SELECT MAX(id) FROM chat_messages WHERE (sender_id=? AND recipient_id=u.id) OR (sender_id=u.id AND recipient_id=?)),0),COALESCE(r.message_id,0),
-	 (SELECT COUNT(*) FROM chat_messages WHERE sender_id=u.id AND recipient_id=? AND deleted=0 AND id>COALESCE(r.message_id,0))
+	 (SELECT COUNT(*) FROM (SELECT 1 FROM chat_messages WHERE sender_id=u.id AND recipient_id=? AND deleted=0 AND id>COALESCE(r.message_id,0) LIMIT `+chatUnreadLimit+`))
 	 FROM peers JOIN users u ON u.id=peers.peer LEFT JOIN chat_reads r ON r.user_id=? AND r.kind=2 AND r.target_id=u.id WHERE u.id>? ORDER BY u.id LIMIT 17`, user, user, user, user, user, user, user, cursor)
 	if err != nil {
 		return p, err

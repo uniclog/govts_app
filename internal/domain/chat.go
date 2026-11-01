@@ -65,7 +65,39 @@ func ValidateChatText(text string) error {
 	return nil
 }
 
+// chatReactionEmoji is the wire table of ChatReaction.Code, offset by one. Codes
+// are stored and sent, so entries may only be appended.
+var chatReactionEmoji = [...]string{"👍", "❤️", "😂", "😮", "😢", "🔥", "👏", "🎉"}
+
+const MaxChatReactions = len(chatReactionEmoji)
+
+// ChatReactionCode returns the code of a supported reaction emoji.
+func ChatReactionCode(emoji string) (uint8, bool) {
+	for i, value := range chatReactionEmoji {
+		if value == emoji {
+			return uint8(i + 1), true
+		}
+	}
+	return 0, false
+}
+
+// ChatReactionEmoji returns the emoji of a reaction code.
+func ChatReactionEmoji(code uint8) (string, bool) {
+	if code == 0 || int(code) > MaxChatReactions {
+		return "", false
+	}
+	return chatReactionEmoji[code-1], true
+}
+
+// ChatReaction is one emoji's total on a message, as seen by the requesting user.
+type ChatReaction struct {
+	Code  uint8
+	Count uint16
+	Mine  bool
+}
+
 type ChatMessage struct {
+	Reactions     []ChatReaction
 	Deleted       bool
 	Revision      int64
 	AttachmentIDs []int64

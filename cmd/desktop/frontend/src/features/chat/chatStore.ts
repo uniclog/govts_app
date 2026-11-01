@@ -1,5 +1,6 @@
 import {desktopAPI, type ChatDialogDTO, type ChatMessageDTO, type ChatPageDTO, type ChatRequestDTO} from "../../api";
 import {errorCode} from "../../locales";
+import {REACTION_EMOJI} from "./emoji";
 
 export type ChatTarget = {kind: "channel" | "direct"; id: string};
 export type PendingMessage = {clientId: string; text: string; attachmentIds?: string[]; sentAtMS: number; state: "sending" | "error"; error?: string};
@@ -11,8 +12,9 @@ export type Conversation = {
 const keyOf = (t: ChatTarget) => `${t.kind}:${t.id}`;
 const compare = (a: string, b: string) => BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0;
 const maxID = (a: string, b: string) => compare(a, b) > 0 ? a : b;
+const encoder = new TextEncoder();
 const limitDraft = (text: string): string => {
-    const encoder = new TextEncoder();
+    if (encoder.encode(text).length <= 1000) return text;
     let result = "", bytes = 0;
     for (const character of text) {
         const size = encoder.encode(character).length;
@@ -21,6 +23,15 @@ const limitDraft = (text: string): string => {
     }
     return result;
 };
+// The server sends reactions in table order; local changes keep to it too.
+const withReaction = (message: ChatMessageDTO, emoji: string, mine: boolean): ChatMessageDTO => {
+    const others = (message.reactions ?? []).filter((r) => r.emoji !== emoji);
+    const current = message.reactions?.find((r) => r.emoji === emoji);
+    const count = (current?.count ?? 0) + (mine === !!current?.mine ? 0 : mine ? 1 : -1);
+    const reactions = count > 0 ? [...others, {emoji, count, mine}] : others;
+    return {...message, reactions: reactions.sort((a, b) => REACTION_EMOJI.indexOf(a.emoji) - REACTION_EMOJI.indexOf(b.emoji))};
+};
+const visibleState = (c: Conversation) => [c.messages.length, c.messages[c.messages.length - 1]?.id, c.messages[c.messages.length - 1]?.revision, c.pending.length, c.error, c.hasOlder, c.unread, c.readId, c.newMessages].join("|");
 export const chatError = (e: unknown) => (e instanceof Error ? e.message : String(e)).replace(/^Error:\s*/, "");
 
 export class ChatStore {
@@ -31,9 +42,13 @@ export class ChatStore {
     dialogHasMore = false;
     private dialogCursor = "0";
     private listeners = new Set<() => void>();
+    private contentListeners = new Set<() => void>();
     private conversations = new Map<string, Conversation>();
     private busy = new Set<string>();
     private reading = new Set<string>();
+    private reacting = new Map<string, {conversation: Conversation; id: string; emoji: string; add: boolean}>();
+    private reactionTail: Promise<unknown> = Promise.resolve();
+    private lastReactionAt = 0;
     private listing = false;
     private disposed = false;
     private connected = false;
@@ -48,6 +63,8 @@ export class ChatStore {
     private readQueue = new Map<string, {target: ChatTarget; id: string}>();
     private dismissedDialogs = new Map<string, string>();
     private timer: number;
+    private changeTimer = 0;
+    private lastChangeSyncAt = 0;
     private restoredDrafts: Record<string, string> = {};
     private onMessageReceived: () => void = () => undefined;
     readonly confirmedAttachments = new Set<string>();
@@ -91,7 +108,7 @@ export class ChatStore {
         this.timer = window.setInterval(() => void this.reconcile(), 1000);
     }
     setMessageReceivedHandler(handler: () => void) { this.onMessageReceived = handler; }
-    dispose() { this.disposed = true; this.lifecycle.abort(); window.clearInterval(this.timer); this.listeners.clear(); }
+    dispose() { this.disposed = true; this.lifecycle.abort(); window.clearInterval(this.timer); window.clearTimeout(this.changeTimer); this.listeners.clear(); this.contentListeners.clear(); }
     prepareUpdate() {
         if ([...this.conversations.values()].some((c) => c.pending.length > 0)) throw new Error(errorCode("chat-pending-refresh"));
         const drafts: Record<string,string> = {...this.restoredDrafts};
@@ -105,6 +122,16 @@ export class ChatStore {
         this.nextSyncAt = 0;
     }
     invalidate() { this.nextSyncAt = Math.min(this.nextSyncAt, Date.now() + 3000); }
+    // The server announced a change. Every participant reacts to it, so a busy
+    // channel costs one conversation sync per two seconds, whatever the rate.
+    changed() {
+        if (this.changeTimer) return;
+        this.changeTimer = window.setTimeout(() => {
+            this.changeTimer = 0;
+            this.lastChangeSyncAt = Date.now();
+            void this.reconcile(true);
+        }, Math.max(100, this.lastChangeSyncAt + 2000 - Date.now()));
+    }
     watch(target: ChatTarget) {
         const key = keyOf(target), entry = this.watched.get(key);
         this.watched.set(key, {target, count: (entry?.count ?? 0) + 1});
@@ -121,23 +148,34 @@ export class ChatStore {
         this.dismissedDialogs.set(userId, latest);
     }
     shouldOpenDialog(dialog: ChatDialogDTO) { return dialog.unread > 0 && compare(dialog.latestId, this.dismissedDialogs.get(dialog.userId) ?? "0") > 0; }
-    private async reconcile() {
+    // Dialogs stay on the five-second cycle; an announced change refreshes conversations only.
+    private async reconcile(conversationsOnly = false) {
         void this.finishAttachments();
-        if (!this.connected || this.disposed || this.scheduled || Date.now() < Math.max(this.nextSyncAt, this.pausedUntil)) return;
+        if (!this.connected || this.disposed || Date.now() < this.pausedUntil) return;
+        if (this.scheduled) {
+            if (conversationsOnly) this.changed();
+            return;
+        }
+        // A steady stream of changes must not starve the cycle, so a due one joins in.
+        const due = Date.now() >= this.nextSyncAt;
+        if (!conversationsOnly && !due) return;
         this.scheduled = true;
         const epoch = this.epoch;
-        this.nextSyncAt = Date.now() + 5000;
+        if (due) this.nextSyncAt = Date.now() + 5000;
         try {
             await this.flushReads();
             if (epoch !== this.epoch || !this.connected) return;
             await Promise.all([...this.watched.values()].map(({target}) => this.sync(target, false, true)));
             if (epoch !== this.epoch || !this.connected) return;
             await Promise.all([...this.watched.values()].map(({target}) => this.syncChanges(target)));
-            if (epoch !== this.epoch || !this.connected) return;
+            if (!due || epoch !== this.epoch || !this.connected) return;
             await this.refreshDialogs(false, true);
         } finally { this.scheduled = false; }
     }
     subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
+    // Typing and reactions reach only the chat panels, not every view of the store.
+    subscribeContent = (listener: () => void) => { this.contentListeners.add(listener); return () => { this.contentListeners.delete(listener); }; };
+    private notifyContent() { if (!this.disposed) for (const listener of this.contentListeners) listener(); }
     private notify() { if (!this.disposed) for (const listener of this.listeners) listener(); }
 
     conversation(target: ChatTarget): Conversation {
@@ -160,26 +198,34 @@ export class ChatStore {
     }
     setDraft(target: ChatTarget, text: string) {
         const c = this.conversation(target);
-        if (!c.draft && text && [...this.conversations.values()].filter((v) => v.draft).length >= 32) c.error = errorCode("chat-draft-limit");
-        else c.draft = limitDraft(text);
-        this.notify();
+        if (!c.draft && text && [...this.conversations.values()].filter((v) => v.draft).length >= 32) {
+            c.error = errorCode("chat-draft-limit");
+            this.notify();
+            return;
+        }
+        c.draft = limitDraft(text);
+        this.notifyContent();
     }
 
+    // Reactions have their own lane, so a queue of background reads cannot delay them.
     private async request(operation: string, target?: ChatTarget, extra: Partial<ChatRequestDTO> = {}): Promise<ChatPageDTO> {
+        const reaction = operation === "react", userAction = reaction || operation === "send";
         const epoch = this.epoch, signal = this.lifecycle.signal;
         const check = () => {
             if (this.disposed || !this.connected || epoch !== this.epoch || signal.aborted) throw new Error(errorCode("chat-session-ended"));
         };
         const run = async () => {
             check();
-            if (Date.now() < this.pausedUntil) throw new Error(errorCode("chat-rate-limit"));
-            const delay = Math.max(0, this.lastRequestAt + 1000 - Date.now());
+            // The pause answers the read limit; messages and reactions have their own budgets.
+            if (!userAction && Date.now() < this.pausedUntil) throw new Error(errorCode("chat-rate-limit"));
+            const delay = Math.max(0, (reaction ? this.lastReactionAt : this.lastRequestAt) + 1000 - Date.now());
             if (delay) await new Promise<void>((resolve, reject) => {
                 const aborted = () => { window.clearTimeout(timer); reject(new Error(errorCode("chat-session-ended"))); };
                 const timer = window.setTimeout(() => { signal.removeEventListener("abort", aborted); resolve(); }, delay);
                 signal.addEventListener("abort", aborted, {once: true});
             });
-            check(); this.lastRequestAt = Date.now();
+            check();
+            if (reaction) this.lastReactionAt = Date.now(); else this.lastRequestAt = Date.now();
             let page: ChatPageDTO;
             try {
                 page = await desktopAPI.chat({context: this.context, operation, kind: target?.kind ?? "", targetId: target?.id ?? "0", cursor: "0", forward: false, clientId: "", text: "", ...extra});
@@ -191,11 +237,18 @@ export class ChatStore {
             if (page.userId !== this.userId) throw new Error(errorCode("chat-account-changed"));
             return page;
         };
-        const result = this.requestTail.then(run, run);
-        this.requestTail = result.catch(() => undefined);
+        const result = (reaction ? this.reactionTail : this.requestTail).then(run, run);
+        if (reaction) this.reactionTail = result.catch(() => undefined);
+        else this.requestTail = result.catch(() => undefined);
         return result;
     }
     private merge(c: Conversation, page: ChatPageDTO, history = false, older = false, changes = false) {
+        // Most polls bring nothing; keeping the array keeps the rows and the sort untouched.
+        if (!page.messages?.length) {
+            c.readId = maxID(c.readId, page.readId);
+            if (history) c.unread = page.unread;
+            return;
+        }
         const messages = new Map(c.messages.map((m) => [m.id, m]));
         const confirmed = new Set((page.messages ?? []).filter((m) => m.senderId === this.userId).map((m) => m.clientId));
         for (const message of page.messages ?? []) if (message.senderId === this.userId && message.attachmentIds?.length) this.confirmAttachments(message.attachmentIds);
@@ -215,6 +268,8 @@ export class ChatStore {
         const sorted = [...messages.values()].sort((a, b) => compare(a.id, b.id));
         if (older && sorted.length > 500) { c.messages = sorted.slice(0, 500); c.olderWindow = true; }
         else c.messages = sorted.slice(-500);
+        // A snapshot read before the server applied a reaction must not undo it on screen.
+        for (const pending of this.reacting.values()) if (pending.conversation === c) c.messages = c.messages.map((entry) => entry.id === pending.id ? withReaction(entry, pending.emoji, pending.add) : entry);
         c.readId = maxID(c.readId, page.readId);
         if (history) c.unread = page.unread;
     }
@@ -225,7 +280,11 @@ export class ChatStore {
         if (this.busy.has(key)) return;
         const c = this.conversation(target);
         const epoch = this.epoch;
-        this.busy.add(key); c.loading = true; this.notify();
+        // A poll over loaded history is invisible unless it finds something.
+        const quiet = background && c.loaded && !older;
+        const before = quiet ? visibleState(c) : "";
+        this.busy.add(key);
+        if (!quiet) {c.loading = true; this.notify();}
         try {
             if (!c.loaded || older) {
                 if (!c.loaded) {
@@ -258,7 +317,10 @@ export class ChatStore {
                 else this.invalidate();
             }
         }
-        finally { c.loading = false; this.busy.delete(key); this.notify(); }
+        finally {
+            c.loading = false; this.busy.delete(key);
+            if (!quiet || before !== visibleState(c)) this.notify();
+        }
     }
 
     private async syncChanges(target: ChatTarget) {
@@ -270,7 +332,7 @@ export class ChatStore {
             this.merge(c, changes, false, false, true);
             c.changeCursor = maxID(c.changeCursor, changes.cursor);
             if (changes.hasMore) this.invalidate();
-            this.notify();
+            if (changes.messages?.length) this.notify();
         } catch {
             // Keep the loaded history and retry; this is a background read,
             // not a failed user action. Old-session errors must stay silent.
@@ -282,6 +344,7 @@ export class ChatStore {
         if (this.listing || this.disposed || !this.connected) return;
         this.listing = true;
         const epoch = this.epoch;
+        const before = JSON.stringify([this.dialogs, this.dialogError, this.dialogHasMore]);
         try {
             const result = new Map<string, ChatDialogDTO>(this.dialogs.map((d) => [d.userId, d]));
             const cursor = more || this.dialogHasMore ? this.dialogCursor : "0";
@@ -298,7 +361,10 @@ export class ChatStore {
                 else this.invalidate();
             }
         }
-        finally { this.listing = false; this.notify(); }
+        finally {
+            this.listing = false;
+            if (before !== JSON.stringify([this.dialogs, this.dialogError, this.dialogHasMore])) this.notify();
+        }
     }
 
     async latest(target: ChatTarget) {
@@ -350,6 +416,28 @@ export class ChatStore {
             c.error = "";
         } catch (e) {if (!this.disposed) c.error = chatError(e);}
         finally {this.notify(); this.invalidate();}
+    }
+
+    async react(target: ChatTarget, id: string, emoji: string) {
+        const c = this.conversation(target), key = `${keyOf(target)}:${id}:${emoji}`;
+        const message = c.messages.find((entry) => entry.id === id);
+        if (!message || message.deleted || this.disposed || !this.connected || this.reacting.has(key)) return;
+        const add = !message.reactions?.some((r) => r.emoji === emoji && r.mine);
+        // Requests are paced one per second, so the chip must answer before the server does.
+        const apply = (mine: boolean) => {c.messages = c.messages.map((entry) => entry.id === id ? withReaction(entry, emoji, mine) : entry);};
+        this.reacting.set(key, {conversation: c, id, emoji, add});
+        apply(add);
+        this.notifyContent();
+        try {
+            const page = await this.request("react", target, {cursor: id, text: emoji, forward: add});
+            this.reacting.delete(key);
+            this.merge(c, page);
+            c.error = "";
+            this.notifyContent();
+        } catch (e) {
+            this.reacting.delete(key);
+            if (!this.disposed) {apply(!add); c.error = chatError(e); this.notify();}
+        }
     }
 
     async markRead(target: ChatTarget) {
