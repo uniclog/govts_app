@@ -36,6 +36,19 @@ export function WindowControls({overlayOpen, onError}: {
         try { await operation(); }
         catch (error) { onError(rawError(error)); }
     }, [onError]);
+    useEffect(() => {
+        const onDoubleClick = (event: MouseEvent) => {
+            const target = event.target;
+            if (event.button !== 0 || !(target instanceof Element)) return;
+            if (!target.closest(".status-bar, .window-overlay-drag")) return;
+            // Respect the same no-drag regions as native window dragging.
+            if (getComputedStyle(target).getPropertyValue("--wails-draggable").trim() !== "drag") return;
+            event.preventDefault();
+            void run(() => WailsWindow.ToggleMaximise());
+        };
+        document.addEventListener("dblclick", onDoubleClick);
+        return () => document.removeEventListener("dblclick", onDoubleClick);
+    }, [run]);
     return <div className="window-chrome">
         {overlayOpen && <div className="window-overlay-drag" aria-hidden="true"/>}
         <div className="window-controls" role="group" aria-label={m.window.controls}>
