@@ -51,12 +51,14 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
     const [editing, setEditing] = useState<string | null>(null);
     const [alias, setAlias] = useState("");
     const [menu, setMenu] = useState<{server: RecentServer; x: number; y: number} | null>(null);
+    const [copied, setCopied] = useState<string | null>(null);
+    const copiedTimer = useRef<number | undefined>(undefined);
     const menuRef = useRef<HTMLDivElement>(null);
     const editingRef = useRef<string | null>(null);
     const busy = useRef(false);
     const mounted = useRef(true);
     const loadGeneration = useRef(0);
-    useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+    useEffect(() => { mounted.current = true; return () => { mounted.current = false; window.clearTimeout(copiedTimer.current); }; }, []);
     useEffect(() => {
         if (!menu) return;
         const outside = (event: PointerEvent) => { if (!menuRef.current?.contains(event.target as Node)) setMenu(null); };
@@ -106,6 +108,14 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
         editingRef.current = null; setEditing(null);
         if (address) void run(() => desktopAPI.setServerAlias(address, alias));
     };
+    const share = async (address: string) => {
+        try {
+            await navigator.clipboard.writeText(address);
+            setCopied(address);
+            window.clearTimeout(copiedTimer.current);
+            copiedTimer.current = window.setTimeout(() => setCopied(null), 1500);
+        } catch { onError(m.connection.shareFailed); }
+    };
     return <section className={`sidebar-section recent-servers ${standalone ? "connection-server-list" : ""} ${rail ? "server-rail-list" : ""}`} aria-label={m.connection.recent}>
         <div className={`servers-heading ${standalone ? "panel-heading" : ""}`}>
         {standalone ? <h2>{m.connection.recentHeading}</h2> :
@@ -151,6 +161,11 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
                     <span className="recent-server-label"><span>{server.alias || server.address}</span>{server.alias ? <small>{server.address}</small> : standalone && <small>{server.status === "available" ? m.connection.availableShort : server.status === "unavailable" ? m.connection.unavailableShort : m.connection.unknownShort}</small>}{server.version && <small className="recent-server-version" title={server.current ? m.connection.serverVersion(server.version) : m.connection.lastServerVersion(server.version)}>{m.connection.serverVersion(server.version)}</small>}</span>
                 </button>}
                 <ServerPopulation server={server}/>
+                {standalone && <button type="button" className="server-share" aria-label={m.connection.shareLabel(server.alias || server.address)}
+                        title={copied === server.address ? m.connection.shareCopied : m.connection.share}
+                        onClick={() => void share(server.address)}>
+                    <Icon name={copied === server.address ? "check" : "share"}/>
+                </button>}
                 <button type="button" className="server-favorite" aria-pressed={server.favorite}
                         aria-label={m.connection.favoriteLabel(server.favorite ? m.connection.unpin : m.connection.pin, server.alias || server.address)}
                         title={server.favorite ? m.connection.favoriteOff : m.connection.favoriteOn} disabled={pending}

@@ -47,8 +47,6 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
     const [name, setName] = useState("");
     const [pending, setPending] = useState(false);
     const [remember, setRemember] = useState(shouldRememberAddress);
-    const [invitation, setInvitation] = useState("");
-    const [invitationError, setInvitationError] = useState("");
     const connecting = useRef(false);
     useEffect(() => {
         let active = true;
@@ -79,23 +77,6 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
         }
     };
     const selectServer = (address: string) => { setServer(address); rememberServerAddress(address); };
-    const applyInvitation = (value: string) => {
-        setInvitation(value);
-        const address = value.trim().replace(/^srx:\/\//i, "");
-        // Only direct server addresses are supported; invite tokens need a resolver.
-        if (!address || /[\s/?#@]/.test(address) || !/^(?:\[[\da-f:]+\]|[\p{L}\d._-]+):\d{1,5}$/iu.test(address)) {
-            setInvitationError(m.connection.inviteUnsupported);
-            return;
-        }
-        setInvitationError("");
-        selectServer(address);
-        document.getElementById("display-name")?.focus();
-    };
-    const pasteInvitation = async () => {
-        if (invitation.trim()) { applyInvitation(invitation); return; }
-        try { applyInvitation(await navigator.clipboard.readText()); }
-        catch { setInvitationError(m.connection.pasteHint); }
-    };
     return <div className="connection-page"><div className="connection-layout">
         <section className="connection-card connection-hero">
         <div className="connection-rings" aria-hidden="true"><i/><i/><i/><i/><i/></div>
@@ -134,12 +115,10 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
             <RecentServers view={view} expanded={true} onToggle={() => {}} standalone disabled={pending} selectedAddress={server.replace(/^srx:\/\//i, "").trim()}
                 refreshingServers={refreshingServers} onRefreshServers={onRefreshServers}
                 onSelect={selectServer} onReconnect={connect} onError={onError}/>
-            <form className="connection-invitation" onSubmit={(event) => { event.preventDefault(); void pasteInvitation(); }}>
-                <label htmlFor="server-invitation">{m.connection.inviteLabel}</label>
-                <div className="connection-invitation-row"><span className="connection-input"><Icon name="globe"/><input id="server-invitation" value={invitation} onChange={(event) => { setInvitation(event.target.value); setInvitationError(""); }} placeholder="srx://host:port" spellCheck={false} disabled={pending}/></span>
-                <button type="submit" disabled={pending}>{m.connection.paste}</button></div>
-                {invitationError && <p className="connection-invite-error" role="alert">{invitationError}</p>}
-            </form>
+            <div className="connection-server-guide">
+                <p>{m.connection.serverGuideHint}</p>
+                <button type="button" disabled title={m.connection.serverGuideSoon}><Icon name="server"/>{m.connection.serverGuide}</button>
+            </div>
         </aside>
     </div></div>;
 }

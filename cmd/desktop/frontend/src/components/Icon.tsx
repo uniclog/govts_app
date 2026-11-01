@@ -1,8 +1,9 @@
-export type IconName = "chevronDown" | "voice" | "search" | "headphones" | "moon" | "send" | "plus" | "more" | "minimise" | "maximise" | "restoreWindow" | "globe" | "users" | "lock" | "arrowRight" | "channels" | "settings" | "mic" | "sound" | "screen" | "info" | "disconnect" | "hangup" | "chat" | "server" | "close" | "refresh" | "away" | "here" | "shield" | "attachment" | "file" | "download" | "check" | "pause" | "play";
+export type IconName = "chevronDown" | "share" | "voice" | "search" | "headphones" | "moon" | "send" | "plus" | "more" | "minimise" | "maximise" | "restoreWindow" | "globe" | "users" | "lock" | "arrowRight" | "channels" | "settings" | "mic" | "sound" | "screen" | "info" | "disconnect" | "hangup" | "chat" | "server" | "close" | "refresh" | "away" | "here" | "shield" | "attachment" | "file" | "download" | "check" | "pause" | "play";
 
 export function Icon({name}: {name: IconName}) {
     const paths: Record<IconName, React.ReactNode> = {
         chevronDown: <path d="m6 9 6 6 6-6"/>,
+        share: <><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></>,
         voice: <><circle cx="5" cy="12" r="1" fill="currentColor"/><path d="M10 8a6 6 0 0 1 0 8M15 4a11 11 0 0 1 0 16"/></>,
         search: <><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></>,
         headphones: <><path d="M4 14v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="12" width="5" height="9" rx="2"/><rect x="16" y="12" width="5" height="9" rx="2"/></>,
