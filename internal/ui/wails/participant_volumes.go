@@ -21,29 +21,36 @@ func (s *Service) participantVolumeAccount(userID string) string {
 	return mediaTrustServerKey(s.serverAddress) + "|" + userID
 }
 
-// restoreParticipantVolumes applies saved values once per participant session,
-// because the client clears session volumes on every reconnect.
-func (s *Service) restoreParticipantVolumes(view ClientViewDTO) {
-	if view.ConnectionStatus != "connected" || !view.SnapshotFresh {
-		return
-	}
-	type restore struct {
-		sessionID uint64
-		volume    float32
-	}
-	var pending []restore
-	s.settingsMu.Lock()
-	account := s.participantVolumeAccount(view.UserID)
-	if !s.rememberParticipantVolumes || account == "" {
-		s.settingsMu.Unlock()
-		return
-	}
-	context := account + "|" + view.SessionID
+// resetAppliedVolumes starts a new restore pass when the local session changes.
+// settingsMu must be held.
+func (s *Service) resetAppliedVolumes(account, sessionID string) {
+	context := account + "|" + sessionID
 	if s.appliedVolumeContext != context || s.appliedVolumes == nil {
 		s.appliedVolumeContext = context
 		s.appliedVolumes = make(map[string]struct{})
 	}
+}
+
+type participantVolumeRestore struct {
+	sessionID uint64
+	volume    float32
+}
+
+// pendingParticipantVolumes returns saved values not applied yet, once per
+// participant session, because the client clears session volumes on reconnect.
+func (s *Service) pendingParticipantVolumes(view ClientViewDTO) []participantVolumeRestore {
+	if view.ConnectionStatus != "connected" || !view.SnapshotFresh {
+		return nil
+	}
+	s.settingsMu.Lock()
+	defer s.settingsMu.Unlock()
+	account := s.participantVolumeAccount(view.UserID)
+	if !s.rememberParticipantVolumes || account == "" {
+		return nil
+	}
+	s.resetAppliedVolumes(account, view.SessionID)
 	saved := s.participantVolumes[account]
+	var pending []participantVolumeRestore
 	for _, participant := range view.Participants {
 		if participant.Local || participant.UserID == "" || participant.UserID == "0" {
 			continue
@@ -60,10 +67,13 @@ func (s *Service) restoreParticipantVolumes(view ClientViewDTO) {
 		if err != nil {
 			continue
 		}
-		pending = append(pending, restore{sessionID: id, volume: volume})
+		pending = append(pending, participantVolumeRestore{sessionID: id, volume: volume})
 	}
-	s.settingsMu.Unlock()
-	for _, item := range pending {
+	return pending
+}
+
+func (s *Service) restoreParticipantVolumes(view ClientViewDTO) {
+	for _, item := range s.pendingParticipantVolumes(view) {
 		if err := s.client.SetParticipantVolume(item.sessionID, item.volume); err != nil {
 			log.Printf("restore participant volume failed: session=%d error=%v", item.sessionID, err)
 		}
@@ -71,28 +81,31 @@ func (s *Service) restoreParticipantVolumes(view ClientViewDTO) {
 }
 
 // saveParticipantVolume remembers a value set by the user for the participant's
-// account. The default volume is not stored.
+// account.
 func (s *Service) saveParticipantVolume(sessionID uint64, value float32) {
-	view := viewDTO(s.client.Snapshot(), s.client.LastError())
-	session := formatUint64(sessionID)
-	userID := ""
+	view := s.client.Snapshot()
+	var remoteUser int64
 	for _, participant := range view.Participants {
-		if participant.SessionID == session {
-			userID = participant.UserID
+		if participant.SessionID == sessionID {
+			remoteUser = participant.UserID
 			break
 		}
 	}
+	s.recordParticipantVolume(view.UserID, view.SessionID, remoteUser, sessionID, value)
+}
+
+// recordParticipantVolume keeps the value from being replaced by a restore in
+// this session and stores it. The default volume is not stored.
+func (s *Service) recordParticipantVolume(localUser int64, localSession uint64, remoteUser int64, sessionID uint64, value float32) {
 	s.settingsMu.Lock()
 	defer s.settingsMu.Unlock()
-	account := s.participantVolumeAccount(view.UserID)
-	if account == "" || userID == "" || userID == "0" {
+	account := s.participantVolumeAccount(strconv.FormatInt(localUser, 10))
+	if account == "" || remoteUser == 0 {
 		return
 	}
-	if s.appliedVolumeContext != account+"|"+view.SessionID || s.appliedVolumes == nil {
-		s.appliedVolumeContext = account + "|" + view.SessionID
-		s.appliedVolumes = make(map[string]struct{})
-	}
-	s.appliedVolumes[session] = struct{}{}
+	s.resetAppliedVolumes(account, formatUint64(localSession))
+	s.appliedVolumes[formatUint64(sessionID)] = struct{}{}
+	userID := strconv.FormatInt(remoteUser, 10)
 	if !s.rememberParticipantVolumes {
 		return
 	}
@@ -119,7 +132,8 @@ func (s *Service) saveParticipantVolume(sessionID uint64, value float32) {
 }
 
 // FlushParticipantVolumes writes a value still waiting for its delayed save.
-func (s *Service) FlushParticipantVolumes() {
+// It is a function so that Wails does not expose it to the frontend.
+func FlushParticipantVolumes(s *Service) {
 	s.settingsMu.Lock()
 	pending := s.participantVolumeSave != nil && s.participantVolumeSave.Stop()
 	s.settingsMu.Unlock()

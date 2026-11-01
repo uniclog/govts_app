@@ -435,7 +435,7 @@ function MainApp({appearance, setTheme, createCustomTheme, updateAppearance, ope
                     onConnected={() => setPage("channels")}
                 />
             </> : <>
-            <StatusBar view={view} onPageChange={setPage} sharing={sharing} screenMedia={screenMedia.current} updateAction={<UpdateButton updates={updates}/>} invoke={invoke}/>
+            <StatusBar view={view} updateAction={<UpdateButton updates={updates}/>}/>
             {actionError && <div className="error-banner" role="alert">{errorText(actionError, m)}</div>}
             {wakeUntil > wakeNow && <WakeNotice until={wakeUntil} now={wakeNow} label={wakeLabel}/>}
             <ChannelsPage onPageChange={setPage} referenceBackdrop={appearance.theme !== "custom"} view={view} screenMedia={screenMedia.current} events={events} invoke={invoke} onWake={wakeParticipant} refreshingServers={refreshingServers} onRefreshServers={refreshServers}
@@ -561,7 +561,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                 <ServerSwitcher view={view} refreshingServers={refreshingServers} onRefreshServers={onRefreshServers} onReconnect={onReconnect} onError={onError}/>
                 <label className="channel-search"><Icon name="search"/><input id="server-channel-search" value={channelQuery} onChange={(event) => setChannelQuery(event.target.value)} placeholder={m.channels.search} aria-label={m.channels.search}/></label>
                 <section className="sidebar-section" aria-label={m.channels.browser}>
-                    <div className="panel-heading"><h2>{m.channels.voiceChannels}</h2>{view.canAdmin && <button type="button" className="channel-add" title={m.admin.open} aria-label={m.admin.open} onClick={() => onPageChange("admin")}><Icon name="plus"/></button>}</div>
+                    <div className="panel-heading"><h2>{m.channels.voiceChannels}</h2></div>
                     <div className="channel-scroll"><ChannelTree query={channelQuery} channels={channels} participants={participants} screenOwners={screenOwners}
                                                              canKick={view.canKick} canBan={view.canBan}
                                                              canDrag={view.canDrag && view.connectionStatus === "connected"}
@@ -898,7 +898,7 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                 {(section === "microphone" || section === "playback") && devicesError && <div className="device-error" role="alert">{m.settings.devicesFailed}: {errorText(devicesError, m)}
                     <button className="text-button" onClick={() => void loadDevices()}>{m.settings.retry}</button>
                 </div>}
-                {section === "microphone" &&
+                {section === "microphone" && <>
                     <section className="settings-card"><h3>{m.settings.microphone}</h3><Select id="capture-device"
                                                                                  label={m.settings.capture}
                                                                                  value={devices?.selectedCapture ?? ""}
@@ -911,8 +911,7 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                            value={microphoneGain} disabled={false}
                                            onChange={setMicrophoneGain}
                                            onCommit={(value) => invoke(() => desktopAPI.setMicrophoneGain(value))}/>
-                    </section>}
-                {section === "microphone" &&
+                    </section>
                     <section className="settings-card">
                         <SettingToggle title={m.settings.denoise}
                                        description={m.settings.denoiseHint}
@@ -923,8 +922,7 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                            value={rnnoiseSensitivity} disabled={!view.audio.rnnoiseEnabled}
                                            onChange={setRNNoiseSensitivity}
                                            onCommit={(value) => invoke(() => desktopAPI.setRNNoiseSensitivity(value))}/>
-                    </section>}
-                {section === "microphone" &&
+                    </section>
                     <section className="settings-card">
                         <SettingToggle title={m.settings.vad}
                                        description={m.settings.vadHint}
@@ -953,7 +951,7 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                 ? m.settings.monitorActive
                                 : m.settings.monitorBlocked}</p>}
                         </div>
-                    </section>}
+                    </section></>}
                 {section === "playback" &&
                     <section className="settings-card compact-card"><h3>{m.settings.playback}</h3><Select id="playback-device"
                                                                                                          label={m.settings.output}

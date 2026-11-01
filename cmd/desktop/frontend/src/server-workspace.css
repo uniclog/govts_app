@@ -27,9 +27,6 @@
 .server-shell .channel-browser > .sidebar-section { min-height: 0; overflow: hidden; }
 .server-shell .channel-browser .panel-heading { min-height: 28px; padding: 0 14px 6px; }
 .server-shell .channel-browser .panel-heading h2 { color: var(--muted); font-size: .625rem; letter-spacing: .025em; text-transform: uppercase; font-weight: 500; }
-.channel-add { display: grid; place-items: center; width: 22px; height: 22px; margin-left: auto; padding: 0; border: 0; border-radius: 5px; color: var(--muted); background: transparent; cursor: pointer; }
-.channel-add:hover { color: var(--text); background: var(--card-strong); }
-.channel-add svg { width: 13px; height: 13px; }
 .server-shell .channel-scroll { min-height: 0; padding: 0 8px 12px; overflow: auto; scrollbar-gutter: auto; }
 .server-shell .channel-row { min-height: 31px; padding-right: 8px; gap: 9px; border-radius: 8px; color: var(--muted); font-size: .75rem; }
 .server-shell .channel-row.selected { color: var(--text); background: color-mix(in srgb, var(--text) 9%, var(--card)); box-shadow: none; }

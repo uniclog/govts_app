@@ -163,16 +163,6 @@
   .connection-hero h1 { font-size: 34px; }
   .connection-server-card { padding: 18px; }
 }
-@media (max-width: 760px) {
-  .connection-hero { container-type: normal; }
-  .connection-features { display: none; }
-  .connection-page { overflow-y: auto; }
-  .connection-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; height: auto; min-height: 100%; }
-  .connection-content { padding: 36px 24px; }
-  .connection-hero h1 { font-size: clamp(28px, 6vw, 38px); }
-  .connection-server-card { min-height: 220px; }
-  .connection-server-list { max-height: 340px; }
-}
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-force-motion]) .connection-switch, :root:not([data-force-motion]) .connection-switch::after { transition: none; }
   :root:not([data-force-motion]) .connection-rings::before { animation: none; }

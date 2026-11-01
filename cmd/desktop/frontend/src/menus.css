@@ -10,7 +10,6 @@
 .settings-window .settings-page { min-width: 0; padding: 24px; }
 .settings-heading { margin: 0 0 22px; }
 .settings-heading h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -.035em; line-height: 1.25; }
-.settings-heading .eyebrow { margin-bottom: 6px; font-size: .625rem; font-weight: 500; letter-spacing: .05em; }
 .settings-close { top: 18px; right: 18px; width: 32px; height: 32px; border: 0; border-radius: 10px; background: var(--card-strong); }
 .settings-layout { grid-template-columns: 200px minmax(0, 1fr); gap: 16px; }
 .settings-nav { min-height: 0; height: 100%; padding: 10px; gap: 5px; border: 0; border-radius: 16px; background: var(--card); box-shadow: none; overflow: auto; }
@@ -20,7 +19,7 @@
 .settings-card { min-width: 0; padding: 22px; border: 0; border-radius: 16px; background: var(--card); box-shadow: none; }
 .settings-card h3 { margin-bottom: 18px; font-size: .9375rem; font-weight: 600; line-height: 1.4; }
 .settings-card h4, .setting-label { font-weight: 500; }
-.settings-card :is(.device-hint, .theme-note, .monitor-hint) { line-height: 1.6; }
+.settings-card :is(.device-hint, .theme-note) { line-height: 1.6; }
 .settings-card .setting-toggle { gap: 16px; margin-top: 18px; padding-top: 18px; }
 .setting-toggle strong { font-weight: 500; }
 .settings-window :is(.primary-button, .secondary-button, .monitor-button, .theme-actions button, .locale-switch button), .screen-dialog-actions button { min-height: 36px; padding: 8px 14px; border-radius: 10px; font-size: .75rem; font-weight: 600; line-height: 1.4; box-shadow: none; }
@@ -44,7 +43,7 @@
 .settings-window :is(.locale-switch button[aria-pressed="true"], .theme-swatch-open[aria-pressed="true"]) { border-color: var(--menu-accent); background: color-mix(in srgb, var(--menu-accent) 10%, var(--card)); }
 .theme-swatch { border-radius: 12px; box-shadow: none; }
 .theme-editor, .palette-group { min-width: 0; }
-.palette-field, .stage-preview { border-radius: 12px; }
+.palette-field { border-radius: 12px; }
 .hotkey-combo kbd, .monitor-button.hotkey-key { border-radius: 8px; background: var(--window); box-shadow: none; }
 .admin-accounts { gap: 14px; }
 .admin-account-row { min-height: 42px; padding: 9px 10px; border-radius: 10px; }
@@ -94,21 +93,6 @@
   .admin-accounts { grid-template-columns: minmax(0, 1fr); }
   .admin-list { max-height: 220px; }
 }
-@media (max-width: 740px) {
-  .settings-overlay { padding: 8px; }
-  .settings-window { border-radius: 16px; }
-  .settings-window .settings-page { padding: 18px 12px 12px; }
-  .settings-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-  .settings-nav { height: auto; flex-direction: row; padding: 6px; border-radius: 12px; }
-  .settings-nav button { flex: 0 0 auto; width: auto; white-space: nowrap; }
-  .settings-nav button[aria-current="page"] { box-shadow: inset 0 -2px var(--menu-accent); }
-  :is(.screen-share-dialog, .link-confirm) { padding: 20px; }
-  .screen-share-dialog fieldset.screen-settings { grid-template-columns: minmax(0, 1fr); }
-  .screen-settings .screen-sound-app { grid-column: auto; }
-  .screen-dialog-actions button { flex: 1 1 auto; }
-  .settings-heading h2 { font-size: 1.25rem; }
-  .admin-channel-grid, .file-admin-stats { grid-template-columns: minmax(0, 1fr); }
-}
 
 .settings-nav button svg { flex: 0 0 16px; width: 16px; height: 16px; opacity: .8; }
 
@@ -154,5 +138,4 @@
 .settings-shell .setting-toggle strong { font-size: .75rem; }
 .settings-shell :is(.setting-toggle, .sensitivity-setting) p { margin-top: 2px; font-size: .6875rem; line-height: 1.4; }
 .settings-shell .setting-label { margin-bottom: 6px; font-size: .75rem; }
-.settings-shell .setting-block { margin-bottom: 14px; }
 .settings-window:has(.settings-shell) .settings-close { top: 20px; right: 20px; width: 28px; height: 28px; border-radius: 8px; }

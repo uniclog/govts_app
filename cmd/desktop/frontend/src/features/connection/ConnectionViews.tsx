@@ -7,7 +7,6 @@ import {Icon} from "../../components/Icon";
 import {errorCode, errorText, rawError} from "../../locales";
 import {LocaleSwitch, useLocale} from "../../locales/Locale";
 import type {ScreenSharingState} from "../screen/ScreenShareDialog";
-import type {ScreenMediaController} from "../screen/screenMedia";
 
 export type Page = "channels" | "settings" | "admin";
 const serverAddressStorageKey = "sonoryx.serverAddress";
@@ -144,13 +143,9 @@ export function LobbyBar({version, updateAction, onPageChange}: {
     </header>;
 }
 
-export function StatusBar({view, onPageChange, sharing, screenMedia, updateAction, invoke}: {
-    invoke: (operation: () => Promise<unknown>) => Promise<void>;
+export function StatusBar({view, updateAction}: {
     updateAction?: ReactNode;
     view: ClientViewDTO;
-    onPageChange: (page: Page) => void;
-    sharing: ScreenSharingState;
-    screenMedia: ScreenMediaController;
 }) {
     const {m} = useLocale();
     const channel = view.channels?.find((item) => item.id === view.channelId);

@@ -1,4 +1,4 @@
-export type IconName = "chevronDown" | "share" | "voice" | "search" | "headphones" | "moon" | "send" | "plus" | "more" | "minimise" | "maximise" | "restoreWindow" | "globe" | "users" | "lock" | "arrowRight" | "channels" | "settings" | "mic" | "sound" | "screen" | "info" | "disconnect" | "hangup" | "chat" | "server" | "close" | "refresh" | "away" | "here" | "shield" | "attachment" | "file" | "download" | "check" | "pause" | "play";
+export type IconName = "chevronDown" | "share" | "voice" | "search" | "headphones" | "moon" | "send" | "minimise" | "maximise" | "restoreWindow" | "globe" | "users" | "lock" | "arrowRight" | "channels" | "settings" | "mic" | "sound" | "screen" | "info" | "disconnect" | "hangup" | "chat" | "server" | "close" | "refresh" | "away" | "shield" | "attachment" | "file" | "download" | "check" | "pause" | "play";
 
 export function Icon({name}: {name: IconName}) {
     const paths: Record<IconName, React.ReactNode> = {
@@ -10,8 +10,6 @@ export function Icon({name}: {name: IconName}) {
         moon: <path d="M20.5 13.2A8.5 8.5 0 0 1 10.8 3.5a8.5 8.5 0 1 0 9.7 9.7Z"/>,
         // The offsets center what the eye sees: the plane by its mass, the clip by its bounds.
         send: <g transform="translate(-1.17 1.17)"><path d="m21 3-7 18-4-7-7-4Z"/><path d="m10 14 5-5"/></g>,
-        plus: <path d="M12 5v14M5 12h14"/>,
-        more: <><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></>,
         minimise: <path d="M5 12h14"/>,
         maximise: <rect x="5" y="5" width="14" height="14" rx="1"/>,
         restoreWindow: <><path d="M9 5V3h12v12h-2"/><rect x="3" y="9" width="12" height="12" rx="1"/></>,
@@ -38,7 +36,6 @@ export function Icon({name}: {name: IconName}) {
         disconnect: <><path d="M9 4H4v16h5M9 12h12m-4-4 4 4-4 4"/></>,
         close: <path d="M6 6l12 12M18 6 6 18"/>,
         away: <><circle cx="9" cy="8" r="3"/><path d="M3 19v-1a4 4 0 0 1 4-4h2.5"/><path d="M15.5 15.5h5.5M15.5 19.5h5.5"/></>,
-        here: <><circle cx="9" cy="8" r="3"/><path d="M3 19v-1a4 4 0 0 1 4-4h2.5"/><path d="m15 17.5 2.2 2.2 4.3-4.7"/></>,
         shield: <><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6Z"/><path d="m9 12 2 2 4-4"/></>,
     };
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;

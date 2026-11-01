@@ -120,7 +120,7 @@ func main() {
 	var shutdownOnce sync.Once
 	shutdown := func() {
 		shutdownOnce.Do(func() {
-			service.FlushParticipantVolumes()
+			wailsui.FlushParticipantVolumes(service)
 			wailsui.StopHotkeys(service)
 			popupLifecycle.Lock()
 			popupStopped = true
