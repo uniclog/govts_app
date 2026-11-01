@@ -150,6 +150,8 @@ func main() {
 		MinHeight:        720,
 		BackgroundColour: application.NewRGB(28, 37, 57),
 		URL:              "/",
+		// Without this the Wails runtime answers every external file drag with "no drop".
+		EnableFileDrop: true,
 	})
 	// Cancelling the close keeps the process alive. The default listener otherwise
 	// destroys the window and quits the client.

@@ -168,6 +168,7 @@ export const en = {
         userKiB: "Account rate, KiB/s", serverKiB: "Server rate, KiB/s", parallel: "Concurrent operations", ttlHours: "Unfinished upload retention, hours", retentionDays: "Attachment retention, days (0 — unlimited)",
         allowUpload: "Allow uploads", allowDownload: "Allow downloads", used: "Used", free: "Free", active: "Operations",
         delete: "Delete", confirmDelete: "Delete this attachment from the server?",
+        dropHint: "Drop files to attach",
         attach: "Attach files", queue: "File transfers", pause: "Pause", resume: "Resume", cancel: "Cancel",
         save: "Save as…", preview: "Preview", close: "Close", deleted: "Attachment deleted", limit: "Maximum four attachments",
         policyConflict: "Settings were changed by another administrator. Refresh before saving.",

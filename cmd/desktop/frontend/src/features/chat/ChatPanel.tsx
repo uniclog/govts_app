@@ -154,9 +154,12 @@ export function ChatPanel({store, target, title, active, connected, online, loca
         }
         refresh();
     };
+    const canDropFiles = connected && !!caps?.uploadsEnabled;
     return <section className="chat-panel" aria-label={title}
-        onDragOver={(e) => {if(caps && connected) e.preventDefault();}}
-        onDrop={(e) => {e.preventDefault(); if (connected) void addFiles([...e.dataTransfer.files]);}}
+        data-file-drop-target={canDropFiles ? "" : undefined} data-drop-hint={m.files.dropHint}
+        onDragLeave={(e) => {if (!e.currentTarget.contains(e.relatedTarget as Node | null)) e.currentTarget.classList.remove("file-drop-target-active");}}
+        onDragOver={(e) => {if (canDropFiles && e.dataTransfer.types.includes("Files")) e.preventDefault();}}
+        onDrop={(e) => {e.preventDefault(); if (canDropFiles) void addFiles([...e.dataTransfer.files]);}}
         onPaste={(e) => {const files = [...e.clipboardData.files]; if(files.length && caps && connected) {e.preventDefault(); void addFiles(files);}}}>
         {target.kind === "direct" && <header className="chat-heading"><strong>{title}</strong><span>{online ? m.chat.online : m.chat.offline}</span></header>}
         {c.error && <div className="chat-error" role="alert">{errorText(c.error, m)}<button onClick={() => void store.sync(target)} disabled={!connected || c.loading}>{m.chat.retry}</button></div>}
