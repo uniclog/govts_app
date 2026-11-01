@@ -25,7 +25,7 @@ function ChatMessageText({text}: {text: string}) {
 
 const resizeComposer = (input: HTMLTextAreaElement) => {
     input.style.height = "0px";
-    const contentHeight = input.scrollHeight + 2;
+    const contentHeight = input.scrollHeight + input.offsetHeight - input.clientHeight;
     input.style.height = `${Math.max(32, Math.min(68, contentHeight))}px`;
     input.style.overflowY = contentHeight > 68 ? "auto" : "hidden";
 };

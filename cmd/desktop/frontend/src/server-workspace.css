@@ -142,9 +142,9 @@
 .server-shell .chat-message:hover .chat-message-menu-button, .server-shell .chat-message:focus-within .chat-message-menu-button { opacity: 1; }
 .server-shell .chat-message.pending { display: block; }
 .server-shell .chat-composer { grid-template-columns: minmax(0, 1fr) 36px; gap: 8px; padding-top: 8px; }
-.server-shell .chat-composer.has-attachments { grid-template-columns: 34px minmax(0, 1fr) 36px; }
+.server-shell .chat-composer.has-attachments { grid-template-columns: 36px minmax(0, 1fr) 36px; }
 .server-shell .chat-composer button { height: 36px; padding: 0; border: 0; border-radius: 10px; background: var(--card-strong); }
-.server-shell .chat-composer .chat-attach-button { width: 34px; min-width: 34px; }
+.server-shell .chat-composer .chat-attach-button { width: 36px; min-width: 36px; }
 .server-shell .chat-composer textarea { height: 36px; min-height: 36px; padding: 9px 10px; border: 0; border-radius: 10px; background: var(--card-strong); box-shadow: none; font-size: .75rem; }
 .server-shell .chat-input-placeholder { top: 9px; right: 10px; left: 10px; }
 /* The chat panel clips anything outside the field, so focus is drawn inside it. */

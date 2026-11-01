@@ -8,7 +8,8 @@ export function Icon({name}: {name: IconName}) {
         search: <><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></>,
         headphones: <><path d="M4 14v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="12" width="5" height="9" rx="2"/><rect x="16" y="12" width="5" height="9" rx="2"/></>,
         moon: <path d="M20.5 13.2A8.5 8.5 0 0 1 10.8 3.5a8.5 8.5 0 1 0 9.7 9.7Z"/>,
-        send: <><path d="m21 3-7 18-4-7-7-4Z"/><path d="m10 14 5-5"/></>,
+        // The offsets center what the eye sees: the plane by its mass, the clip by its bounds.
+        send: <g transform="translate(-1.17 1.17)"><path d="m21 3-7 18-4-7-7-4Z"/><path d="m10 14 5-5"/></g>,
         plus: <path d="M12 5v14M5 12h14"/>,
         more: <><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></>,
         minimise: <path d="M5 12h14"/>,
@@ -21,7 +22,7 @@ export function Icon({name}: {name: IconName}) {
         check: <path d="m5 12 4 4L19 6"/>,
         pause: <path d="M8 5v14M16 5v14"/>,
         play: <path d="m8 4 12 8-12 8Z"/>,
-        attachment: <path d="m8 13 6.5-6.5a3 3 0 0 1 4.2 4.2L10 19.4a5 5 0 0 1-7-7L12 3.5a2 2 0 0 1 2.8 2.8L6 15.1a1 1 0 0 0 1.4 1.4L16 8"/>,
+        attachment: <path transform="translate(1.35 .25)" d="m8 13 6.5-6.5a3 3 0 0 1 4.2 4.2L10 19.4a5 5 0 0 1-7-7L12 3.5a2 2 0 0 1 2.8 2.8L6 15.1a1 1 0 0 0 1.4 1.4L16 8"/>,
         file: <><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></>,
         download: <path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/>,
         refresh: <><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 17.9 17"/></>,
