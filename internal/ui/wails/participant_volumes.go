@@ -1,8 +1,8 @@
 package wailsui
 
 import (
-	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"uniclog.io/sonoryx/internal/client"
@@ -12,72 +12,37 @@ import (
 // once the value settles.
 const participantVolumeSaveDelay = 400 * time.Millisecond
 
-// participantVolumeAccount names the local account on the current server.
-// settingsMu must be held. Empty means the account is not known yet.
-func (s *Service) participantVolumeAccount(userID string) string {
-	if userID == "" || userID == "0" {
-		return ""
+// savedVolumesForServer returns the values the client applies on this server,
+// by local user id and remote user id. It is empty while remembering is off.
+func (s *Service) savedVolumesForServer(server string) map[int64]map[int64]float32 {
+	s.settingsMu.RLock()
+	defer s.settingsMu.RUnlock()
+	result := make(map[int64]map[int64]float32)
+	if !s.rememberParticipantVolumes {
+		return result
 	}
-	return mediaTrustServerKey(s.serverAddress) + "|" + userID
-}
-
-// resetAppliedVolumes starts a new restore pass when the local session changes.
-// settingsMu must be held.
-func (s *Service) resetAppliedVolumes(account, sessionID string) {
-	context := account + "|" + sessionID
-	if s.appliedVolumeContext != context || s.appliedVolumes == nil {
-		s.appliedVolumeContext = context
-		s.appliedVolumes = make(map[string]struct{})
-	}
-}
-
-type participantVolumeRestore struct {
-	sessionID uint64
-	volume    float32
-}
-
-// pendingParticipantVolumes returns saved values not applied yet, once per
-// participant session, because the client clears session volumes on reconnect.
-func (s *Service) pendingParticipantVolumes(view ClientViewDTO) []participantVolumeRestore {
-	if view.ConnectionStatus != "connected" || !view.SnapshotFresh {
-		return nil
-	}
-	s.settingsMu.Lock()
-	defer s.settingsMu.Unlock()
-	account := s.participantVolumeAccount(view.UserID)
-	if !s.rememberParticipantVolumes || account == "" {
-		return nil
-	}
-	s.resetAppliedVolumes(account, view.SessionID)
-	saved := s.participantVolumes[account]
-	var pending []participantVolumeRestore
-	for _, participant := range view.Participants {
-		if participant.Local || participant.UserID == "" || participant.UserID == "0" {
+	prefix := mediaTrustServerKey(server) + "|"
+	for account, volumes := range s.participantVolumes {
+		if !strings.HasPrefix(account, prefix) {
 			continue
 		}
-		if _, done := s.appliedVolumes[participant.SessionID]; done {
-			continue
-		}
-		s.appliedVolumes[participant.SessionID] = struct{}{}
-		volume, ok := saved[participant.UserID]
-		if !ok {
-			continue
-		}
-		id, err := strconv.ParseUint(participant.SessionID, 10, 64)
+		local, err := strconv.ParseInt(strings.TrimPrefix(account, prefix), 10, 64)
 		if err != nil {
 			continue
 		}
-		pending = append(pending, participantVolumeRestore{sessionID: id, volume: volume})
+		remote := make(map[int64]float32, len(volumes))
+		for userID, value := range volumes {
+			if id, err := strconv.ParseInt(userID, 10, 64); err == nil {
+				remote[id] = value
+			}
+		}
+		result[local] = remote
 	}
-	return pending
+	return result
 }
 
-func (s *Service) restoreParticipantVolumes(view ClientViewDTO) {
-	for _, item := range s.pendingParticipantVolumes(view) {
-		if err := s.client.SetParticipantVolume(item.sessionID, item.volume); err != nil {
-			log.Printf("restore participant volume failed: session=%d error=%v", item.sessionID, err)
-		}
-	}
+func (s *Service) pushParticipantVolumes(server string) {
+	s.client.SetSavedParticipantVolumes(s.savedVolumesForServer(server))
 }
 
 // saveParticipantVolume remembers a value set by the user for the participant's
@@ -91,24 +56,23 @@ func (s *Service) saveParticipantVolume(sessionID uint64, value float32) {
 			break
 		}
 	}
-	s.recordParticipantVolume(view.UserID, view.SessionID, remoteUser, sessionID, value)
+	s.recordParticipantVolume(view.UserID, remoteUser, value)
+	s.settingsMu.RLock()
+	server := s.serverAddress
+	s.settingsMu.RUnlock()
+	s.pushParticipantVolumes(server)
 }
 
-// recordParticipantVolume keeps the value from being replaced by a restore in
-// this session and stores it. The default volume is not stored.
-func (s *Service) recordParticipantVolume(localUser int64, localSession uint64, remoteUser int64, sessionID uint64, value float32) {
+// recordParticipantVolume stores a value under "server|local user id". The
+// default volume is not stored.
+func (s *Service) recordParticipantVolume(localUser, remoteUser int64, value float32) {
 	s.settingsMu.Lock()
 	defer s.settingsMu.Unlock()
-	account := s.participantVolumeAccount(strconv.FormatInt(localUser, 10))
-	if account == "" || remoteUser == 0 {
+	if !s.rememberParticipantVolumes || localUser == 0 || remoteUser == 0 {
 		return
 	}
-	s.resetAppliedVolumes(account, formatUint64(localSession))
-	s.appliedVolumes[formatUint64(sessionID)] = struct{}{}
+	account := mediaTrustServerKey(s.serverAddress) + "|" + strconv.FormatInt(localUser, 10)
 	userID := strconv.FormatInt(remoteUser, 10)
-	if !s.rememberParticipantVolumes {
-		return
-	}
 	if s.participantVolumes == nil {
 		s.participantVolumes = make(map[string]map[string]float32)
 	}
@@ -151,7 +115,9 @@ func (s *Service) RememberParticipantVolumes() bool {
 func (s *Service) SetRememberParticipantVolumes(value bool) error {
 	s.settingsMu.Lock()
 	s.rememberParticipantVolumes = value
+	server := s.serverAddress
 	s.settingsMu.Unlock()
+	s.pushParticipantVolumes(server)
 	return s.saveSettings()
 }
 

@@ -50,8 +50,6 @@ type Service struct {
 	// Participant volume state is guarded by settingsMu.
 	rememberParticipantVolumes bool
 	participantVolumes         map[string]map[string]float32
-	appliedVolumes             map[string]struct{}
-	appliedVolumeContext       string
 	participantVolumeSave      *time.Timer
 	connectionMu               sync.Mutex
 	recentServers              []clientsettings.RecentServer
@@ -128,6 +126,8 @@ func (s *Service) connect(request ConnectRequest) error {
 	if err := s.setDisplayName(request.Name); err != nil {
 		return err
 	}
+	// Set before connecting so that the first snapshot already applies them.
+	s.pushParticipantVolumes(request.Server)
 	if err := s.client.Connect(clientapp.ConnectOptions{
 		Name:             request.Name,
 		Server:           request.Server,
@@ -494,7 +494,6 @@ func (s *Service) Snapshot() ClientViewDTO {
 	dto.ServerIdentityChange = s.client.ServerIdentityChange()
 	dto.ChatContext = s.client.ChatContext() + "|" + dto.UserID
 	s.recordServerVisit(dto)
-	s.restoreParticipantVolumes(dto)
 	return dto
 }
 
