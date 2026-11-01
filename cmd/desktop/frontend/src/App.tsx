@@ -819,10 +819,14 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
     const [soundVolume, setSoundVolume] = useState(view.soundVolume);
     useEffect(() => setSoundVolume(view.soundVolume), [view.soundVolume]);
     const [closeToTray, setCloseToTrayState] = useState(false);
+    const [rememberVolumes, setRememberVolumes] = useState(true);
     useEffect(() => {
         let active = true;
         void desktopAPI.closeToTray().then((value) => {
             if (active) setCloseToTrayState(value);
+        }).catch(() => undefined);
+        void desktopAPI.rememberParticipantVolumes().then((value) => {
+            if (active) setRememberVolumes(value);
         }).catch(() => undefined);
         return () => {
             active = false;
@@ -1006,6 +1010,20 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                            await desktopAPI.setCloseToTray(value);
                                        } catch (error) {
                                            setCloseToTrayState(previous);
+                                           throw error;
+                                       }
+                                   })}/>
+                </section>
+                <section className="settings-card">
+                    <SettingToggle title={m.settings.rememberVolumes} description={m.settings.rememberVolumesHint}
+                                   checked={rememberVolumes}
+                                   onChange={(value) => invoke(async () => {
+                                       const previous = rememberVolumes;
+                                       setRememberVolumes(value);
+                                       try {
+                                           await desktopAPI.setRememberParticipantVolumes(value);
+                                       } catch (error) {
+                                           setRememberVolumes(previous);
                                            throw error;
                                        }
                                    })}/>

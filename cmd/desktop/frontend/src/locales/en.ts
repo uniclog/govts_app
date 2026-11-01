@@ -435,6 +435,8 @@ export const en = {
         deafenHint: "Incoming voice is still processed, but not played.",
         forceMotion: "Animations even when disabled in Windows",
         forceMotionHint: "The app plays animations regardless of the system setting. The Windows setting itself does not change.",
+        rememberVolumes: "Remember participant volume",
+        rememberVolumesHint: "Volume and Mute are saved for your account on this server and applied when the participant comes back.",
         tray: "Close to tray",
         trayHint: "The close button hides the window in the tray. The app and voice keep running. Without this, close quits Sonoryx.",
         vadLevel: "By loudness",

@@ -38,21 +38,27 @@ type ConnectRequest struct {
 }
 
 type Service struct {
-	client            *clientapp.App
-	settings          *clientsettings.Store
-	settingsMu        sync.RWMutex
-	displayName       string
-	serverAddress     string
-	trustedMediaKeys  map[string]string
-	theme             string
-	locale            string
-	closeToTray       bool
-	connectionMu      sync.Mutex
-	recentServers     []clientsettings.RecentServer
-	recordedVisit     string
-	skipServerHistory bool
-	serverStatus      *serverstatus.Cache
-	statusChanged     func()
+	client           *clientapp.App
+	settings         *clientsettings.Store
+	settingsMu       sync.RWMutex
+	displayName      string
+	serverAddress    string
+	trustedMediaKeys map[string]string
+	theme            string
+	locale           string
+	closeToTray      bool
+	// Participant volume state is guarded by settingsMu.
+	rememberParticipantVolumes bool
+	participantVolumes         map[string]map[string]float32
+	appliedVolumes             map[string]struct{}
+	appliedVolumeContext       string
+	participantVolumeSave      *time.Timer
+	connectionMu               sync.Mutex
+	recentServers              []clientsettings.RecentServer
+	recordedVisit              string
+	skipServerHistory          bool
+	serverStatus               *serverstatus.Cache
+	statusChanged              func()
 	// audioSwitchMu orders microphone and speaker clicks with their cues.
 	audioSwitchMu     sync.Mutex
 	hotkeyKeys        map[string]string
@@ -418,7 +424,11 @@ func (s *Service) SetParticipantVolume(sessionID string, value float32) error {
 	if err != nil {
 		return err
 	}
-	return s.client.SetParticipantVolume(id, value)
+	if err := s.client.SetParticipantVolume(id, value); err != nil {
+		return err
+	}
+	s.saveParticipantVolume(id, value)
+	return nil
 }
 
 func (s *Service) Disconnect() error {
@@ -484,6 +494,7 @@ func (s *Service) Snapshot() ClientViewDTO {
 	dto.ServerIdentityChange = s.client.ServerIdentityChange()
 	dto.ChatContext = s.client.ChatContext() + "|" + dto.UserID
 	s.recordServerVisit(dto)
+	s.restoreParticipantVolumes(dto)
 	return dto
 }
 
