@@ -51,6 +51,8 @@ function linkHref(body: string): string | null {
         return null;
     }
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    // https://bank.example@evil.example reads as one site and opens another.
+    if (url.username || url.password) return null;
     if (!explicit) {
         const labels = url.hostname.split(".");
         if (labels.length < 2 || labels.some((label) => label.length === 0)) return null;
@@ -60,6 +62,11 @@ function linkHref(body: string): string | null {
     }
     return url.href;
 }
+
+// Direction overrides can make text and file names read as something else, and
+// control characters have no visible form. Emoji joiners and tabs stay.
+const unsafeText = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/g;
+export const safeChatText = (text: string) => text.replace(unsafeText, "");
 
 export function chatLinkParts(text: string): ChatTextPart[] {
     const parts: ChatTextPart[] = [];

@@ -460,6 +460,50 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .chat-context-menu button:disabled { opacity: .45; cursor: default; }
 .chat-context-menu button:hover, .chat-context-menu button:focus-visible { background: var(--card-strong); outline: none; }
 
+/* Emoji and reactions. Native colour fonts, so every theme shows the same glyphs. */
+.chat-emoji { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; font-weight: 400; }
+.chat-message-text.is-emoji-only { font-size: 2.25rem; line-height: 1.2; }
+.chat-panel .chat-composer .chat-input textarea { padding-right: 38px; }
+.chat-panel .chat-composer .chat-input.has-counter textarea { padding-right: 104px; }
+.chat-panel .chat-input > small { right: 38px; }
+.chat-panel .chat-composer .chat-input-placeholder { right: 38px; }
+.chat-panel .chat-composer .chat-emoji-button { position: absolute; right: 4px; bottom: 2px; display: grid; place-items: center; width: 28px; min-width: 28px; height: 28px; padding: 0; border: 0; border-radius: 7px; color: var(--muted); background: transparent; cursor: pointer; }
+.server-shell .chat-composer .chat-emoji-button { bottom: 4px; }
+.chat-panel .chat-composer .chat-emoji-button:hover, .chat-panel .chat-composer .chat-emoji-button[aria-expanded="true"] { color: var(--text); background: color-mix(in srgb, var(--line) 60%, transparent); }
+.chat-emoji-button svg { width: 18px; height: 18px; }
+
+.chat-reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.chat-message .chat-reaction { display: inline-flex; align-items: center; gap: 4px; min-height: 22px; padding: 1px 7px; border: 1px solid var(--line); border-radius: 11px; color: var(--muted); background: transparent; font-size: .6875rem; line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer; transition: background-color .12s ease, border-color .12s ease; animation: chat-reaction-in .08s ease-out; }
+.chat-reaction .chat-emoji { font-size: .8125rem; }
+.chat-message .chat-reaction:hover:not(:disabled) { color: var(--text); background: var(--card-strong); }
+.chat-message .chat-reaction.is-mine { border-color: var(--menu-accent); color: var(--text); background: color-mix(in srgb, var(--menu-accent) 16%, transparent); }
+.chat-message .chat-reaction.is-mine:hover:not(:disabled) { background: color-mix(in srgb, var(--menu-accent) 26%, transparent); }
+.chat-message .chat-reaction:disabled { opacity: .6; cursor: default; }
+@keyframes chat-reaction-in { from { opacity: 0; transform: scale(.8); } }
+
+.chat-message-actions { display: flex; gap: 2px; }
+.chat-message .chat-message-copy-button { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; color: var(--muted); background: transparent; cursor: pointer; }
+.chat-message-copy-button svg { width: 14px; height: 14px; }
+.chat-message .chat-message-copy-button:hover, .chat-message .chat-message-copy-button:focus-visible { color: var(--text); background: var(--card-strong); }
+.chat-message .chat-message-copy-button.is-copied { color: var(--accent); }
+.server-shell .chat-message-actions { position: absolute; top: 5px; right: 4px; opacity: 0; }
+.server-shell .chat-message:hover .chat-message-actions, .server-shell .chat-message:focus-within .chat-message-actions, .server-shell .chat-message-actions:has([aria-expanded="true"], .is-copied) { opacity: 1; }
+.server-shell .chat-message .chat-message-actions .chat-message-menu-button { position: static; opacity: 1; }
+.server-shell .chat-message:not(.is-deleted):not(.pending) .chat-message-meta { padding-right: 50px; }
+
+.chat-emoji-popover { position: fixed; z-index: 10000; max-width: calc(100vw - 16px); border: 1px solid var(--line); border-radius: 14px; color: var(--text); background: var(--card); box-shadow: var(--menu-shadow); }
+.chat-emoji-popover button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; font-size: 1.125rem; line-height: 1; cursor: pointer; }
+.chat-emoji-popover button:hover, .chat-emoji-popover button:focus-visible { background: var(--card-strong); outline: none; }
+.chat-emoji-popover button:focus-visible { box-shadow: inset 0 0 0 1px var(--menu-accent); }
+.chat-emoji-popover.is-reaction { display: flex; flex-wrap: wrap; gap: 2px; width: 286px; padding: 6px; justify-content: center; }
+.chat-emoji-popover.is-reaction button.is-mine { background: color-mix(in srgb, var(--menu-accent) 18%, transparent); }
+.chat-emoji-popover.is-composer { width: 296px; max-height: min(320px, calc(100vh - 16px)); padding: 4px 8px 8px; overflow-y: auto; }
+.chat-emoji-group h4 { margin: 8px 2px 4px; color: var(--muted); font-size: .6875rem; font-weight: 500; }
+.chat-emoji-group > div { display: grid; grid-template-columns: repeat(auto-fill, 32px); gap: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-force-motion]) .chat-message .chat-reaction { transition: none; animation: none; }
+}
+
 .connection-progress-actions { display: flex; justify-content: center; margin-top: 18px; }
 .connection-cancel { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 8px 14px; border: 1px solid var(--danger-line); border-radius: 10px; color: var(--danger-text); background: var(--danger-soft); font-size: .75rem; cursor: pointer; }
 .connection-cancel:hover:not(:disabled) { border-color: var(--danger); }

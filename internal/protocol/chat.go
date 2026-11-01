@@ -6,7 +6,7 @@ import (
 	"uniclog.io/sonoryx/internal/domain"
 )
 
-const ChatSchemaVersion = 3
+const ChatSchemaVersion = 4
 
 type ChatOperation uint8
 
@@ -18,6 +18,7 @@ const (
 	ChatChanges
 	ChatDelete
 	ChatDeleteFile
+	ChatReact
 )
 
 type ChatRequest struct {
@@ -72,7 +73,7 @@ func DecodeChatRequest(b []byte) (ChatRequest, error) {
 }
 
 func (r ChatRequest) Validate() error {
-	if r.Operation < ChatSend || r.Operation > ChatDeleteFile || r.Cursor < 0 {
+	if r.Operation < ChatSend || r.Operation > ChatReact || r.Cursor < 0 {
 		return errors.New("invalid chat operation")
 	}
 	if r.Operation != ChatDialogs {
@@ -98,6 +99,13 @@ func (r ChatRequest) Validate() error {
 			}
 		} else if len(r.AttachmentIDs) != 0 {
 			return errors.New("unexpected deletion attachments")
+		}
+		return nil
+	}
+	if r.Operation == ChatReact {
+		// Cursor names the message, Text the emoji, Forward adds or removes it.
+		if _, ok := domain.ChatReactionCode(r.Text); !ok || r.Cursor <= 0 || r.ClientID != ([16]byte{}) || len(r.AttachmentIDs) != 0 {
+			return errors.New("invalid reaction request")
 		}
 		return nil
 	}
@@ -164,6 +172,10 @@ func EncodeChatPage(p domain.ChatPage) ([]byte, error) {
 			return nil, err
 		}
 		b = appendAttachmentIDs(b, m.AttachmentIDs)
+		b, err = appendChatReactions(b, m)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for _, d := range p.Dialogs {
 		if d.UserID <= 0 || d.LatestID < 0 || d.ReadID < 0 {
@@ -232,6 +244,10 @@ func DecodeChatPage(b []byte) (domain.ChatPage, error) {
 				return p, err
 			}
 		}
+		m.Reactions, b, err = takeChatReactions(b)
+		if err != nil {
+			return p, err
+		}
 		p.Messages = append(p.Messages, m)
 	}
 	for i := 0; i < nd; i++ {
@@ -260,6 +276,46 @@ func appendAttachmentIDs(b []byte, ids []int64) []byte {
 		b = binary.BigEndian.AppendUint64(b, uint64(id))
 	}
 	return b
+}
+
+// Each reaction is code u8 (0x80 marks the requester's own) ‖ count u16,
+// in ascending code order after a count u8.
+func appendChatReactions(b []byte, m domain.ChatMessage) ([]byte, error) {
+	if len(m.Reactions) > domain.MaxChatReactions || (m.Deleted && len(m.Reactions) != 0) {
+		return nil, errors.New("invalid chat reactions")
+	}
+	b = append(b, byte(len(m.Reactions)))
+	var previous uint8
+	for _, r := range m.Reactions {
+		if _, ok := domain.ChatReactionEmoji(r.Code); !ok || r.Code <= previous || r.Count == 0 {
+			return nil, errors.New("invalid chat reaction")
+		}
+		previous = r.Code
+		code := r.Code
+		if r.Mine {
+			code |= 0x80
+		}
+		b = append(b, code)
+		b = binary.BigEndian.AppendUint16(b, r.Count)
+	}
+	return b, nil
+}
+
+func takeChatReactions(b []byte) ([]domain.ChatReaction, []byte, error) {
+	if len(b) < 1 || int(b[0]) > domain.MaxChatReactions || len(b) < 1+int(b[0])*3 {
+		return nil, nil, errors.New("invalid chat reactions")
+	}
+	n := int(b[0])
+	b = b[1:]
+	if n == 0 {
+		return nil, b, nil
+	}
+	reactions := make([]domain.ChatReaction, n)
+	for i := range reactions {
+		reactions[i] = domain.ChatReaction{Code: b[0] & 0x7f, Mine: b[0]&0x80 != 0, Count: binary.BigEndian.Uint16(b[1:3])}
+		b = b[3:]
+	}
+	return reactions, b, nil
 }
 
 func takeAttachmentIDs(b []byte) ([]int64, []byte, error) {
