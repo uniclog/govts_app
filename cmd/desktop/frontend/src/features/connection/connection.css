@@ -105,7 +105,7 @@
   .connection-brand { margin-bottom: 12px; }
   .connection-hero h1 { margin-bottom: 10px; font-size: 28px; letter-spacing: -.8px; }
 }
-@container (max-height: 635px) {
+@container (max-height: 632px) {
   .connection-hero .lead { display: none; }
   .connection-content:has(.form-error) h1 { display: none; }
 }
