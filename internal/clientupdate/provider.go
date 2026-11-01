@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -47,7 +48,50 @@ func (p *provider) get(ctx context.Context, address string) (*http.Response, err
 	if strings.Contains(address, "/releases/latest") && p.etag != "" {
 		r.Header.Set("If-None-Match", p.etag)
 	}
-	return p.client.Do(r)
+	// Retry only before a response body is handed to the caller: replaying an
+	// artifact after writing part of it would corrupt the staged executable.
+	for attempt := 0; ; attempt++ {
+		response, err := p.client.Do(r)
+		if err == nil {
+			return response, nil
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if attempt >= 2 || !retryableRequestError(err) {
+			return nil, describeRequestError(err)
+		}
+		timer := time.NewTimer(time.Duration(attempt+1) * time.Second)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
+
+func retryableRequestError(err error) bool {
+	var dns *net.DNSError
+	var op *net.OpError
+	var network net.Error
+	// DNS "no such host" can be transient too (for example during startup).
+	return errors.As(err, &dns) || errors.As(err, &op) ||
+		(errors.As(err, &network) && network.Timeout()) ||
+		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)
+}
+
+func describeRequestError(err error) error {
+	var dns *net.DNSError
+	if errors.As(err, &dns) {
+		return errors.New("Не удалось определить адрес сервера обновлений GitHub. Проверьте подключение к интернету и DNS, затем повторите попытку.")
+	}
+	var network net.Error
+	if errors.As(err, &network) && network.Timeout() {
+		return errors.New("Сервер обновлений GitHub не ответил вовремя. Повторите попытку позже.")
+	}
+	// net/http errors include signed redirect URLs; do not expose them in UI.
+	return errors.New("Не удалось подключиться к серверу обновлений GitHub. Проверьте подключение к интернету и повторите попытку.")
 }
 
 func (p *provider) Check(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
