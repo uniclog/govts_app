@@ -145,7 +145,9 @@
 .settings-shell .settings-heading h2 { font-size: 1.375rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.3; }
 .settings-shell .settings-heading p { margin: 4px 0 0; color: var(--muted); font-size: .75rem; line-height: 1.5; }
 .settings-shell .settings-card { margin-bottom: 8px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--card-strong) 45%, var(--card)); }
-.settings-shell .settings-card:last-child { margin-bottom: 0; }
+.settings-shell .settings-card:last-child, .settings-shell :is(.admin-accounts, .file-admin) .settings-card { margin-bottom: 0; }
+.settings-shell :is(.admin-accounts, .file-admin) { gap: 8px; }
+.settings-shell .admin-account-row[aria-pressed="true"] { box-shadow: none; }
 .settings-shell .settings-card h3 { margin-bottom: 12px; font-size: .8125rem; font-weight: 700; }
 .settings-shell .settings-card .setting-toggle { min-height: 0; gap: 16px; margin-top: 12px; padding: 0; border: 0; }
 .settings-shell .settings-card > .setting-toggle:first-child { margin-top: 0; }
