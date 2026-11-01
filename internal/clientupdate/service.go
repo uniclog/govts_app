@@ -165,6 +165,15 @@ func (s *Service) Check() error {
 		return err
 	}
 	release, err := s.u.Check(ctx)
+	// Wails flattens provider errors into a string, losing context identity.
+	if ctx.Err() != nil {
+		err = ctx.Err()
+	} else if err != nil {
+		err = errors.New(strings.TrimPrefix(err.Error(), "updater: all providers failed: sonoryx-github-signed: "))
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		err = errors.New("Проверка обновлений заняла слишком много времени. Проверьте подключение к интернету и повторите попытку.")
+	}
 	status := "up-to-date"
 	s.mu.Lock()
 	if err == nil {
