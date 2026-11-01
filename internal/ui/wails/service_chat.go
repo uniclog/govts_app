@@ -22,18 +22,25 @@ type ChatRequestDTO struct {
 	Text          string   `json:"text"`
 }
 
+type ChatReactionDTO struct {
+	Emoji string `json:"emoji"`
+	Count uint16 `json:"count"`
+	Mine  bool   `json:"mine"`
+}
+
 type ChatMessageDTO struct {
-	Deleted       bool     `json:"deleted"`
-	Revision      string   `json:"revision"`
-	AttachmentIDs []string `json:"attachmentIds,omitempty"`
-	ID            string   `json:"id"`
-	SenderID      string   `json:"senderId"`
-	RecipientID   string   `json:"recipientId"`
-	ChannelID     string   `json:"channelId"`
-	ClientID      string   `json:"clientId"`
-	SenderName    string   `json:"senderName"`
-	Text          string   `json:"text"`
-	SentAtMS      int64    `json:"sentAtMs"`
+	Reactions     []ChatReactionDTO `json:"reactions,omitempty"`
+	Deleted       bool              `json:"deleted"`
+	Revision      string            `json:"revision"`
+	AttachmentIDs []string          `json:"attachmentIds,omitempty"`
+	ID            string            `json:"id"`
+	SenderID      string            `json:"senderId"`
+	RecipientID   string            `json:"recipientId"`
+	ChannelID     string            `json:"channelId"`
+	ClientID      string            `json:"clientId"`
+	SenderName    string            `json:"senderName"`
+	Text          string            `json:"text"`
+	SentAtMS      int64             `json:"sentAtMs"`
 }
 
 type ChatDialogDTO struct {
@@ -79,6 +86,8 @@ func (s *Service) Chat(request ChatRequestDTO) (ChatPageDTO, error) {
 		r.Operation = protocol.ChatDelete
 	case "delete-file":
 		r.Operation = protocol.ChatDeleteFile
+	case "react":
+		r.Operation = protocol.ChatReact
 	default:
 		return ChatPageDTO{}, errors.New("неизвестная операция чата")
 	}
@@ -123,6 +132,15 @@ func (s *Service) Chat(request ChatRequestDTO) (ChatPageDTO, error) {
 		dto.Messages = append(dto.Messages, ChatMessageDTO{Deleted: m.Deleted, Revision: strconv.FormatInt(m.Revision, 10), ID: strconv.FormatInt(m.ID, 10), SenderID: strconv.FormatInt(m.SenderID, 10), RecipientID: strconv.FormatInt(m.RecipientID, 10), ChannelID: strconv.FormatInt(m.ChannelID, 10), ClientID: hex.EncodeToString(m.ClientID[:]), SenderName: m.SenderName, Text: m.Text, SentAtMS: m.SentAtMS})
 		for _, id := range m.AttachmentIDs {
 			dto.Messages[len(dto.Messages)-1].AttachmentIDs = append(dto.Messages[len(dto.Messages)-1].AttachmentIDs, strconv.FormatInt(id, 10))
+		}
+	}
+	for i, m := range p.Messages {
+		for _, reaction := range m.Reactions {
+			emoji, ok := domain.ChatReactionEmoji(reaction.Code)
+			if !ok {
+				return ChatPageDTO{}, errors.New("неизвестная реакция")
+			}
+			dto.Messages[i].Reactions = append(dto.Messages[i].Reactions, ChatReactionDTO{Emoji: emoji, Count: reaction.Count, Mine: reaction.Mine})
 		}
 	}
 	for _, d := range p.Dialogs {

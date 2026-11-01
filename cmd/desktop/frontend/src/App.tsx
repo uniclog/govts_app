@@ -243,7 +243,7 @@ function MainApp({appearance, setTheme, createCustomTheme, updateAppearance, ope
     useEffect(() => {
         chatStore?.setConnected(view.connectionStatus === "connected");
     }, [chatStore, view.connectionStatus]);
-    useEffect(() => { chatStore?.invalidate(); }, [chatStore, view.chatRevision]);
+    useEffect(() => { chatStore?.changed(); }, [chatStore, view.chatRevision]);
     const [events, setEvents] = useState<ClientEventDTO[]>([]);
     const [actionError, setActionErrorState] = useState("");
     const [actionErrorTick, setActionErrorTick] = useState(0);
@@ -592,7 +592,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                         <button className="info-toggle" title={m.channels.info} aria-label={m.channels.info} aria-expanded={showInfo} onClick={() => setShowInfo(!showInfo)}><Icon name="info"/></button>
                     </header>
                     <div className="participants-stage" data-backdrop={stageBackdrop} data-reference-backdrop={referenceBackdrop} role="region" tabIndex={0} aria-label={m.channels.stage}>
-                        {referenceBackdrop ? <div className="workspace-stage-art" aria-hidden="true"><i/><i/><i/></div> : <StageScene backdrop={stageBackdrop}/>}
+                        {referenceBackdrop ? <div className="workspace-stage-art" aria-hidden="true"><i/><i/><i/><i/></div> : <StageScene backdrop={stageBackdrop}/>}
                         <div className={`stage-speaking-summary ${speakingMembers.length ? "is-speaking" : ""}`}><Icon name="voice"/><span>{speakingMembers.length ? `${m.channels.speakingNow} ${speakingMembers.map((person) => person.displayName).join(", ")}` : m.channels.quiet}</span></div>
                         <div className="stage-member-summary"><Icon name="users"/>{members.length}{selected.maxUsers ? ` / ${selected.maxUsers}` : ""}</div>
                         <div className="participants-strip" data-single={members.length + channelStreams.length === 1}>

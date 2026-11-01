@@ -73,10 +73,20 @@
 .server-shell .info-toggle:hover { color: var(--text); }
 .server-shell .participants-stage { position: relative; min-width: 0; min-height: 0; border-radius: 18px; overflow: hidden; }
 .server-shell .participants-stage[data-reference-backdrop="true"] { background: radial-gradient(ellipse at 6% 8%, color-mix(in srgb, var(--workspace-brand) 13%, transparent), transparent 48%), radial-gradient(ellipse at 95% 94%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 44%), var(--card-strong); }
-.workspace-stage-art { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.workspace-stage-art i { position: absolute; top: 50%; left: 50%; width: 460px; aspect-ratio: 1; transform: translate(-50%, -50%); border: 1px solid color-mix(in srgb, var(--muted) 6%, transparent); border-radius: 50%; }
-.workspace-stage-art i:nth-child(2) { width: 620px; }
-.workspace-stage-art i:nth-child(3) { width: 780px; }
+.workspace-stage-art { position: absolute; inset: 0; pointer-events: none; overflow: hidden; contain: strict; }
+/* Quiet sound waves: a border ring animated by transform and opacity only, so the compositor moves it without repaints. */
+.workspace-stage-art i { --wave-size: clamp(860px, 70vw, 1600px); position: absolute; top: 50%; left: 50%; width: var(--wave-size); height: var(--wave-size); margin: calc(var(--wave-size) / -2) 0 0 calc(var(--wave-size) / -2); border: 2px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 50%; opacity: 0; transform: scale(.3); animation: workspace-stage-wave 24s linear infinite; }
+.workspace-stage-art i:nth-child(2) { animation-delay: -6s; }
+.workspace-stage-art i:nth-child(3) { animation-delay: -12s; }
+.workspace-stage-art i:nth-child(4) { animation-delay: -18s; }
+@keyframes workspace-stage-wave {
+  0% { opacity: 0; transform: scale(.3); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-force-motion]) .workspace-stage-art i { display: none; }
+}
 .stage-speaking-summary, .stage-member-summary { position: absolute; z-index: 2; top: 18px; display: flex; align-items: center; gap: 6px; max-width: calc(100% - 128px); min-height: 25px; padding: 4px 10px; border-radius: 99px; color: var(--muted); background: color-mix(in srgb, var(--card) 45%, transparent); font-size: .6875rem; }
 .stage-speaking-summary { left: 18px; }
 .stage-speaking-summary span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
