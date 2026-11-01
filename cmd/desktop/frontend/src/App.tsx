@@ -578,6 +578,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                 <footer className="workspace-user-footer">
                     <span className={`footer-avatar ${localParticipant?.speaking && !view.audio.muted ? "speaking" : ""}`} style={avatarStyle(localChatName)}>{localChatName.slice(0, 1).toUpperCase()}</span>
                     <div className="workspace-user-identity"><strong title={localChatName}>{localChatName}</strong><ConnectionStatsPopup sessionId={view.sessionId} status={view.connectionStatus} channelId={view.channelId} sharing={sharing} screenMedia={screenMedia}/></div>
+                    {view.canAdmin && view.connectionStatus === "connected" && <button id="open-admin" type="button" aria-label={m.admin.open} title={m.admin.open} onClick={() => onPageChange("admin")}><Icon name="shield"/></button>}
                     <button id="open-settings" type="button" aria-label={m.connection.settings} title={m.connection.settings} onClick={() => onPageChange("settings")}><Icon name="settings"/></button>
                 </footer>
             </section>
@@ -589,7 +590,6 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                         <div><h2 title={selected.name}>{selected.name}</h2><p title={selected.topic}>{selected.topic || m.channels.voice} · {members.length}{selected.maxUsers ? ` / ${selected.maxUsers}` : ""} · {selected.audio.codec} {m.channels.kbps(selected.audio.bitrate / 1000)}</p></div>
                         <span className="channel-member-stack" aria-label={m.channels.members}>{members.slice(0, 4).map((person) => <span key={person.sessionId} style={avatarStyle(person.displayName)} title={person.displayName}>{person.displayName.slice(0, 1).toUpperCase()}</span>)}{members.length > 4 && <small>+{members.length - 4}</small>}</span>
                         <button className="info-toggle" title={m.channels.info} aria-label={m.channels.info} aria-expanded={showInfo} onClick={() => setShowInfo(!showInfo)}><Icon name="info"/></button>
-                        {view.canAdmin && <button id="open-admin" className="info-toggle" title={m.admin.open} aria-label={m.admin.open} onClick={() => onPageChange("admin")}><Icon name="more"/></button>}
                     </header>
                     <div className="participants-stage" data-backdrop={stageBackdrop} data-reference-backdrop={referenceBackdrop} role="region" tabIndex={0} aria-label={m.channels.stage}>
                         {referenceBackdrop ? <div className="workspace-stage-art" aria-hidden="true"><i/><i/><i/></div> : <StageScene backdrop={stageBackdrop}/>}

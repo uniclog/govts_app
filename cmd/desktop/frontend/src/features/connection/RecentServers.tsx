@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from "react";
+import type {ReactNode} from "react";
 import {desktopAPI, type ClientViewDTO, type RecentServer} from "../../api";
 import {Icon} from "../../components/Icon";
 import type {Messages} from "../../locales";
@@ -29,7 +30,8 @@ function serverInitials(alias: string): string {
         : Array.from(words[0]).slice(0, 2).join("")).toUpperCase();
 }
 
-export function RecentServers({view, expanded, onToggle, onReconnect, onError, refreshingServers, onRefreshServers, standalone = false, rail = false, disabled = false, onSelect, onCountChange, selectedAddress}: {
+export function RecentServers({view, expanded, onToggle, onReconnect, onError, refreshingServers, onRefreshServers, standalone = false, rail = false, disabled = false, onSelect, onCountChange, selectedAddress, headerAction}: {
+    headerAction?: ReactNode;
     rail?: boolean;
     selectedAddress?: string;
     refreshingServers: boolean;
@@ -130,6 +132,7 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
             <Icon name="refresh"/>
         </button>
         <span className="count-badge">{servers.length}</span>
+        {headerAction}
         </div>
         <div id="recent-servers-list" className="servers-scroll" hidden={!expanded}>
             {servers.filter((server) => !rail || !server.current).map((server) => <div key={server.address} className={`recent-server${standalone && server.address === selectedAddress ? " selected" : ""}`}>

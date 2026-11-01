@@ -322,6 +322,8 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .chat-heading { display: flex; justify-content: space-between; gap: 12px; padding: 0 12px 8px; font-size: 0.75rem; border-bottom: 1px solid var(--line); }
 .chat-heading span { color: var(--muted); white-space: nowrap; }
 .chat-composer textarea { box-sizing: border-box; display: block; width: 100%; min-width: 0; height: 32px; max-height: 68px; resize: none; overflow-y: hidden; padding: 6px 8px; font: inherit; font-size: 0.75rem; line-height: 18px; }
+.chat-input-placeholder { position: absolute; top: 7px; right: 9px; left: 9px; overflow: hidden; color: var(--muted); font-size: 0.75rem; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.chat-composer textarea:focus + .chat-input-placeholder { visibility: hidden; }
 .chat-composer small { color: var(--muted); font-size: 0.625rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .chat-message { display: grid; grid-template-columns: minmax(0, 1fr) 22px; align-items: start; gap: 6px; margin: 0; padding: 6px 4px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 45%, transparent); border-radius: 0; background: transparent; overflow-wrap: anywhere; font-size: 0.8125rem; line-height: 1.4; }
 .chat-message:last-child { border-bottom-color: transparent; }

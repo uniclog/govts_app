@@ -54,6 +54,9 @@
 .workspace-user-footer button { display: grid; place-items: center; width: 20px; height: 28px; flex: 0 0 20px; padding: 0; border: 0; border-radius: 6px; color: var(--muted); background: transparent; cursor: pointer; }
 .workspace-user-footer button svg { width: 14px; height: 14px; }
 .workspace-user-footer button:hover { color: var(--text); background: var(--card); }
+.workspace-user-footer :is(#open-admin, #open-settings) { width: 30px; height: 30px; flex: 0 0 30px; border-radius: 8px; }
+.workspace-user-footer :is(#open-admin, #open-settings) svg { width: 18px; height: 18px; }
+.workspace-user-footer :is(#open-admin, #open-settings):hover { color: var(--text); background: color-mix(in srgb, var(--accent-blue) 12%, var(--card)); }
 .workspace-user-footer button[aria-pressed="true"] { color: var(--danger); }
 .workspace-user-footer button:disabled { opacity: .4; cursor: default; }
 .server-shell .workspace-divider { z-index: 1; width: 8px; border: 0; background: transparent; }
@@ -132,10 +135,10 @@
 .server-shell .chat-message { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 9px; margin: 0; padding: 9px 0; border: 0; font-size: .8125rem; line-height: 1.5; }
 .server-shell .chat-message.is-deleted { grid-template-columns: 34px minmax(0, 1fr); }
 .chat-author-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: #26302c; background: var(--avatar-colour); font-size: .8125rem; font-weight: 600; }
-.server-shell .chat-message-meta { margin-bottom: 3px; padding-right: 18px; gap: 5px; font-size: .75rem; }
+.server-shell .chat-message-meta { margin-bottom: 3px; padding-right: 30px; gap: 5px; font-size: .75rem; }
 .server-shell .chat-message.own .chat-message-author { color: var(--text); }
 .server-shell .chat-message time { font-size: .625rem; }
-.server-shell .chat-message .chat-message-menu-button { position: absolute; top: 7px; right: 0; width: 16px; height: 20px; opacity: 0; }
+.server-shell .chat-message .chat-message-menu-button { position: absolute; top: 5px; right: 4px; width: 22px; height: 22px; opacity: 0; }
 .server-shell .chat-message:hover .chat-message-menu-button, .server-shell .chat-message:focus-within .chat-message-menu-button { opacity: 1; }
 .server-shell .chat-message.pending { display: block; }
 .server-shell .chat-composer { grid-template-columns: minmax(0, 1fr) 36px; gap: 8px; padding-top: 8px; }
@@ -143,6 +146,9 @@
 .server-shell .chat-composer button { height: 36px; padding: 0; border: 0; border-radius: 10px; background: var(--card-strong); }
 .server-shell .chat-composer .chat-attach-button { width: 34px; min-width: 34px; }
 .server-shell .chat-composer textarea { height: 36px; min-height: 36px; padding: 9px 10px; border: 0; border-radius: 10px; background: var(--card-strong); box-shadow: none; font-size: .75rem; }
+.server-shell .chat-input-placeholder { top: 9px; right: 10px; left: 10px; }
+/* The chat panel clips anything outside the field, so focus is drawn inside it. */
+.server-shell .chat-composer textarea:focus { box-shadow: inset 0 0 0 1px var(--accent-blue); animation: none; }
 .server-shell .chat-composer .chat-send-button { display: grid; place-items: center; min-width: 36px; color: #fff; background: var(--workspace-brand); }
 .server-shell .chat-send-button svg { width: 19px; height: 19px; }
 .server-shell .chat-composer .chat-send-button:disabled { opacity: .7; }
@@ -201,8 +207,9 @@
 .server-switcher-brand svg { width: 21px; height: 21px; }
 .server-switcher-popover { display: flex; flex-direction: column; position: absolute; z-index: 30; top: calc(100% + 6px); left: 12px; width: min(340px, calc(100vw - 40px)); max-height: calc(100vh - 160px); padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: 0 16px 48px #0005; }
 .server-switcher-popover .connection-server-list { min-height: 0; max-height: min(60vh, 480px, calc(100vh - 194px)); }
-.server-switcher-popover .servers-heading { padding-right: 28px; }
-.server-switcher-close { position: absolute; top: 12px; right: 10px; display: grid; place-items: center; width: 26px; height: 26px; padding: 5px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; }
+.server-shell .channel-browser .server-switcher-popover .servers-heading { min-height: 26px; padding: 0; }
+.server-switcher-close { display: grid; flex: 0 0 26px; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 8px; color: var(--muted); background: transparent; }
+.server-switcher-close svg { display: block; width: 16px; height: 16px; }
 .server-switcher-close:hover { color: var(--text); background: var(--card-strong); }
 .server-switcher-popover .recent-server:has([aria-current="true"]) { border-color: var(--workspace-brand); }
 .server-shell .stage-screen-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; width: 100%; min-width: 0; min-height: 160px; margin: 0; padding: 16px 8px 14px; border: 1px solid transparent; border-radius: 20px; background: var(--card); text-align: center; }
@@ -226,7 +233,7 @@
 .server-shell .workspace-direct-tabs .close-chat-tab { flex: 0 0 20px; width: 20px; height: 20px; padding: 0; }
 
 .workspace-user-footer .connection-stats-anchor { max-width: 100%; margin-top: 3px; }
-.workspace-user-footer .status-pill { display: flex; align-items: center; justify-content: flex-start; gap: 5px; width: auto; max-width: 100%; height: 16px; min-height: 16px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: var(--muted); font-size: .625rem; font-weight: 500; }
+.workspace-user-footer .status-pill { display: flex; align-items: center; justify-content: flex-start; gap: 5px; width: auto; max-width: 100%; height: 16px; min-height: 16px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: var(--muted); font-size: .6875rem; font-weight: 500; }
 .workspace-user-footer .status-pill.connected { color: var(--accent); }
 .workspace-user-footer .status-pill.connecting, .workspace-user-footer .status-pill.reconnecting { color: var(--warning); }
 .workspace-user-footer .status-pill:hover { background: transparent; text-decoration: underline; }
