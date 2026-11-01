@@ -32,6 +32,7 @@ import {InterfaceSettings} from "./features/settings/InterfaceSettings";
 import {AdminPanel} from "./features/admin/AdminPanel";
 import {StageScene} from "./features/settings/StageScene";
 import {HotkeySettings} from "./features/settings/HotkeySettings";
+import {loadForceMotion, saveForceMotion} from "./features/settings/motion";
 
 const contentTabs = ["chat", "events"] as const;
 type ContentTab = typeof contentTabs[number] | `direct:${string}`;
@@ -434,7 +435,7 @@ function MainApp({appearance, setTheme, createCustomTheme, updateAppearance, ope
                     onConnected={() => setPage("channels")}
                 />
             </> : <>
-            <StatusBar view={view} onPageChange={setPage} sharing={sharing} screenMedia={screenMedia.current} updateAction={<UpdateButton updates={updates}/>} invoke={invoke}/>
+            <StatusBar view={view} updateAction={<UpdateButton updates={updates}/>}/>
             {actionError && <div className="error-banner" role="alert">{errorText(actionError, m)}</div>}
             {wakeUntil > wakeNow && <WakeNotice until={wakeUntil} now={wakeNow} label={wakeLabel}/>}
             <ChannelsPage onPageChange={setPage} referenceBackdrop={appearance.theme !== "custom"} view={view} screenMedia={screenMedia.current} events={events} invoke={invoke} onWake={wakeParticipant} refreshingServers={refreshingServers} onRefreshServers={refreshServers}
@@ -560,7 +561,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                 <ServerSwitcher view={view} refreshingServers={refreshingServers} onRefreshServers={onRefreshServers} onReconnect={onReconnect} onError={onError}/>
                 <label className="channel-search"><Icon name="search"/><input id="server-channel-search" value={channelQuery} onChange={(event) => setChannelQuery(event.target.value)} placeholder={m.channels.search} aria-label={m.channels.search}/></label>
                 <section className="sidebar-section" aria-label={m.channels.browser}>
-                    <div className="panel-heading"><h2>{m.channels.voiceChannels}</h2>{view.canAdmin && <button type="button" className="channel-add" title={m.admin.open} aria-label={m.admin.open} onClick={() => onPageChange("admin")}><Icon name="plus"/></button>}</div>
+                    <div className="panel-heading"><h2>{m.channels.voiceChannels}</h2></div>
                     <div className="channel-scroll"><ChannelTree query={channelQuery} channels={channels} participants={participants} screenOwners={screenOwners}
                                                              canKick={view.canKick} canBan={view.canBan}
                                                              canDrag={view.canDrag && view.connectionStatus === "connected"}
@@ -577,6 +578,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                 <footer className="workspace-user-footer">
                     <span className={`footer-avatar ${localParticipant?.speaking && !view.audio.muted ? "speaking" : ""}`} style={avatarStyle(localChatName)}>{localChatName.slice(0, 1).toUpperCase()}</span>
                     <div className="workspace-user-identity"><strong title={localChatName}>{localChatName}</strong><ConnectionStatsPopup sessionId={view.sessionId} status={view.connectionStatus} channelId={view.channelId} sharing={sharing} screenMedia={screenMedia}/></div>
+                    {view.canAdmin && view.connectionStatus === "connected" && <button id="open-admin" type="button" aria-label={m.admin.open} title={m.admin.open} onClick={() => onPageChange("admin")}><Icon name="shield"/></button>}
                     <button id="open-settings" type="button" aria-label={m.connection.settings} title={m.connection.settings} onClick={() => onPageChange("settings")}><Icon name="settings"/></button>
                 </footer>
             </section>
@@ -588,7 +590,6 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                         <div><h2 title={selected.name}>{selected.name}</h2><p title={selected.topic}>{selected.topic || m.channels.voice} · {members.length}{selected.maxUsers ? ` / ${selected.maxUsers}` : ""} · {selected.audio.codec} {m.channels.kbps(selected.audio.bitrate / 1000)}</p></div>
                         <span className="channel-member-stack" aria-label={m.channels.members}>{members.slice(0, 4).map((person) => <span key={person.sessionId} style={avatarStyle(person.displayName)} title={person.displayName}>{person.displayName.slice(0, 1).toUpperCase()}</span>)}{members.length > 4 && <small>+{members.length - 4}</small>}</span>
                         <button className="info-toggle" title={m.channels.info} aria-label={m.channels.info} aria-expanded={showInfo} onClick={() => setShowInfo(!showInfo)}><Icon name="info"/></button>
-                        {view.canAdmin && <button id="open-admin" className="info-toggle" title={m.admin.open} aria-label={m.admin.open} onClick={() => onPageChange("admin")}><Icon name="more"/></button>}
                     </header>
                     <div className="participants-stage" data-backdrop={stageBackdrop} data-reference-backdrop={referenceBackdrop} role="region" tabIndex={0} aria-label={m.channels.stage}>
                         {referenceBackdrop ? <div className="workspace-stage-art" aria-hidden="true"><i/><i/><i/></div> : <StageScene backdrop={stageBackdrop}/>}
@@ -804,6 +805,7 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
     updates: UpdatesState;
 }) {
     const {m} = useLocale();
+    const [forceMotion, setForceMotion] = useState(loadForceMotion);
     const [sensitivity, setSensitivity] = useState(view.audio.vadSensitivity);
     useEffect(() => setSensitivity(view.audio.vadSensitivity), [view.audio.vadSensitivity]);
     const [rnnoiseSensitivity, setRNNoiseSensitivity] = useState(view.audio.rnnoiseSensitivity);
@@ -817,10 +819,14 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
     const [soundVolume, setSoundVolume] = useState(view.soundVolume);
     useEffect(() => setSoundVolume(view.soundVolume), [view.soundVolume]);
     const [closeToTray, setCloseToTrayState] = useState(false);
+    const [rememberVolumes, setRememberVolumes] = useState(true);
     useEffect(() => {
         let active = true;
         void desktopAPI.closeToTray().then((value) => {
             if (active) setCloseToTrayState(value);
+        }).catch(() => undefined);
+        void desktopAPI.rememberParticipantVolumes().then((value) => {
+            if (active) setRememberVolumes(value);
         }).catch(() => undefined);
         return () => {
             active = false;
@@ -876,21 +882,23 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
             setDevicePending(false);
         }
     };
-    return <section className="settings-page">
-        <div className="settings-heading"><p className="eyebrow">{m.settings.eyebrow}</p><h2>{m.settings.title}</h2></div>
+    return <section className="settings-page settings-shell">
         <div className="settings-layout">
             <nav className="settings-nav" aria-label={m.settings.sections}>
+                <h2>{m.settings.title}</h2>
                 <button type="button" aria-current={section === "microphone" ? "page" : undefined} onClick={() => setSection("microphone")}><Icon name="mic"/>{m.settings.microphone}</button>
                 <button type="button" aria-current={section === "playback" ? "page" : undefined} onClick={() => setSection("playback")}><Icon name="headphones"/>{m.settings.playback}</button>
                 <button type="button" aria-current={section === "interface" ? "page" : undefined} onClick={() => setSection("interface")}><Icon name="screen"/>{m.settings.interface}</button>
                 <button type="button" aria-current={section === "behavior" ? "page" : undefined} onClick={() => setSection("behavior")}><Icon name="settings"/>{m.settings.behavior}</button>
                 <button type="button" aria-current={section === "updates" ? "page" : undefined} onClick={() => setSection("updates")}><Icon name="download"/>{m.settings.updates}</button>
             </nav>
+            <div className="settings-panel">
+                <div className="settings-heading"><h2>{m.settings[section]}</h2><p>{m.settings.sectionHints[section]}</p></div>
             <div className="settings-content">
                 {(section === "microphone" || section === "playback") && devicesError && <div className="device-error" role="alert">{m.settings.devicesFailed}: {errorText(devicesError, m)}
                     <button className="text-button" onClick={() => void loadDevices()}>{m.settings.retry}</button>
                 </div>}
-                {section === "microphone" &&
+                {section === "microphone" && <>
                     <section className="settings-card"><h3>{m.settings.microphone}</h3><Select id="capture-device"
                                                                                  label={m.settings.capture}
                                                                                  value={devices?.selectedCapture ?? ""}
@@ -903,6 +911,8 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                            value={microphoneGain} disabled={false}
                                            onChange={setMicrophoneGain}
                                            onCommit={(value) => invoke(() => desktopAPI.setMicrophoneGain(value))}/>
+                    </section>
+                    <section className="settings-card">
                         <SettingToggle title={m.settings.denoise}
                                        description={m.settings.denoiseHint}
                                        checked={view.audio.rnnoiseEnabled}
@@ -912,6 +922,8 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                            value={rnnoiseSensitivity} disabled={!view.audio.rnnoiseEnabled}
                                            onChange={setRNNoiseSensitivity}
                                            onCommit={(value) => invoke(() => desktopAPI.setRNNoiseSensitivity(value))}/>
+                    </section>
+                    <section className="settings-card">
                         <SettingToggle title={m.settings.vad}
                                        description={m.settings.vadHint}
                                        checked={view.audio.vadEnabled}
@@ -939,7 +951,7 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                 ? m.settings.monitorActive
                                 : m.settings.monitorBlocked}</p>}
                         </div>
-                    </section>}
+                    </section></>}
                 {section === "playback" &&
                     <section className="settings-card compact-card"><h3>{m.settings.playback}</h3><Select id="playback-device"
                                                                                                          label={m.settings.output}
@@ -956,6 +968,8 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                         <LocaleSwitch labelledBy="locale-label"/>
                     </div>
                     <InterfaceSettings appearance={appearance} onTheme={(value) => invoke(() => setTheme(value))} onCreate={createCustomTheme} onChange={updateAppearance} onOpenSaved={openSavedTheme} onSave={saveNamedTheme} onImport={importThemeFile} onExport={exportTheme} onDelete={deleteSavedTheme}/>
+                    <SettingToggle title={m.settings.forceMotion} description={m.settings.forceMotionHint} checked={forceMotion}
+                                   onChange={async (value) => { saveForceMotion(value); setForceMotion(value); }}/>
                 </section>
                 <section className="settings-card"><h3>{m.settings.sounds}</h3>
                     <Select id="sound-pack" label={m.settings.soundPack} hint={m.settings.soundPackHint}
@@ -998,6 +1012,20 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                        }
                                    })}/>
                 </section>
+                <section className="settings-card">
+                    <SettingToggle title={m.settings.rememberVolumes} description={m.settings.rememberVolumesHint}
+                                   checked={rememberVolumes}
+                                   onChange={(value) => invoke(async () => {
+                                       const previous = rememberVolumes;
+                                       setRememberVolumes(value);
+                                       try {
+                                           await desktopAPI.setRememberParticipantVolumes(value);
+                                       } catch (error) {
+                                           setRememberVolumes(previous);
+                                           throw error;
+                                       }
+                                   })}/>
+                </section>
                 <section className="settings-card"><h3>{m.settings.awayAction}</h3>
                     <SettingToggle title={m.settings.muteOnAway} description={m.settings.muteOnAwayHint}
                                    checked={view.muteOnAway}
@@ -1008,6 +1036,7 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                 </section>
                 <HotkeySettings/></>}
                 {section === "updates" && <UpdatesPanel updates={updates}/>}
+            </div>
             </div>
         </div>
     </section>;

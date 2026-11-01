@@ -14,20 +14,23 @@ const maxReasonBytes = 128;
 export function AdminPanel({view}: {view: ClientViewDTO}) {
     const {m} = useLocale();
     const [section, setSection] = useState<Section>("accounts");
-    return <section className="settings-page admin-page">
-        <div className="settings-heading"><p className="eyebrow">{view.server.name || m.connection.server}</p><h2>{m.admin.title}</h2></div>
+    return <section className="settings-page settings-shell admin-page">
         <div className="settings-layout">
             <nav className="settings-nav" aria-label={m.admin.sections}>
+                <h2>{m.admin.title}</h2>
                 <button type="button" aria-current={section === "accounts" ? "page" : undefined} onClick={() => setSection("accounts")}><Icon name="users"/>{m.admin.accounts}</button>
                 <button type="button" aria-current={section === "channels" ? "page" : undefined} onClick={() => setSection("channels")}><Icon name="channels"/>{m.admin.channels}</button>
                 <button type="button" aria-current={section === "audit" ? "page" : undefined} onClick={() => setSection("audit")}><Icon name="shield"/>{m.admin.audit}</button>
                 <button type="button" aria-current={section === "files" ? "page" : undefined} onClick={() => setSection("files")}><Icon name="file"/>{m.files.admin}</button>
             </nav>
+            <div className="settings-panel">
+                <div className="settings-heading"><h2>{section === "files" ? m.files.admin : m.admin[section]}</h2><p>{view.server.name || m.connection.server}</p></div>
             <div className="settings-content">
                 {section === "accounts" && <AccountsSection view={view}/>}
                 {section === "channels" && <ChannelsSection view={view}/>}
                 {section === "audit" && <AuditSection/>}
                 {section === "files" && <FileAdmin context={view.chatContext}/>}
+            </div>
             </div>
         </div>
     </section>;

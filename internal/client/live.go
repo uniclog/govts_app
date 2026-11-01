@@ -590,7 +590,9 @@ func (s *State) ApplyEvent(generation uint64, e domain.StateEvent) bool {
 	s.snapshot = next
 	if removeVolumeID != 0 {
 		s.Audio.RemoveParticipantVolume(removeVolumeID)
+		delete(s.volumeResolved, removeVolumeID)
 	}
+	s.applySavedVolumesLocked()
 	if notification != 0 {
 		s.queueNotificationSoundLocked(notification)
 	}

@@ -10,7 +10,6 @@
 .settings-window .settings-page { min-width: 0; padding: 24px; }
 .settings-heading { margin: 0 0 22px; }
 .settings-heading h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -.035em; line-height: 1.25; }
-.settings-heading .eyebrow { margin-bottom: 6px; font-size: .625rem; font-weight: 500; letter-spacing: .05em; }
 .settings-close { top: 18px; right: 18px; width: 32px; height: 32px; border: 0; border-radius: 10px; background: var(--card-strong); }
 .settings-layout { grid-template-columns: 200px minmax(0, 1fr); gap: 16px; }
 .settings-nav { min-height: 0; height: 100%; padding: 10px; gap: 5px; border: 0; border-radius: 16px; background: var(--card); box-shadow: none; overflow: auto; }
@@ -20,7 +19,7 @@
 .settings-card { min-width: 0; padding: 22px; border: 0; border-radius: 16px; background: var(--card); box-shadow: none; }
 .settings-card h3 { margin-bottom: 18px; font-size: .9375rem; font-weight: 600; line-height: 1.4; }
 .settings-card h4, .setting-label { font-weight: 500; }
-.settings-card :is(.device-hint, .theme-note, .monitor-hint) { line-height: 1.6; }
+.settings-card :is(.device-hint, .theme-note) { line-height: 1.6; }
 .settings-card .setting-toggle { gap: 16px; margin-top: 18px; padding-top: 18px; }
 .setting-toggle strong { font-weight: 500; }
 .settings-window :is(.primary-button, .secondary-button, .monitor-button, .theme-actions button, .locale-switch button), .screen-dialog-actions button { min-height: 36px; padding: 8px 14px; border-radius: 10px; font-size: .75rem; font-weight: 600; line-height: 1.4; box-shadow: none; }
@@ -44,7 +43,7 @@
 .settings-window :is(.locale-switch button[aria-pressed="true"], .theme-swatch-open[aria-pressed="true"]) { border-color: var(--menu-accent); background: color-mix(in srgb, var(--menu-accent) 10%, var(--card)); }
 .theme-swatch { border-radius: 12px; box-shadow: none; }
 .theme-editor, .palette-group { min-width: 0; }
-.palette-field, .stage-preview { border-radius: 12px; }
+.palette-field { border-radius: 12px; }
 .hotkey-combo kbd, .monitor-button.hotkey-key { border-radius: 8px; background: var(--window); box-shadow: none; }
 .admin-accounts { gap: 14px; }
 .admin-account-row { min-height: 42px; padding: 9px 10px; border-radius: 10px; }
@@ -94,21 +93,6 @@
   .admin-accounts { grid-template-columns: minmax(0, 1fr); }
   .admin-list { max-height: 220px; }
 }
-@media (max-width: 740px) {
-  .settings-overlay { padding: 8px; }
-  .settings-window { border-radius: 16px; }
-  .settings-window .settings-page { padding: 18px 12px 12px; }
-  .settings-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-  .settings-nav { height: auto; flex-direction: row; padding: 6px; border-radius: 12px; }
-  .settings-nav button { flex: 0 0 auto; width: auto; white-space: nowrap; }
-  .settings-nav button[aria-current="page"] { box-shadow: inset 0 -2px var(--menu-accent); }
-  :is(.screen-share-dialog, .link-confirm) { padding: 20px; }
-  .screen-share-dialog fieldset.screen-settings { grid-template-columns: minmax(0, 1fr); }
-  .screen-settings .screen-sound-app { grid-column: auto; }
-  .screen-dialog-actions button { flex: 1 1 auto; }
-  .settings-heading h2 { font-size: 1.25rem; }
-  .admin-channel-grid, .file-admin-stats { grid-template-columns: minmax(0, 1fr); }
-}
 
 .settings-nav button svg { flex: 0 0 16px; width: 16px; height: 16px; opacity: .8; }
 
@@ -128,3 +112,30 @@
 .participant-menu-actions button.is-danger { color: var(--danger-text); }
 .participant-menu-actions button.is-danger span { color: inherit; }
 .participant-menu-actions button.is-danger:hover:not(:disabled) { color: var(--danger-text); background: var(--danger-soft); }
+
+/* Settings use a sidebar and a content panel of grouped cards inside the fixed-size window. */
+.settings-window:has(.settings-shell) { padding: 8px; }
+.settings-window .settings-shell { padding: 0; grid-template-rows: minmax(0, 1fr); }
+.settings-shell .settings-layout { grid-template-columns: 220px minmax(0, 1fr); gap: 8px; }
+.settings-shell .settings-nav { padding: 14px 10px; gap: 2px; border: 1px solid var(--line); border-radius: 20px; }
+.settings-shell .settings-nav h2 { margin: 2px 8px 14px; font-size: 1.125rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.4; }
+.settings-shell .settings-nav button { min-height: 34px; padding: 7px 10px; font-size: .75rem; }
+.settings-shell .settings-nav button[aria-current="page"] { color: var(--text); background: var(--card-strong); box-shadow: none; }
+.settings-shell .settings-nav button[aria-current="page"] svg { color: var(--menu-accent); opacity: 1; }
+/* Only the cards scroll, so the scrollbar stays inside the panel and clear of the close button. */
+.settings-shell .settings-panel { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; min-height: 0; padding: 24px 14px 14px 28px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); }
+.settings-shell .settings-content { padding: 0 7px 0 0; scrollbar-gutter: stable; }
+.settings-shell .settings-heading { margin: 0 0 16px; padding-right: 44px; }
+.settings-shell .settings-heading h2 { font-size: 1.375rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.3; }
+.settings-shell .settings-heading p { margin: 4px 0 0; color: var(--muted); font-size: .75rem; line-height: 1.5; }
+.settings-shell .settings-card { margin-bottom: 8px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--card-strong) 45%, var(--card)); }
+.settings-shell .settings-card:last-child, .settings-shell :is(.admin-accounts, .file-admin) .settings-card { margin-bottom: 0; }
+.settings-shell :is(.admin-accounts, .file-admin) { gap: 8px; }
+.settings-shell .admin-account-row[aria-pressed="true"] { box-shadow: none; }
+.settings-shell .settings-card h3 { margin-bottom: 12px; font-size: .8125rem; font-weight: 700; }
+.settings-shell .settings-card .setting-toggle { min-height: 0; gap: 16px; margin-top: 12px; padding: 0; border: 0; }
+.settings-shell .settings-card > .setting-toggle:first-child { margin-top: 0; }
+.settings-shell .setting-toggle strong { font-size: .75rem; }
+.settings-shell :is(.setting-toggle, .sensitivity-setting) p { margin-top: 2px; font-size: .6875rem; line-height: 1.4; }
+.settings-shell .setting-label { margin-bottom: 6px; font-size: .75rem; }
+.settings-window:has(.settings-shell) .settings-close { top: 20px; right: 20px; width: 28px; height: 28px; border-radius: 8px; }

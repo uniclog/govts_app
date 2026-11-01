@@ -25,7 +25,7 @@ function ChatMessageText({text}: {text: string}) {
 
 const resizeComposer = (input: HTMLTextAreaElement) => {
     input.style.height = "0px";
-    const contentHeight = input.scrollHeight + 2;
+    const contentHeight = input.scrollHeight + input.offsetHeight - input.clientHeight;
     input.style.height = `${Math.max(32, Math.min(68, contentHeight))}px`;
     input.style.overflowY = contentHeight > 68 ? "auto" : "hidden";
 };
@@ -154,9 +154,12 @@ export function ChatPanel({store, target, title, active, connected, online, loca
         }
         refresh();
     };
+    const canDropFiles = connected && !!caps?.uploadsEnabled;
     return <section className="chat-panel" aria-label={title}
-        onDragOver={(e) => {if(caps && connected) e.preventDefault();}}
-        onDrop={(e) => {e.preventDefault(); if (connected) void addFiles([...e.dataTransfer.files]);}}
+        data-file-drop-target={canDropFiles ? "" : undefined} data-drop-hint={m.files.dropHint}
+        onDragLeave={(e) => {if (!e.currentTarget.contains(e.relatedTarget as Node | null)) e.currentTarget.classList.remove("file-drop-target-active");}}
+        onDragOver={(e) => {if (canDropFiles && e.dataTransfer.types.includes("Files")) e.preventDefault();}}
+        onDrop={(e) => {e.preventDefault(); if (canDropFiles) void addFiles([...e.dataTransfer.files]);}}
         onPaste={(e) => {const files = [...e.clipboardData.files]; if(files.length && caps && connected) {e.preventDefault(); void addFiles(files);}}}>
         {target.kind === "direct" && <header className="chat-heading"><strong>{title}</strong><span>{online ? m.chat.online : m.chat.offline}</span></header>}
         {c.error && <div className="chat-error" role="alert">{errorText(c.error, m)}<button onClick={() => void store.sync(target)} disabled={!connected || c.loading}>{m.chat.retry}</button></div>}
@@ -209,9 +212,11 @@ export function ChatPanel({store, target, title, active, connected, online, loca
         <div className={`chat-composer${caps?.uploadsEnabled ? " has-attachments" : ""}`}>
             {caps?.uploadsEnabled && <button className="chat-attach-button" type="button" aria-label={m.files.attach} title={`${m.files.attach}\n${m.files.originalMetadata}`} disabled={!connected || staging || uploads.length >= caps.maxAttachments} onClick={() => {setFileError(""); void desktopAPI.filePick(store.context, target.kind, target.id).catch((e) => setFileError(String(e)));}}><Icon name="attachment"/></button>}
             <div className={`chat-input${bytes >= 800 ? " has-counter" : ""}`}>
-            <textarea ref={composer} rows={1} maxLength={1000} aria-label={m.chat.message} title={m.chat.composerHint} placeholder={connected ? m.chat.placeholder : m.chat.draftWaiting} value={c.draft}
+            <textarea ref={composer} rows={1} maxLength={1000} aria-label={m.chat.message} title={m.chat.composerHint} value={c.draft}
                 onChange={(event) => store.setDraft(target, event.target.value)}
                 onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); send(); } }}/>
+            {/* Native placeholders lose their ellipsis while the field holds focus. */}
+            {!c.draft && <span className="chat-input-placeholder" aria-hidden="true">{connected ? m.chat.placeholder : m.chat.draftWaiting}</span>}
             {bytes >= 800 && <small className={bytes > 1000 ? "is-over-limit" : ""} title={m.chat.bytes}>{bytes}/1000</small>}
             </div>
             <button className="chat-send-button" disabled={!connected || !valid} type="button" title={m.chat.send} aria-label={m.chat.send} onClick={send}><Icon name="send"/></button>

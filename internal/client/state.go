@@ -12,19 +12,23 @@ import (
 )
 
 type State struct {
-	voiceFlow               *voiceflow.Endpoint
-	voiceReserve            int
-	mu                      sync.RWMutex
-	syncMu                  sync.Mutex
-	syncSerial              uint64
-	syncedGeneration        uint64
-	observedRevision        domain.StateRevision
-	resync                  chan struct{}
-	subscribers             map[chan struct{}]struct{}
-	notices                 chan string
-	notificationSounds      chan NotificationSound
-	speaking                map[uint64]time.Time
-	Audio                   *AudioControlState
+	voiceFlow          *voiceflow.Endpoint
+	voiceReserve       int
+	mu                 sync.RWMutex
+	syncMu             sync.Mutex
+	syncSerial         uint64
+	syncedGeneration   uint64
+	observedRevision   domain.StateRevision
+	resync             chan struct{}
+	subscribers        map[chan struct{}]struct{}
+	notices            chan string
+	notificationSounds chan NotificationSound
+	speaking           map[uint64]time.Time
+	Audio              *AudioControlState
+	// savedVolumes holds remembered participant volumes for the current server;
+	// volumeResolved holds sessions they were already applied to. Guarded by mu.
+	savedVolumes            map[int64]map[int64]float32
+	volumeResolved          map[uint64]struct{}
 	measurements            connectionMeasurements
 	chatRevision            uint64
 	voice                   *installedVoiceState
@@ -88,6 +92,7 @@ func NewState(sessionID uint64, name string) *State {
 	}
 	s.voiceFlow = voiceflow.NewEndpoint(protocol.VoiceUpstream, time.Now())
 	s.Audio = NewAudioControlState(func() { s.audioChanged() })
+	s.volumeResolved = make(map[uint64]struct{})
 	return s
 }
 
@@ -162,6 +167,7 @@ func (s *State) PrepareConnection() error {
 	s.measurements.reset()
 	clear(s.speaking)
 	s.Audio.ClearParticipantVolumes()
+	clear(s.volumeResolved)
 	s.clearNotificationSoundsLocked()
 	s.notifyLocked()
 	return nil
@@ -195,6 +201,7 @@ drainNotices:
 	}
 	clear(s.speaking)
 	s.Audio.ClearParticipantVolumes()
+	clear(s.volumeResolved)
 	s.clearNotificationSoundsLocked()
 	s.notifyLocked()
 	return s.generation
@@ -268,6 +275,7 @@ func (s *State) ReplaceSnapshot(snapshot domain.ServerSnapshot) {
 	defer s.mu.Unlock()
 	s.resetIncomingForSnapshotLocked(snapshot)
 	s.snapshot = snapshot.Clone()
+	s.applySavedVolumesLocked()
 	s.snapshotFresh = true
 	s.syncedGeneration = s.generation
 	s.notifyLocked()
@@ -294,6 +302,7 @@ func (s *State) ReplaceSnapshotForGeneration(generation uint64, snapshot domain.
 	previousChannel := s.channelID
 	s.resetIncomingForSnapshotLocked(snapshot)
 	s.snapshot = snapshot.Clone()
+	s.applySavedVolumesLocked()
 	s.syncedGeneration = generation
 	s.snapshotFresh = snapshot.Revision >= s.observedRevision
 	clear(s.speaking)

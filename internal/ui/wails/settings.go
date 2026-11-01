@@ -13,6 +13,9 @@ import (
 func (s *Service) enableSettings(path string) error {
 	store := clientsettings.NewStore(path)
 	s.settings = store
+	s.settingsMu.Lock()
+	s.rememberParticipantVolumes = true
+	s.settingsMu.Unlock()
 	settings, err := store.Load()
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
@@ -29,6 +32,8 @@ func (s *Service) enableSettings(path string) error {
 		s.locale = "ru"
 	}
 	s.closeToTray = settings.CloseToTray
+	s.rememberParticipantVolumes = settings.RememberParticipantVolumes
+	s.participantVolumes = settings.ParticipantVolumes
 	s.recentServers = settings.RecentServers
 	s.hotkeyKeys = clientsettings.NormalizeHotkeys(settings.Hotkeys)
 	s.hotkeyNotifications = settings.HotkeyNotifications
@@ -105,32 +110,36 @@ func (s *Service) saveSettings() (saveErr error) {
 	hotkeyKeys := cloneStringMap(s.hotkeyKeys)
 	hotkeyNotifications := s.hotkeyNotifications
 	hotkeysEnabled := s.hotkeysEnabled
+	rememberParticipantVolumes := s.rememberParticipantVolumes
+	participantVolumes := cloneParticipantVolumes(s.participantVolumes)
 	s.settingsMu.RUnlock()
 	return s.settings.Save(clientsettings.Settings{
-		DisplayName:           displayName,
-		VoiceUplinkReserveKiB: s.client.VoiceReserveKiB(),
-		CaptureDeviceID:       devices.CaptureID,
-		PlaybackDeviceID:      devices.PlaybackID,
-		Deafened:              s.client.SavedDeafened(),
-		RNNoiseEnabled:        view.RNNoiseEnabled,
-		RNNoiseSensitivity:    view.RNNoiseSensitivity,
-		MicrophoneGain:        view.MicrophoneGain,
-		VADEnabled:            view.VADEnabled,
-		VADMode:               view.VADMode,
-		VADSensitivity:        view.VADSensitivity,
-		TrustedMediaKeys:      trustedMediaKeys,
-		Theme:                 theme,
-		Locale:                locale,
-		CloseToTray:           closeToTray,
-		SoundPack:             view.SoundPack,
-		SoundVolume:           view.SoundVolume,
-		MuteOnAway:            view.MuteOnAway,
-		DeafenOnAway:          view.DeafenOnAway,
-		SoundCues:             clientsettings.NormalizeSoundCues(view.SoundCues),
-		RecentServers:         recentServers,
-		Hotkeys:               hotkeyKeys,
-		HotkeyNotifications:   hotkeyNotifications,
-		HotkeysEnabled:        hotkeysEnabled,
+		DisplayName:                displayName,
+		VoiceUplinkReserveKiB:      s.client.VoiceReserveKiB(),
+		CaptureDeviceID:            devices.CaptureID,
+		PlaybackDeviceID:           devices.PlaybackID,
+		Deafened:                   s.client.SavedDeafened(),
+		RNNoiseEnabled:             view.RNNoiseEnabled,
+		RNNoiseSensitivity:         view.RNNoiseSensitivity,
+		MicrophoneGain:             view.MicrophoneGain,
+		VADEnabled:                 view.VADEnabled,
+		VADMode:                    view.VADMode,
+		VADSensitivity:             view.VADSensitivity,
+		TrustedMediaKeys:           trustedMediaKeys,
+		Theme:                      theme,
+		Locale:                     locale,
+		CloseToTray:                closeToTray,
+		SoundPack:                  view.SoundPack,
+		SoundVolume:                view.SoundVolume,
+		MuteOnAway:                 view.MuteOnAway,
+		DeafenOnAway:               view.DeafenOnAway,
+		SoundCues:                  clientsettings.NormalizeSoundCues(view.SoundCues),
+		RecentServers:              recentServers,
+		Hotkeys:                    hotkeyKeys,
+		HotkeyNotifications:        hotkeyNotifications,
+		HotkeysEnabled:             hotkeysEnabled,
+		RememberParticipantVolumes: rememberParticipantVolumes,
+		ParticipantVolumes:         participantVolumes,
 	})
 }
 
