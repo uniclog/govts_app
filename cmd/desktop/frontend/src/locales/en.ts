@@ -345,7 +345,13 @@ export const en = {
     settings: {
         title: "Settings",
         close: "Close",
-        eyebrow: "CLIENT SETTINGS",
+        sectionHints: {
+            microphone: "Input device, gain and voice processing",
+            playback: "Output device and deafening",
+            interface: "Language, appearance and app sounds",
+            behavior: "Window behavior, away actions and hotkeys",
+            updates: "App version and installing updates",
+        },
         sections: "Settings sections",
         microphone: "Microphone",
         playback: "Playback",

@@ -128,3 +128,29 @@
 .participant-menu-actions button.is-danger { color: var(--danger-text); }
 .participant-menu-actions button.is-danger span { color: inherit; }
 .participant-menu-actions button.is-danger:hover:not(:disabled) { color: var(--danger-text); background: var(--danger-soft); }
+
+/* Settings use a sidebar and a content panel of grouped cards inside the fixed-size window. */
+.settings-window:has(.settings-shell) { padding: 8px; }
+.settings-window .settings-shell { padding: 0; grid-template-rows: minmax(0, 1fr); }
+.settings-shell .settings-layout { grid-template-columns: 220px minmax(0, 1fr); gap: 8px; }
+.settings-shell .settings-nav { padding: 14px 10px; gap: 2px; border: 1px solid var(--line); border-radius: 20px; }
+.settings-shell .settings-nav h2 { margin: 2px 8px 14px; font-size: 1.125rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.4; }
+.settings-shell .settings-nav button { min-height: 34px; padding: 7px 10px; font-size: .75rem; }
+.settings-shell .settings-nav button[aria-current="page"] { color: var(--text); background: var(--card-strong); box-shadow: none; }
+.settings-shell .settings-nav button[aria-current="page"] svg { color: var(--menu-accent); opacity: 1; }
+/* Only the cards scroll, so the scrollbar stays inside the panel and clear of the close button. */
+.settings-shell .settings-panel { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; min-height: 0; padding: 24px 14px 14px 28px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); }
+.settings-shell .settings-content { padding: 0 7px 0 0; scrollbar-gutter: stable; }
+.settings-shell .settings-heading { margin: 0 0 16px; padding-right: 44px; }
+.settings-shell .settings-heading h2 { font-size: 1.375rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.3; }
+.settings-shell .settings-heading p { margin: 4px 0 0; color: var(--muted); font-size: .75rem; line-height: 1.5; }
+.settings-shell .settings-card { margin-bottom: 8px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--card-strong) 45%, var(--card)); }
+.settings-shell .settings-card:last-child { margin-bottom: 0; }
+.settings-shell .settings-card h3 { margin-bottom: 12px; font-size: .8125rem; font-weight: 700; }
+.settings-shell .settings-card .setting-toggle { min-height: 0; gap: 16px; margin-top: 12px; padding: 0; border: 0; }
+.settings-shell .settings-card > .setting-toggle:first-child { margin-top: 0; }
+.settings-shell .setting-toggle strong { font-size: .75rem; }
+.settings-shell :is(.setting-toggle, .sensitivity-setting) p { margin-top: 2px; font-size: .6875rem; line-height: 1.4; }
+.settings-shell .setting-label { margin-bottom: 6px; font-size: .75rem; }
+.settings-shell .setting-block { margin-bottom: 14px; }
+.settings-window:has(.settings-shell) .settings-close { top: 20px; right: 20px; width: 28px; height: 28px; border-radius: 8px; }

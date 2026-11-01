@@ -247,7 +247,7 @@ h2 { margin: 0; font-size: 1.25rem; }
 .app-select-control { position: relative; min-width: 0; }
 .app-select-trigger { display: flex; width: 100%; min-width: 0; min-height: 46px; align-items: center; gap: 12px; padding: 0 14px; cursor: pointer; text-align: left; }
 .app-select-trigger:focus-visible { outline: 0; }
-.app-select-trigger:disabled { color: var(--muted); cursor: wait; }
+.app-select-trigger:disabled { color: var(--muted); cursor: not-allowed; }
 .app-select-trigger > span:first-child { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-select-trigger::after { content: ""; width: 8px; height: 8px; flex: 0 0 auto; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; border-radius: 1px; opacity: .75; transform: translateY(-2px) rotate(45deg); transition: transform .18s ease, opacity .18s ease; }
 .app-select-trigger:hover:not(:disabled)::after, .app-select-trigger:focus-visible::after, .app-select-trigger[aria-expanded="true"]::after { opacity: 1; }

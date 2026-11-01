@@ -878,16 +878,18 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
             setDevicePending(false);
         }
     };
-    return <section className="settings-page">
-        <div className="settings-heading"><p className="eyebrow">{m.settings.eyebrow}</p><h2>{m.settings.title}</h2></div>
+    return <section className="settings-page settings-shell">
         <div className="settings-layout">
             <nav className="settings-nav" aria-label={m.settings.sections}>
+                <h2>{m.settings.title}</h2>
                 <button type="button" aria-current={section === "microphone" ? "page" : undefined} onClick={() => setSection("microphone")}><Icon name="mic"/>{m.settings.microphone}</button>
                 <button type="button" aria-current={section === "playback" ? "page" : undefined} onClick={() => setSection("playback")}><Icon name="headphones"/>{m.settings.playback}</button>
                 <button type="button" aria-current={section === "interface" ? "page" : undefined} onClick={() => setSection("interface")}><Icon name="screen"/>{m.settings.interface}</button>
                 <button type="button" aria-current={section === "behavior" ? "page" : undefined} onClick={() => setSection("behavior")}><Icon name="settings"/>{m.settings.behavior}</button>
                 <button type="button" aria-current={section === "updates" ? "page" : undefined} onClick={() => setSection("updates")}><Icon name="download"/>{m.settings.updates}</button>
             </nav>
+            <div className="settings-panel">
+                <div className="settings-heading"><h2>{m.settings[section]}</h2><p>{m.settings.sectionHints[section]}</p></div>
             <div className="settings-content">
                 {(section === "microphone" || section === "playback") && devicesError && <div className="device-error" role="alert">{m.settings.devicesFailed}: {errorText(devicesError, m)}
                     <button className="text-button" onClick={() => void loadDevices()}>{m.settings.retry}</button>
@@ -905,6 +907,9 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                            value={microphoneGain} disabled={false}
                                            onChange={setMicrophoneGain}
                                            onCommit={(value) => invoke(() => desktopAPI.setMicrophoneGain(value))}/>
+                    </section>}
+                {section === "microphone" &&
+                    <section className="settings-card">
                         <SettingToggle title={m.settings.denoise}
                                        description={m.settings.denoiseHint}
                                        checked={view.audio.rnnoiseEnabled}
@@ -914,6 +919,9 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                            value={rnnoiseSensitivity} disabled={!view.audio.rnnoiseEnabled}
                                            onChange={setRNNoiseSensitivity}
                                            onCommit={(value) => invoke(() => desktopAPI.setRNNoiseSensitivity(value))}/>
+                    </section>}
+                {section === "microphone" &&
+                    <section className="settings-card">
                         <SettingToggle title={m.settings.vad}
                                        description={m.settings.vadHint}
                                        checked={view.audio.vadEnabled}
@@ -1012,6 +1020,7 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                 </section>
                 <HotkeySettings/></>}
                 {section === "updates" && <UpdatesPanel updates={updates}/>}
+            </div>
             </div>
         </div>
     </section>;
