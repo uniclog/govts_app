@@ -59,6 +59,7 @@ func (s *Service) enableSettings(path string) error {
 	if err := s.client.SetMicrophoneGain(settings.MicrophoneGain); err != nil {
 		restoreErrors = append(restoreErrors, err)
 	}
+	s.client.SetExclusiveCaptureBufferAdaptive(!settings.ExclusiveCaptureBufferFixed)
 	s.client.SetRNNoiseEnabled(settings.RNNoiseEnabled)
 	s.client.SetVADEnabled(settings.VADEnabled)
 	if err := s.client.SetSoundPack(settings.SoundPack); err != nil {
@@ -122,6 +123,7 @@ func (s *Service) saveSettings() (saveErr error) {
 		RNNoiseEnabled:             view.RNNoiseEnabled,
 		RNNoiseSensitivity:         view.RNNoiseSensitivity,
 		MicrophoneGain:             view.MicrophoneGain,
+		ExclusiveCaptureBufferFixed: !s.client.ExclusiveCaptureBufferAdaptive(),
 		VADEnabled:                 view.VADEnabled,
 		VADMode:                    view.VADMode,
 		VADSensitivity:             view.VADSensitivity,

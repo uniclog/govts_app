@@ -820,8 +820,12 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
     useEffect(() => setSoundVolume(view.soundVolume), [view.soundVolume]);
     const [closeToTray, setCloseToTrayState] = useState(false);
     const [rememberVolumes, setRememberVolumes] = useState(true);
+    const [adaptiveBuffer, setAdaptiveBuffer] = useState(true);
     useEffect(() => {
         let active = true;
+        void desktopAPI.exclusiveCaptureBufferAdaptive().then((value) => {
+            if (active) setAdaptiveBuffer(value);
+        }).catch(() => undefined);
         void desktopAPI.closeToTray().then((value) => {
             if (active) setCloseToTrayState(value);
         }).catch(() => undefined);
@@ -911,6 +915,19 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                                            value={microphoneGain} disabled={false}
                                            onChange={setMicrophoneGain}
                                            onCommit={(value) => invoke(() => desktopAPI.setMicrophoneGain(value))}/>
+                        <SettingToggle title={m.settings.adaptiveBuffer}
+                                       description={m.settings.adaptiveBufferHint}
+                                       checked={adaptiveBuffer}
+                                       onChange={async (value) => {
+                                           setAdaptiveBuffer(value);
+                                           try {
+                                               await desktopAPI.setExclusiveCaptureBufferAdaptive(value);
+                                           } catch (error) {
+                                               // The mode may have changed even if saving failed.
+                                               setAdaptiveBuffer(await desktopAPI.exclusiveCaptureBufferAdaptive().catch(() => !value));
+                                               setDevicesError(rawError(error));
+                                           }
+                                       }}/>
                     </section>
                     <section className="settings-card">
                         <SettingToggle title={m.settings.denoise}

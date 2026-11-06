@@ -5,10 +5,10 @@ import {errorCode} from "./locales";
 // Встроенные темы только подменяют палитру. Своя тема дополнительно
 // задаёт шрифт и подложку сцены. Производные роли пересчитываются в CSS.
 
-export const builtinThemes = ["light", "neutral", "dark", "beige", "brown", "purple"] as const;
+export const builtinThemes = ["light", "dark", "navy", "beige", "brown", "purple"] as const;
 export type BuiltinTheme = (typeof builtinThemes)[number];
 
-export const themeModes = ["light", "neutral", "dark", "beige", "brown", "purple", "custom"] as const;
+export const themeModes = ["light", "dark", "navy", "beige", "brown", "purple", "custom"] as const;
 export type ThemeMode = (typeof themeModes)[number];
 
 export const stageBackdrops = ["mountains", "pines", "clouds", "horizon", "city", "stars", "plain", "image"] as const;
@@ -90,35 +90,35 @@ export const darkPalette: ThemePalette = {
 };
 
 export const lightPalette: ThemePalette = {
-    window: "#f2f0eb",
-    card: "#ffffff",
-    cardStrong: "#ece9e2",
-    line: "#e4e1da",
-    text: "#25272b",
-    muted: "#858890",
-    accent: "#2ba97c",
-    accentBlue: "#e56f38",
-    danger: "#db3653",
-    warning: "#b88712",
+    window: "#d1d7dd",
+    card: "#f2f4f7",
+    cardStrong: "#e1e6ec",
+    line: "#d4dae2",
+    text: "#1f2630",
+    muted: "#586373",
+    accent: "#21785e",
+    accentBlue: "#3d62a0",
+    danger: "#b8394b",
+    warning: "#875f0f",
     onAccent: "#ffffff",
 };
 
 export const themePalettes: Record<BuiltinTheme, ThemePalette> = {
     light: lightPalette,
-    neutral: {
-        window: "#141416",
-        card: "#1e1e22",
-        cardStrong: "#2a2a30",
-        line: "#3e3e46",
-        text: "#ececf1",
-        muted: "#a1a1ab",
-        accent: "#3dccb0",
-        accentBlue: "#6eb6e0",
-        danger: "#f07480",
-        warning: "#e2b56c",
-        onAccent: "#10211c",
-    },
     dark: darkPalette,
+    navy: {
+        window: "#0b1426",
+        card: "#121e36",
+        cardStrong: "#1b2a48",
+        line: "#2a3d62",
+        text: "#e8eefb",
+        muted: "#94a3c0",
+        accent: "#4cc9f0",
+        accentBlue: "#5b9bff",
+        danger: "#ff6b81",
+        warning: "#f5d06f",
+        onAccent: "#06202b",
+    },
     beige: {
         window: "#e7e0d4",
         card: "#f4efe6",
@@ -203,8 +203,11 @@ export function defaultAppearance(): Appearance {
     };
 }
 
+// "neutral" was the grey dark theme; its place is taken by the navy one.
+const legacyThemes: Record<string, ThemeMode> = {neutral: "navy"};
+
 export function normalizeTheme(value: string): ThemeMode {
-    return themeModes.find((mode) => mode === value) ?? "dark";
+    return themeModes.find((mode) => mode === value) ?? legacyThemes[value] ?? "dark";
 }
 
 function nearestFontSize(value: number): FontSize {

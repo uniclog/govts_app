@@ -814,6 +814,15 @@ func (a *App) SetMicrophoneGain(value float32) error {
 	return a.state.Audio.SetMicrophoneGain(value)
 }
 
+// SetExclusiveCaptureBufferAdaptive only affects a microphone opened through
+// the exclusive-mode fallback: adaptive grows from 100 up to 200 ms, otherwise 180 ms.
+// The microphone reopens with the new buffer.
+func (a *App) SetExclusiveCaptureBufferAdaptive(value bool) {
+	audio.SetExclusiveCaptureBufferAdaptive(value)
+}
+
+func (a *App) ExclusiveCaptureBufferAdaptive() bool { return audio.ExclusiveCaptureBufferAdaptive() }
+
 func (a *App) SetVADEnabled(value bool) { a.state.Audio.SetVADEnabled(value) }
 
 func (a *App) SetVADMode(value string) error {

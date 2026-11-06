@@ -14,19 +14,22 @@ const version = 1
 
 // Settings contains desktop client preferences that survive application restarts.
 type Settings struct {
-	VoiceUplinkReserveKiB int               `json:"voiceUplinkReserveKiB,omitempty"`
-	DisplayName           string            `json:"displayName"`
-	CaptureDeviceID       string            `json:"captureDeviceId"`
-	PlaybackDeviceID      string            `json:"playbackDeviceId"`
-	Deafened              bool              `json:"deafened"`
-	RNNoiseEnabled        bool              `json:"rnnoiseEnabled"`
-	RNNoiseSensitivity    float32           `json:"rnnoiseSensitivity"`
-	MicrophoneGain        float32           `json:"microphoneGain"`
-	VADEnabled            bool              `json:"vadEnabled"`
-	VADMode               string            `json:"vadMode"`
-	VADSensitivity        float32           `json:"vadSensitivity"`
-	TrustedMediaKeys      map[string]string `json:"trustedMediaKeys,omitempty"`
-	Theme                 string            `json:"theme,omitempty"`
+	VoiceUplinkReserveKiB int     `json:"voiceUplinkReserveKiB,omitempty"`
+	DisplayName           string  `json:"displayName"`
+	CaptureDeviceID       string  `json:"captureDeviceId"`
+	PlaybackDeviceID      string  `json:"playbackDeviceId"`
+	Deafened              bool    `json:"deafened"`
+	RNNoiseEnabled        bool    `json:"rnnoiseEnabled"`
+	RNNoiseSensitivity    float32 `json:"rnnoiseSensitivity"`
+	MicrophoneGain        float32 `json:"microphoneGain"`
+	// ExclusiveCaptureBufferFixed turns off the adaptive WASAPI buffer of the
+	// exclusive-mode microphone fallback; it is then 180 ms. False is adaptive.
+	ExclusiveCaptureBufferFixed bool              `json:"exclusiveCaptureBufferFixed,omitempty"`
+	VADEnabled                  bool              `json:"vadEnabled"`
+	VADMode                     string            `json:"vadMode"`
+	VADSensitivity              float32           `json:"vadSensitivity"`
+	TrustedMediaKeys            map[string]string `json:"trustedMediaKeys,omitempty"`
+	Theme                       string            `json:"theme,omitempty"`
 	// Locale is the interface language: 2–8 lowercase letters, for example ru, en, ky.
 	// Empty means Russian. Unknown values are kept only if they match that shape,
 	// so a new language does not require a settings change. Version stays 1.
@@ -66,13 +69,16 @@ type RecentServer struct {
 
 const (
 	// ThemeSystem is the legacy unset value. The desktop UI treats it as ThemeDark.
-	ThemeSystem  = "system"
-	ThemeLight   = "light"
-	ThemeNeutral = "neutral"
-	ThemeDark    = "dark"
-	ThemeBeige   = "beige"
-	ThemeBrown   = "brown"
-	ThemePurple  = "purple"
+	ThemeSystem = "system"
+	ThemeLight  = "light"
+	ThemeDark   = "dark"
+	ThemeNavy   = "navy"
+	ThemeBeige  = "beige"
+	ThemeBrown  = "brown"
+	ThemePurple = "purple"
+
+	// themeLegacyNeutral was the grey dark theme; the navy one took its place.
+	themeLegacyNeutral = "neutral"
 )
 
 // Notification sound packs. internal/client renders them; this package owns
@@ -260,8 +266,10 @@ func NormalizeLocale(value string) (string, bool) {
 
 func NormalizeTheme(value string) string {
 	switch value {
-	case ThemeLight, ThemeNeutral, ThemeDark, ThemeBeige, ThemeBrown, ThemePurple:
+	case ThemeLight, ThemeDark, ThemeNavy, ThemeBeige, ThemeBrown, ThemePurple:
 		return value
+	case themeLegacyNeutral:
+		return ThemeNavy
 	default:
 		return ThemeSystem
 	}

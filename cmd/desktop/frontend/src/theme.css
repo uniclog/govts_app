@@ -16,6 +16,15 @@
   mountains, pines, clouds, horizon, city, stars, plain, image.
   У встроенных тем сцена с кольцами и мягким свечением. Своя тема сохраняет выбранную подложку.
   Встроенные темы нельзя экспортировать. Файл своей темы — JSON sonoryx-theme.
+
+  Два акцента и их роли одинаковы во всех темах:
+  --accent («Акцент») — голос и связь: говорит, подключено, микрофон включён,
+  демонстрация идёт, успешное действие.
+  --accent-blue («Выделение») — выбор и бренд: выбранный канал, сервер и пункт,
+  переключатели, ползунки, меню, фокус, цель перетаскивания, главная кнопка.
+  --on-accent читается на заливке обоих.
+  Компоненты не проверяют data-theme для цвета: всё, чем темы различаются,
+  задаётся здесь переменными (палитра, --field-bg, --control-*, --stage-*).
 */
 
 :root {
@@ -63,36 +72,50 @@
   --stage-fill: linear-gradient(155deg, var(--card-strong), var(--window) 85%);
   --stage-ridge: var(--card);
   --stage-image: none;
+  /* How far a control lifts off its surface and how strongly a pressed state
+     tints it. The same share of text reads far weaker on a light surface, so
+     light themes raise both instead of restyling the controls. */
+  --control-lift: 3%;
+  --control-state: 12%;
+  /* Participants stage: base surface and the strength of its two corner glows. */
+  --stage-base: var(--card-strong);
+  --stage-tint: 13%;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --window: #f2f0eb;
-  --card: #ffffff;
-  --card-strong: #ece9e2;
-  --line: #e4e1da;
-  --text: #25272b;
-  --muted: #858890;
-  --accent: #2ba97c;
-  --accent-blue: #e56f38;
-  --danger: #db3653;
-  --warning: #b88712;
+  --window: #d1d7dd;
+  --card: #f2f4f7;
+  --card-strong: #e1e6ec;
+  --line: #d4dae2;
+  --text: #1f2630;
+  --muted: #586373;
+  --accent: #21785e;
+  --accent-blue: #3d62a0;
+  --danger: #b8394b;
+  --warning: #875f0f;
   --on-accent: #ffffff;
+  --control-lift: 8%;
+  --control-state: 16%;
+  /* The window is too close to the card here for the default mix to recess a field. */
+  --field-bg: var(--window);
+  --stage-base: color-mix(in srgb, var(--window) 55%, var(--card));
+  --stage-tint: 7%;
 }
 
-:root[data-theme="neutral"] {
+:root[data-theme="navy"] {
   color-scheme: dark;
-  --window: #141416;
-  --card: #1e1e22;
-  --card-strong: #2a2a30;
-  --line: #3e3e46;
-  --text: #ececf1;
-  --muted: #a1a1ab;
-  --accent: #3dccb0;
-  --accent-blue: #6eb6e0;
-  --danger: #f07480;
-  --warning: #e2b56c;
-  --on-accent: #10211c;
+  --window: #0b1426;
+  --card: #121e36;
+  --card-strong: #1b2a48;
+  --line: #2a3d62;
+  --text: #e8eefb;
+  --muted: #94a3c0;
+  --accent: #4cc9f0;
+  --accent-blue: #5b9bff;
+  --danger: #ff6b81;
+  --warning: #f5d06f;
+  --on-accent: #06202b;
 }
 
 :root[data-theme="beige"] {

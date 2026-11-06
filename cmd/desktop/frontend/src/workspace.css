@@ -181,7 +181,7 @@
 .update-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .update-actions a { color: var(--accent-blue); }
 .updates-panel p { margin: 0 0 12px; font-size: 0.8125rem; line-height: 1.45; }
-.updates-panel progress { display: block; width: 100%; margin: 0 0 8px; accent-color: var(--accent); }
+.updates-panel progress { display: block; width: 100%; margin: 0 0 8px; accent-color: var(--accent-blue); }
 .updates-panel small { display: block; margin: 0 0 12px; color: var(--muted); font-size: 0.75rem; }
 .update-dialog { width: min(560px, calc(100vw - 32px)); }
 .update-dialog .settings-card { margin: 0 0 14px; }
@@ -240,12 +240,12 @@
 .link-confirm::backdrop { background: var(--overlay); }
 .media-trust-dialog { max-height: calc(100vh - 32px); overflow-y: auto; }
 .media-trust-dialog code { white-space: pre-wrap; }
-.link-confirm-mark { display: grid; width: 42px; height: 42px; margin: 0 auto 14px; place-items: center; border-radius: 50%; color: var(--accent); background: var(--accent-soft); }
+.link-confirm-mark { display: grid; width: 42px; height: 42px; margin: 0 auto 14px; place-items: center; border-radius: 50%; color: var(--accent-blue); background: var(--info-soft); }
 .link-confirm .link-confirm-mark svg { width: 18px; height: 18px; }
 .link-confirm h2 { margin: 0 0 14px; font-size: 1.05rem; font-weight: 700; line-height: 1.35; }
 .link-confirm-address { margin: 0 0 18px; padding: 10px 12px; border-radius: 10px; background: var(--window); color: var(--text); font-size: 0.8125rem; line-height: 1.45; overflow-wrap: anywhere; text-align: left; }
 .link-confirm .screen-dialog-actions { justify-content: center; }
-.link-confirm :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.link-confirm :focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 3px; }
 .screen-share-dialog::backdrop { background: var(--overlay); }
 .screen-share-dialog h2 { margin: 0 0 10px; font-size: 1.25rem; }
 .screen-share-dialog > p { color: var(--muted); line-height: 1.5; }
@@ -253,8 +253,8 @@
 .screen-share-dialog legend { margin-bottom: 10px; font-weight: 600; }
 .screen-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 .screen-dialog-actions button { padding: 10px 14px; border: 1px solid var(--line); border-radius: 9px; color: var(--text); background: var(--card-strong); cursor: pointer; }
-.screen-dialog-actions .primary-button { color: var(--window); border-color: var(--accent); background: var(--accent); }
-.screen-share-dialog :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.screen-dialog-actions .primary-button { color: var(--on-accent); border-color: var(--accent-blue); background: var(--accent-blue); }
+.screen-share-dialog :focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 3px; }
 .screen-share-dialog button:disabled { cursor: default; opacity: .55; }
 button:disabled { cursor: not-allowed; opacity: .5; }
 .channel-detail { display: block; padding: 15px; border-left: 1px solid var(--line); }
@@ -365,7 +365,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .file-transfer-actions > button { display: grid; place-items: center; width: 23px; height: 26px; padding: 4px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; }
 .file-transfer-actions > button:hover { color: var(--text); background: var(--card); }
 .file-transfer-actions svg { width: 14px; height: 14px; }
-.file-transfer progress { position: absolute; left: 10px; bottom: 3px; width: calc(100% - 20px); height: 2px; accent-color: var(--accent); }
+.file-transfer progress { position: absolute; left: 10px; bottom: 3px; width: calc(100% - 20px); height: 2px; accent-color: var(--accent-blue); }
 .file-transfer.has-error { border-color: var(--danger); }
 .file-transfer.has-error small { color: var(--danger-text); }
 .file-card { display: grid; grid-template-columns: minmax(0, 1fr) 28px; align-items: center; gap: 8px; width: fit-content; max-width: min(380px, 100%); padding: 6px 8px; margin: 4px 0; border: 1px solid var(--line); border-radius: 6px; background: var(--card-strong); white-space: normal; }
@@ -410,10 +410,10 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .file-preview { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; background: #000c; }
 .file-preview .file-preview-photo { display: block; padding: 0; border: 0; border-radius: 0; background: transparent; cursor: zoom-out; }
 .file-preview-photo img { display: block; width: min(90vw, 720px); max-height: 80vh; object-fit: contain; }
-.file-preview-photo:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.file-preview-photo:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 4px; }
 .file-photo-menu { position: fixed; width: 176px; max-width: calc(100vw - 16px); padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--card-strong); box-shadow: 0 8px 28px #0005; }
 .file-photo-menu button { display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 4px; text-align: left; color: var(--text); background: transparent; font-size: .75rem; cursor: pointer; }
-.file-photo-menu button:hover, .file-photo-menu button:focus-visible { background: var(--card); outline: 1px solid var(--accent); }
+.file-photo-menu button:hover, .file-photo-menu button:focus-visible { background: var(--card); outline: 1px solid var(--accent-blue); }
 .file-copy-status { position: absolute; bottom: 24px; max-width: calc(100vw - 32px); padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--card-strong); color: var(--text); font-size: .8125rem; }
 .file-copy-status.is-error { color: var(--danger-text); }
 
@@ -437,7 +437,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .file-admin-field input { display: block; width: 100%; min-width: 0; min-height: 40px; padding: 9px 12px; font-size: .8125rem; }
 .file-admin-permissions { display: flex; flex-wrap: wrap; gap: 14px 24px; padding-top: 2px; }
 .file-admin-check { display: inline-flex; align-items: center; gap: 9px; color: var(--text); font-size: .8125rem; cursor: pointer; }
-.file-admin-check input { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.file-admin-check input { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--accent-blue); }
 .file-admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .admin-account-file-rights { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
 .admin-account-file-rights h4 { margin: 0 0 6px; font-size: .8125rem; }
