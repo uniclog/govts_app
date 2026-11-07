@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -14,6 +15,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/updater"
+	"uniclog.io/sonoryx/internal/appnap"
 	"uniclog.io/sonoryx/internal/apppopup"
 	"uniclog.io/sonoryx/internal/audio"
 	voiceclient "uniclog.io/sonoryx/internal/client"
@@ -21,6 +23,7 @@ import (
 	"uniclog.io/sonoryx/internal/clientsettings"
 	"uniclog.io/sonoryx/internal/clientupdate"
 	"uniclog.io/sonoryx/internal/logging"
+	"uniclog.io/sonoryx/internal/macwebview"
 	wailsui "uniclog.io/sonoryx/internal/ui/wails"
 )
 
@@ -46,6 +49,9 @@ func main() {
 	}
 	defer stopLogging()
 	log.Printf("client starting: version=%s", applicationVersion())
+	if err := appnap.Disable(); err != nil {
+		log.Printf("app nap stays enabled: %v", err)
+	}
 	if slices.Contains(os.Args[1:], audio.SoundLogFlag) {
 		audio.SetSoundLog(true)
 		log.Printf("sound cue trace enabled: flag=%s", audio.SoundLogFlag)
@@ -85,7 +91,10 @@ func main() {
 			Handler: application.AssetFileServerFS(assets),
 		},
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			// The WindowClosing hook decides between quitting and close to tray.
+			// With true, AppKit terminates as soon as the hidden main window was
+			// the last visible one, so close to tray quit the client.
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 		Windows: application.WindowsOptions{
 			WebviewUserDataPath: webviewDataPath,
@@ -116,7 +125,12 @@ func main() {
 	bridgeCtx, cancelBridge := context.WithCancel(context.Background())
 	stopBridge := wailsui.StartEventBridge(bridgeCtx, app, client)
 	stopServerStatus := wailsui.ConfigureServerStatuses(app, service)
-	wailsui.StartHotkeys(service)
+	// Arm hotkeys once the event loop runs: macOS registers Carbon hot keys
+	// on the main thread, whose queue only drains from then on. Off the event
+	// thread, so a slow registration cannot stall startup.
+	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+		go wailsui.StartHotkeys(service)
+	})
 	var shutdownOnce sync.Once
 	shutdown := func() {
 		shutdownOnce.Do(func() {
@@ -153,7 +167,12 @@ func main() {
 		URL:              "/",
 		// Without this the Wails runtime answers every external file drag with "no drop".
 		EnableFileDrop: true,
+		Mac: application.MacWindow{
+			// Stream sound is started from the Start click chain, like on Windows.
+			WebviewPreferences: application.MacWebviewPreferences{EnableAutoplayWithoutUserAction: application.Enabled},
+		},
 	})
+	enableScreenCapture(mainWindow)
 	// Cancelling the close keeps the process alive. The default listener otherwise
 	// destroys the window and quits the client.
 	mainWindow.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
@@ -170,6 +189,10 @@ func main() {
 		app.Quit()
 	})
 	installTray(app, mainWindow, client, service, &quitting)
+	// A Dock click brings back a window hidden to the menu bar, as Mac apps do.
+	app.Event.OnApplicationEvent(events.Mac.ApplicationShouldHandleReopen, func(*application.ApplicationEvent) {
+		showMainWindow(mainWindow)
+	})
 	trackMainWindowVisibility(mainWindow, service)
 	fitWindowToScreen(mainWindow)
 	wailsui.ConfigureHotkeyNotifications(service,
@@ -196,6 +219,21 @@ func main() {
 // handler reads it while shutdown, which runs on the main thread, may be
 // waiting for that handler; a window call would wait for the main thread too.
 var mainWindowHidden atomic.Bool
+
+// enableScreenCapture turns on getDisplayMedia in the main window's WKWebView
+// once the native window exists. Other platforms need nothing.
+func enableScreenCapture(window *application.WebviewWindow) {
+	var once sync.Once
+	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
+		once.Do(func() {
+			application.InvokeSync(func() {
+				if err := macwebview.EnableScreenCapture(window.NativeWindow()); err != nil {
+					log.Printf("screen capture unavailable in webview: %v", err)
+				}
+			})
+		})
+	})
+}
 
 // fitWindowToScreen keeps the default window size inside the work area of a
 // small screen, such as 1280x720 without the taskbar.
@@ -301,7 +339,12 @@ func installTray(app *application.App, window *application.WebviewWindow, client
 			if quitting.Load() {
 				return
 			}
-			refreshCapture()
+			// Enumerating CoreAudio devices next to a running output stream
+			// can drop tens of milliseconds of sound, so macOS refreshes the
+			// capture state only when the microphone item is used.
+			if runtime.GOOS != "darwin" {
+				refreshCapture()
+			}
 			syncMenu()
 		}
 	}()

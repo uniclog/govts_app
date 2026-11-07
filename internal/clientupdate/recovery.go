@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -69,7 +70,14 @@ func readRecoveryAt(path string) (recoveryPlan, error) {
 
 // PrepareRecovery starts a watchdog from a copy of the OLD executable. It is
 // separate from Wails' swap helper and never enters WebView or SingleInstance.
+//
+// It is Windows-only. On macOS the Wails helper itself keeps Sonoryx.app.bak,
+// checks the installed bundle and its signature, relaunches it with open -n
+// and restores the backup when the new app fails validation or launch.
 func PrepareRecovery(version string) (func(), error) {
+	if runtime.GOOS != "windows" {
+		return func() {}, nil
+	}
 	cleanupRetiredRecovery()
 	pointer, err := recoveryPointer()
 	if err != nil {

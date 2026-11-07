@@ -20,7 +20,7 @@ const (
 )
 
 // ErrLoopbackUnsupported means this system cannot capture per process
-// (Windows before process loopback, or another OS).
+// (Windows before process loopback, macOS before 14.2, or another OS).
 var ErrLoopbackUnsupported = errors.New("process loopback capture is unavailable")
 
 var errLoopbackClosed = errors.New("loopback capture stopped")
@@ -137,12 +137,19 @@ func (c *LoopbackCapture) Close() {
 var (
 	loopbackProbeMu sync.Mutex
 	loopbackWorks   bool
+	// loopbackAvailable, when set, answers LoopbackSupported without a test
+	// capture. On macOS a test tap would raise the system audio permission
+	// prompt before the user starts a stream.
+	loopbackAvailable func() bool
 )
 
 // LoopbackSupported probes whether per-process capture can start. Only
 // success is remembered: a failure may be transient (audio service restart),
 // and a failed activation costs milliseconds.
 func LoopbackSupported() bool {
+	if loopbackAvailable != nil {
+		return loopbackAvailable()
+	}
 	loopbackProbeMu.Lock()
 	defer loopbackProbeMu.Unlock()
 	if loopbackWorks {

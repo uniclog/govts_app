@@ -227,10 +227,10 @@ func (s *Service) Restart() error {
 	}
 	s.view.Status = "restarting"
 	s.mu.Unlock()
-	self, err := os.Executable()
+	dir, err := updateTargetDir()
 	if err == nil {
 		var f *os.File
-		f, err = os.CreateTemp(filepath.Dir(self), ".sonoryx-update-permission-*")
+		f, err = os.CreateTemp(dir, ".sonoryx-update-permission-*")
 		if err == nil {
 			path := f.Name()
 			err = f.Close()
@@ -269,10 +269,47 @@ func Stop(s *Service) {
 			return
 		}
 		dir, err := filepath.Abs(filepath.Dir(path))
-		root, rootErr := filepath.Abs(os.TempDir())
-		rel, relErr := filepath.Rel(root, dir)
-		if err == nil && rootErr == nil && relErr == nil && rel == filepath.Base(dir) && strings.HasPrefix(rel, "wails-update-") {
-			_ = os.RemoveAll(dir)
+		if err != nil || !strings.HasPrefix(filepath.Base(dir), "wails-update-") {
+			return
+		}
+		// Wails stages beside the update target (next to the EXE, or next to
+		// Sonoryx.app on macOS); older builds staged in Temp.
+		roots := []string{os.TempDir()}
+		if target, err := updateTargetDir(); err == nil {
+			roots = append(roots, target)
+		}
+		for _, root := range roots {
+			root, rootErr := filepath.Abs(root)
+			if rootErr == nil && filepath.Dir(dir) == root {
+				_ = os.RemoveAll(dir)
+				return
+			}
 		}
 	}
+}
+
+// updateTargetDir is the directory the swap helper writes into: the one that
+// holds the executable, or on macOS the one that holds Sonoryx.app.
+func updateTargetDir() (string, error) {
+	self, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if resolved, err := filepath.EvalSymlinks(self); err == nil {
+		self = resolved
+	}
+	return targetDirFor(self), nil
+}
+
+// targetDirFor mirrors Wails' bundleTarget: the first path component that
+// ends in .app is the bundle the helper replaces.
+func targetDirFor(executable string) string {
+	clean := filepath.Clean(executable)
+	parts := strings.Split(clean, string(filepath.Separator))
+	for i, part := range parts {
+		if i > 0 && strings.HasSuffix(part, ".app") {
+			return filepath.Clean(strings.Join(parts[:i], string(filepath.Separator)) + string(filepath.Separator))
+		}
+	}
+	return filepath.Dir(clean)
 }

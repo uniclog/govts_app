@@ -51,6 +51,14 @@ tasks:
       - cmd: powershell -NoProfile -Command "Remove-Item -Force build/windows/icon.icns -ErrorAction SilentlyContinue"
       - cmd: go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate syso -arch {{ARCH}} -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -out cmd/desktop/rsrc_windows_{{ARCH}}.syso
 
+  darwin:resources:
+    internal: true
+    platforms: [darwin]
+    cmds:
+      - mkdir -p build/darwin
+      - go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate icons -input cmd/desktop/frontend/src/components/logo.png -windowsfilename build/darwin/icon.ico -macfilename build/darwin/icon.icns
+      - rm -f build/darwin/icon.ico
+
   build:dev:
     desc: Build the desktop backend for Wails development mode
     deps: [bindings, version:prepare]
@@ -62,7 +70,9 @@ tasks:
       - cmd: go build -buildvcs=false -gcflags=all="-l" -o bin/{{.BINARY_NAME}}-dev.exe ./cmd/desktop
         platforms: [windows]
       - cmd: go build -buildvcs=false -gcflags=all="-l" -o bin/{{.BINARY_NAME}}-dev ./cmd/desktop
-        platforms: [linux, darwin]
+        platforms: [linux]
+      - cmd: sh scripts/build-rnnoise-macos.sh && CGO_CFLAGS="-I$PWD/.cache/rnnoise-darwin/include" CGO_LDFLAGS="-L$PWD/.cache/rnnoise-darwin/lib -lrnnoise" go build -buildvcs=false -gcflags=all="-l" -o bin/{{.BINARY_NAME}}-dev ./cmd/desktop
+        platforms: [darwin]
 
   build:
     desc: Build the Wails desktop client
@@ -72,7 +82,12 @@ tasks:
       - cmd: go build {{if ne .DEV "true"}}-tags production -trimpath -ldflags="-w -s -H windowsgui"{{else}}-buildvcs=false -gcflags=all="-l"{{end}} -o bin/{{.BINARY_NAME}}.exe ./cmd/desktop
         platforms: [windows]
       - cmd: go build {{if ne .DEV "true"}}-tags production -trimpath -ldflags="-w -s"{{else}}-buildvcs=false -gcflags=all="-l"{{end}} -o bin/{{.BINARY_NAME}} ./cmd/desktop
-        platforms: [linux, darwin]
+        platforms: [linux]
+      # Universal binary in bin/Sonoryx.app: screen sharing sound and the
+      # microphone need a bundle with Info.plist; rnnoise is built from source.
+      - task: darwin:resources
+      - cmd: sh scripts/build-macos-app.sh {{if eq .DEV "true"}}--dev{{end}}
+        platforms: [darwin]
 
   run:
     cmds:

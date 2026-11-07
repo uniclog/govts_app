@@ -23,14 +23,20 @@ func main() {
 	out := flag.String("out", "", "signed manifest destination")
 	packed := flag.String("packed", "", "optional zstd-compressed executable destination, signed in the manifest")
 	legacyOut := flag.String("legacy-out", "", "optional manifest for clients released before the Sonoryx rename")
+	macArchive := flag.String("macos-archive", "", "optional macOS update archive ("+updatemanifest.MacFilename+") to sign")
+	macOut := flag.String("macos-out", "", "signed manifest destination for -macos-archive")
 	flag.Parse()
-	if err := run(*generate, *public, *binary, *version, *out, *packed, *legacyOut); err != nil {
+	if (*macArchive == "") != (*macOut == "") {
+		fmt.Fprintln(os.Stderr, "-macos-archive and -macos-out go together")
+		os.Exit(1)
+	}
+	if err := run(*generate, *public, *binary, *version, *out, *packed, *legacyOut, *macArchive, *macOut); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(generate, public, binary, version, out, packedOut, legacyOut string) error {
+func run(generate, public, binary, version, out, packedOut, legacyOut, macArchive, macOut string) error {
 	if generate != "" {
 		if public == "" {
 			return fmt.Errorf("public-key is required")
@@ -101,10 +107,35 @@ func run(generate, public, binary, version, out, packedOut, legacyOut string) er
 			return err
 		}
 	}
+	if macArchive != "" {
+		if err := signMacArchive(version, macArchive, macOut, key); err != nil {
+			return err
+		}
+	}
 	if packed != nil {
 		if err := os.WriteFile(packedOut, packed, 0644); err != nil {
 			return err
 		}
+	}
+	return os.WriteFile(out, manifest, 0644)
+}
+
+// signMacArchive signs the zipped Sonoryx.app as published. The archive is
+// already compressed, so it has no packed copy.
+func signMacArchive(version, archive, out string, key ed25519.PrivateKey) error {
+	data, err := os.ReadFile(archive)
+	if err != nil {
+		return err
+	}
+	if len(data) < 4 || string(data[:4]) != "PK\x03\x04" || int64(len(data)) > updatemanifest.MaxSize {
+		return fmt.Errorf("invalid macOS archive")
+	}
+	manifest, err := updatemanifest.Sign(version, updatemanifest.MacFilename, data, nil, key)
+	if err != nil {
+		return err
+	}
+	if _, err = updatemanifest.VerifyAs(manifest, key.Public().(ed25519.PublicKey), updatemanifest.MacFilename); err != nil {
+		return fmt.Errorf("generated macOS manifest failed verification: %w", err)
 	}
 	return os.WriteFile(out, manifest, 0644)
 }

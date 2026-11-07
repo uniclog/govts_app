@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleName</key>
+    <string>Sonoryx</string>
+    <key>CFBundleDisplayName</key>
+    <string>Sonoryx</string>
+    <key>CFBundleExecutable</key>
+    <string>Sonoryx</string>
+    <key>CFBundleIdentifier</key>
+    <string>app.sonoryx.desktop</string>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
+    <key>CFBundleVersion</key>
+    <string>@VERSION@</string>
+    <key>CFBundleShortVersionString</key>
+    <string>@VERSION@</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <!-- Voice chat captures the microphone through Core Audio (malgo). -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Sonoryx передаёт ваш голос в голосовой канал.</string>
+    <!-- Stream sound uses a Core Audio process tap (macOS 14.2+). Without this
+         key macOS delivers silence instead of asking for access. -->
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>Sonoryx передаёт звук системы или приложения вместе с демонстрацией экрана.</string>
+</dict>
+</plist>

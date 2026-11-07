@@ -1,8 +1,9 @@
 import {desktopAPI, logDiagnostic} from "../../api";
 
-// Stream sound source, captured natively in Go with WASAPI process loopback:
-// all sound except Sonoryx, or one app. "off" is also used when the server or
-// this Windows cannot carry sound, or no app is picked.
+// Stream sound source, captured natively in Go (WASAPI process loopback on
+// Windows, a Core Audio process tap on macOS): all sound except Sonoryx, or
+// one app. "off" is also used when the server or this system cannot carry
+// sound, or no app is picked.
 export type ScreenAudioSource = "off" | "system" | "app";
 export type ScreenAudioChoice = {source: ScreenAudioSource; pid?: number};
 

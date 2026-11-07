@@ -5,8 +5,8 @@ on:
     tags:
       - 'v*'
 
-# Jobs get only what they need: build reads the source, sign alone sees the
-# update signing key, publish alone may write the release.
+# Jobs get only what they need: build and build-macos read the source, sign
+# alone sees the update signing key, publish alone may write the release.
 permissions:
   contents: read
 
@@ -84,8 +84,64 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  build-macos:
+    # Universal (Apple Silicon + Intel) Sonoryx.app, zipped for download and
+    # for the in-app updater. Signed for updates in the sign job like the EXE;
+    # the bundle itself is ad-hoc code signed (no Apple Developer ID).
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Check release version
+        run: go run ./cmd/release-version -tag "$GITHUB_REF_NAME"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: cmd/desktop/frontend/package-lock.json
+
+      - name: Generate desktop bindings
+        run: go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 generate bindings -d cmd/desktop/frontend/bindings -clean=true -ts -i ./cmd/desktop
+
+      - name: Build desktop frontend
+        run: |
+          npm ci --ignore-scripts --prefix cmd/desktop/frontend
+          npm run build --prefix cmd/desktop/frontend
+
+      - name: Build macOS desktop client
+        run: |
+          mkdir -p build/darwin dist
+          go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 generate icons -input cmd/desktop/frontend/src/components/logo.png -windowsfilename build/darwin/icon.ico -macfilename build/darwin/icon.icns
+          rm -f build/darwin/icon.ico
+          # Builds rnnoise from the pinned xiph release, both architectures,
+          # lipo, Sonoryx.app, Sonoryx-macos.zip and Sonoryx-macos.dmg.
+          sh scripts/build-macos-app.sh --release
+          mv bin/Sonoryx-macos.zip bin/Sonoryx-macos.dmg dist/
+
+      - name: Upload unsigned macOS build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-macos
+          path: |
+            dist/Sonoryx-macos.zip
+            dist/Sonoryx-macos.dmg
+          if-no-files-found: error
+          retention-days: 1
+
   sign:
-    needs: build
+    needs: [build, build-macos]
     runs-on: windows-latest
     # The release environment holds UPDATE_SIGNING_KEY; its protection rules
     # (required reviewers, tag filter) gate every use of the key.
@@ -111,15 +167,21 @@ jobs:
           name: unsigned
           path: dist
 
+      - name: Download unsigned macOS build
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-macos
+          path: dist
+
       - name: Sign desktop update
         env:
           UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: |
-          go run ./cmd/update-sign -binary dist/SRX64.exe -public-key cmd/desktop/update-public-key.txt -out dist/SRX64.exe.signature -packed dist/SRX64.exe.zst -legacy-out dist/signature
+          go run ./cmd/update-sign -binary dist/SRX64.exe -public-key cmd/desktop/update-public-key.txt -out dist/SRX64.exe.signature -packed dist/SRX64.exe.zst -legacy-out dist/signature -macos-archive dist/Sonoryx-macos.zip -macos-out dist/Sonoryx-macos.zip.signature
           if ($LASTEXITCODE -ne 0) { throw 'update signing failed' }
           # Clients released before the Sonoryx rename update from GTS64.exe + signature.
           Copy-Item dist/SRX64.exe dist/GTS64.exe
-          $sums = foreach ($name in 'SRX64.exe', 'SRX64.exe.zst', 'GTS64.exe') {
+          $sums = foreach ($name in 'SRX64.exe', 'SRX64.exe.zst', 'GTS64.exe', 'Sonoryx-macos.zip', 'Sonoryx-macos.dmg') {
             $hash = (Get-FileHash -Algorithm SHA256 "dist/$name").Hash.ToLowerInvariant()
             "$hash  $name"
           }
@@ -159,7 +221,7 @@ jobs:
             gh release create $tag --title $tag --draft --generate-notes --verify-tag
             if ($LASTEXITCODE -ne 0) { throw 'release creation failed' }
           }
-          gh release upload $tag dist/SRX64.exe dist/SRX64.exe.zst dist/SRX64.exe.signature dist/GTS64.exe dist/signature dist/sonoryx-server-linux-amd64 dist/SHA256SUMS --clobber
+          gh release upload $tag dist/SRX64.exe dist/SRX64.exe.zst dist/SRX64.exe.signature dist/GTS64.exe dist/signature dist/Sonoryx-macos.zip dist/Sonoryx-macos.zip.signature dist/Sonoryx-macos.dmg dist/sonoryx-server-linux-amd64 dist/SHA256SUMS --clobber
           if ($LASTEXITCODE -ne 0) { throw 'release asset upload failed' }
           gh release edit $tag --title $tag --draft=false
           if ($LASTEXITCODE -ne 0) { throw 'release publication failed' }

@@ -4,6 +4,7 @@ import {desktopAPI, type Hotkey, type HotkeyAction} from "../../api";
 import {errorCode, errorText} from "../../locales";
 import {useLocale} from "../../locales/Locale";
 import {CaptureReleases} from "./captureReleases";
+import {hotkeyLabel, isMacPlatform, macReservedHotkey} from "./hotkeyLabels";
 
 // event.code names the physical key, so the layout and Caps Lock do not matter.
 function physicalKey(code: string): string | null {
@@ -15,6 +16,8 @@ function physicalKey(code: string): string | null {
 }
 
 const modifierCodes = /^(Control|Alt|Shift|Meta|OS)(Left|Right)?$|^CapsLock$/;
+
+const isMac = isMacPlatform(navigator.platform, navigator.userAgent);
 
 type CaptureSession = {
     action: HotkeyAction;
@@ -183,10 +186,17 @@ export function HotkeySettings() {
             return;
         }
         setMessage(null);
-        session.pending = {code: event.code, shortcut: [
+        const shortcut = [
             event.ctrlKey && "Ctrl", event.altKey && "Alt",
             event.shiftKey && "Shift", event.metaKey && "Win", key,
-        ].filter(Boolean).join("+")};
+        ].filter(Boolean).join("+");
+        if (isMac && macReservedHotkey(shortcut)) {
+            setMessage({action, text: errorText(errorCode("hotkey-key-reserved"), m)});
+            return;
+        }
+        session.pending = {code: event.code, shortcut};
+        // macOS sends no keyup for other keys while Command is held.
+        if (isMac && event.metaKey) void finishCapture(event);
     };
     const finishCapture = async (event: KeyboardEvent<HTMLButtonElement>) => {
         const session = captureSession.current;
@@ -215,7 +225,7 @@ export function HotkeySettings() {
         if (mounted.current && !captureSession.current) await load();
     };
     return <section className="settings-card"><h3>{m.settings.hotkeys}</h3>
-        <p className="device-hint">{m.settings.hotkeysHint}</p>
+        <p className="device-hint">{isMac ? m.settings.hotkeysHintMac : m.settings.hotkeysHint}</p>
         {releaseError && <p className="device-hint monitor-warning" role="alert">{m.errors["hotkey-release-failed"]}</p>}
         {loadError && <p className="device-hint monitor-warning" role="alert">{m.settings.hotkeysLoadFailed} <button type="button" className="text-button" onClick={() => void load()}>{m.settings.retry}</button></p>}
         <div className="setting-toggle">
@@ -240,11 +250,16 @@ export function HotkeySettings() {
                     <button type="button" className={`monitor-button hotkey-key ${active ? "active" : ""}`}
                             aria-pressed={active} aria-label={m.settings.hotkeyEdit(m.settings.hotkeyActions[hotkey.action])}
                             aria-busy={active && !editing.ready}
-                            onClick={(event) => { void beginCapture(hotkey.action, event.currentTarget); }}
+                            onClick={(event) => {
+                                // WebKit does not focus a button on click; capture
+                                // listens on the focused button.
+                                event.currentTarget.focus();
+                                void beginCapture(hotkey.action, event.currentTarget);
+                            }}
                             onBlur={() => { if (captureSession.current?.action === hotkey.action) void cancelCapture().catch(reportReleaseFailure); }}
                             onKeyDown={(event) => { if (active) capture(hotkey.action, event); }}
                             onKeyUp={(event) => { if (active) void finishCapture(event); }}>
-                        {active ? "…" : hotkey.key.split("+").join(" + ")}
+                        {active ? "…" : hotkeyLabel(hotkey.key, isMac)}
                     </button>
                 </span>
             </div>;

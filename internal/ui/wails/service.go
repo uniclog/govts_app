@@ -338,6 +338,11 @@ func (s *Service) OpenScreenWindow(streamID, ownerName string) error {
 		MinHeight:        420,
 		BackgroundColour: application.NewRGB(8, 12, 20),
 		URL:              "/?screen=" + url.QueryEscape(streamID) + "&owner=" + url.QueryEscape(ownerName) + "&nonce=" + strconv.FormatInt(time.Now().UnixNano(), 10),
+		// The viewer opens without a click inside it; its stream sound must
+		// start anyway (WebView2 gets the same through a browser argument).
+		Mac: application.MacWindow{
+			WebviewPreferences: application.MacWebviewPreferences{EnableAutoplayWithoutUserAction: application.Enabled},
+		},
 	})
 	return nil
 }

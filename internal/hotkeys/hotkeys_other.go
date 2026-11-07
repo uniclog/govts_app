@@ -1,8 +1,8 @@
-//go:build !windows
+//go:build !windows && !darwin
 
 package hotkeys
 
-// Global hotkeys are implemented only on Windows; elsewhere they are ignored.
+// Global hotkeys are implemented on Windows and macOS; elsewhere they are ignored.
 type noopBackend struct{}
 
 func startBackend(func(action string)) (backend, error) { return noopBackend{}, nil }

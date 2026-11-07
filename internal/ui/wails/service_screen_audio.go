@@ -12,7 +12,8 @@ import (
 	"uniclog.io/sonoryx/internal/audio"
 )
 
-// Stream sound bridge: Go captures PCM with WASAPI process loopback and the
+// Stream sound bridge: Go captures PCM (WASAPI process loopback on Windows,
+// a Core Audio process tap on macOS) and the
 // publishing WebView pulls it with ReadScreenAudio, turns it into a WebRTC
 // track and sends it next to the screen video. One capture runs at a time.
 

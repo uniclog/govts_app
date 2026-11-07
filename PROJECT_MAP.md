@@ -173,6 +173,12 @@ React screenMedia / ScreenViews
   проверкой сохранённого отпечатка сертификата. Первое доверие к
   самоподписанному ключу подтверждает пользователь (TOFU); настройка
   хранится в `internal/clientsettings/`.
+- Звук демонстрации захватывается нативно: `internal/audio/loopback_windows.go`
+  (WASAPI process loopback) и `loopback_darwin.go`/`.m` (Core Audio process
+  tap, macOS 14.2+). На macOS `internal/macwebview/` включает
+  `navigator.mediaDevices` в WKWebView главного окна, а `scripts/package-macos.sh`
+  собирает `bin/Sonoryx.app` с `build/darwin/Info.plist` — без бандла macOS
+  отдаёт tap тишину.
 
 По умолчанию сервер слушает голосовой UDP-порт `9000`, HTTPS signaling на
 `9002` и использует UDP `20000–20100` для WebRTC. Флаги
@@ -192,6 +198,16 @@ WebRTC требуется корректный `-media-advertised-ip`.
   `src/*.css`.
 - `features/updates/` — кнопка доступного обновления в шапке и модальное окно
   загрузки/установки. Раздела обновлений на странице настроек нет.
+- Глобальные горячие клавиши: `internal/hotkeys/` (Windows — low-level
+  keyboard hook, macOS — Carbon `RegisterEventHotKey` в
+  `hotkeys_darwin.go`/`.m`, регистрация на главном потоке с тайм-аутом),
+  сервис — `internal/ui/wails/service_hotkeys.go`, запись сочетаний —
+  `features/settings/HotkeySettings.tsx`. Сочетания хранятся как
+  Ctrl/Alt/Shift/Win; на Mac это Control/Option/Shift/Command (⌃⌥⇧⌘ в UI).
+  На macOS ⌘Q/⌘W/⌘H/⌘M (и ⌘⇧Q/⌘⇧W) не назначаются: их держат меню.
+- macOS-особенности процесса: `internal/appnap/` отключает App Nap (иначе
+  такты микшера растягиваются в фоне), `ApplicationShouldTerminateAfterLastWindowClosed`
+  выключен ради закрытия в трей, клик по Dock возвращает окно (`cmd/desktop/main.go`).
 - Сгенерированные Wails bindings находятся в
   `cmd/desktop/frontend/bindings/uniclog.io/sonoryx/`. Их следует
   пересоздавать после изменения публичных методов или DTO Wails-сервиса,
@@ -210,7 +226,10 @@ WebRTC требуется корректный `-media-advertised-ip`.
   проверки. `provider.go`
   выбирает стабильный Windows amd64 asset и обязательно проверяет подписанный
   манифест; если в манифесте и релизе есть сжатый `SRX64.exe.zst`, качает его
-  и распаковывает на лету, иначе — обычный `SRX64.exe`.
+  и распаковывает на лету, иначе — обычный `SRX64.exe`. На macOS
+  (`releaseTargetFor`) — `Sonoryx-macos.zip` с универсальным `Sonoryx.app` и
+  манифест `Sonoryx-macos.zip.signature`; бандл подменяет и при сбое
+  откатывает helper Wails, watchdog из `recovery.go` там не запускается.
   `internal/updatemanifest/` задаёт формат и Ed25519-проверку.
 - `internal/clientupdate/recovery.go` сохраняет прежний EXE и следит за
   подтверждением запуска нового интерфейса с пределом 90 секунд. Windows API
@@ -233,8 +252,13 @@ WebRTC требуется корректный `-media-advertised-ip`.
 - `.github/workflows/test.yml` запускает проверки Go в CI.
   `.github/workflows/release.yml` срабатывает на тег `vX.Y.Z`, сверяет
   его с `clientVersion` в `version/release.json`, собирает Windows desktop и Linux
-  server, подписывает desktop через secret `UPDATE_SIGNING_KEY`, загружает
-  бинарники, `SRX64.exe.zst`, `SRX64.exe.signature`, копию `GTS64.exe` с
+  server, а job `build-macos` — универсальный `Sonoryx.app`
+  (`scripts/build-macos-app.sh`; rnnoise из исходников —
+  `scripts/build-rnnoise-macos.sh`). Затем подписывает desktop и macOS-архив
+  через secret `UPDATE_SIGNING_KEY`, загружает
+  бинарники, `SRX64.exe.zst`, `SRX64.exe.signature`, `Sonoryx-macos.zip` с
+  `Sonoryx-macos.zip.signature`, `Sonoryx-macos.dmg` для ручной установки
+  (обновления берут только zip), копию `GTS64.exe` с
   `signature` для старых клиентов и `SHA256SUMS` в draft и затем публикует релиз.
   Уже опубликованный релиз под тем же тегом не заменяется.
 - `internal/appversion/` разбирает и сравнивает версии, проверяет параметры

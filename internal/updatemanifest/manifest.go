@@ -23,6 +23,13 @@ const LegacyAssetName = "signature"
 // executable stays in the release for clients that predate compression.
 const PackedFilename = Filename + ".zst"
 
+// MacFilename is the macOS release and update archive: a zip with the
+// universal Sonoryx.app at its root, created by ditto --keepParent. The
+// manifest signs the archive bytes; the Wails updater unpacks it and swaps
+// the bundle. MacAssetName is its signed manifest.
+const MacFilename = "Sonoryx-macos.zip"
+const MacAssetName = MacFilename + ".signature"
+
 // PackedWindow is the zstd window used to pack the executable; clients
 // refuse archives that need more decoder memory than this.
 const PackedWindow = 32 << 20

@@ -95,8 +95,9 @@ func describeRequestError(err error) error {
 }
 
 func (p *provider) Check(ctx context.Context, req updater.CheckRequest) (*updater.Release, error) {
-	if req.Platform != "windows" || req.Arch != "amd64" {
-		return nil, errors.New("автообновление доступно для Windows amd64")
+	target, ok := releaseTargetFor(req.Platform, req.Arch)
+	if !ok {
+		return nil, errors.New("автообновление доступно для Windows amd64 и macOS")
 	}
 	response, err := p.get(ctx, "https://api.github.com/repos/"+repository+"/releases/latest")
 	if err != nil {
@@ -148,11 +149,11 @@ func (p *provider) Check(ctx context.Context, req updater.CheckRequest) (*update
 			continue
 		}
 		switch asset.Name {
-		case updatemanifest.Filename:
+		case target.filename:
 			binaryURL, size = asset.URL, asset.Size
-		case updatemanifest.PackedFilename:
+		case target.packed:
 			packedURL, packedSize = asset.URL, asset.Size
-		case updatemanifest.AssetName:
+		case target.manifest:
 			manifestURL = asset.URL
 		}
 	}
@@ -171,7 +172,7 @@ func (p *provider) Check(ctx context.Context, req updater.CheckRequest) (*update
 	if err != nil || len(data) > 64<<10 {
 		return nil, errors.New("неверный размер манифеста")
 	}
-	m, err := updatemanifest.Verify(data, p.key)
+	m, err := updatemanifest.VerifyAs(data, p.key, target.filename)
 	if err != nil {
 		return nil, err
 	}
@@ -179,14 +180,32 @@ func (p *provider) Check(ctx context.Context, req updater.CheckRequest) (*update
 		return nil, errors.New("подписанные данные не совпадают с релизом")
 	}
 	r := &updater.Release{Version: version, Name: "Sonoryx " + version, Notes: release.Body,
-		Artifact:     updater.Artifact{Filename: m.Filename, Filetype: "exe", Size: m.Size, Platform: "windows", Arch: "amd64"},
+		Artifact:     updater.Artifact{Filename: m.Filename, Filetype: target.filetype, Size: m.Size, Platform: req.Platform, Arch: req.Arch},
 		Verification: &updater.Verification{DigestAlgo: "sha256", Digest: m.Digest, SignatureAlgo: "ed25519", Signature: m.Signature},
 		Metadata:     map[string]any{"url": binaryURL, "minServerVersion": m.MinServerVersion}}
-	if m.Packed != nil && packedURL != "" && packedSize == m.Packed.Size {
+	if target.packed != "" && m.Packed != nil && packedURL != "" && packedSize == m.Packed.Size {
 		r.Metadata["packed"] = packedAsset{url: packedURL, size: m.Packed.Size, digest: m.Packed.Digest}
 	}
 	p.cached, p.etag = r, response.Header.Get("ETag")
 	return r, nil
+}
+
+// releaseTarget names the release assets one platform updates from.
+type releaseTarget struct {
+	filename, packed, manifest, filetype string
+}
+
+// releaseTargetFor picks the assets for the running client. Windows updates
+// the executable (preferring its zstd copy); macOS updates the universal
+// Sonoryx.app from a zip, which the Wails updater unpacks and swaps in.
+func releaseTargetFor(platform, arch string) (releaseTarget, bool) {
+	switch {
+	case platform == "windows" && arch == "amd64":
+		return releaseTarget{updatemanifest.Filename, updatemanifest.PackedFilename, updatemanifest.AssetName, "exe"}, true
+	case platform == "darwin" && (arch == "arm64" || arch == "amd64"):
+		return releaseTarget{filename: updatemanifest.MacFilename, manifest: updatemanifest.MacAssetName, filetype: "zip"}, true
+	}
+	return releaseTarget{}, false
 }
 
 // packedAsset is the signed compressed executable selected by Check.
