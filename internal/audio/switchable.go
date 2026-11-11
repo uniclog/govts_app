@@ -19,6 +19,12 @@ type exclusiveCapture interface {
 	Exclusive() bool
 }
 
+// exclusiveBuffered reports the buffer an exclusive stream opened with, so a
+// changed ExclusiveCaptureBufferMS can reopen it.
+type exclusiveBuffered interface {
+	ExclusiveBufferMS() int
+}
+
 type SwitchableRecorder struct {
 	config CodecConfig
 
@@ -77,6 +83,9 @@ func (r *SwitchableRecorder) Read(samples []int16) (int, error) {
 		generation := r.generation
 		r.mu.Unlock()
 
+		if r.reopenForBuffer(recorder, generation) {
+			continue
+		}
 		n, err := recorder.Read(samples)
 		if err == nil {
 			return n, nil
@@ -104,6 +113,53 @@ func (r *SwitchableRecorder) Read(samples []int16) (int, error) {
 			handler(false)
 		}
 	}
+}
+
+// reopenForBuffer reopens an exclusive device whose buffer differs from the
+// current ExclusiveCaptureBufferMS. The endpoint admits one exclusive stream,
+// so the old device is closed before the new one opens. It reports whether the
+// caller must pick up the recorder again.
+func (r *SwitchableRecorder) reopenForBuffer(device captureDevice, generation uint64) bool {
+	held, ok := device.(exclusiveBuffered)
+	if !ok || held.ExclusiveBufferMS() == 0 || held.ExclusiveBufferMS() == ExclusiveCaptureBufferMS() {
+		return false
+	}
+	r.mu.Lock()
+	if r.closed || r.generation != generation {
+		r.mu.Unlock()
+		return true
+	}
+	config, deviceID, open := r.config, r.deviceID, r.open
+	r.recorder = nil
+	r.generation++
+	handler := r.onAvailability
+	r.mu.Unlock()
+	_ = device.Close()
+
+	next, err := open(config, deviceID)
+	r.mu.Lock()
+	if r.closed || r.recorder != nil {
+		// Closed or switched to another device meanwhile.
+		r.mu.Unlock()
+		if next != nil {
+			_ = next.Close()
+		}
+		return true
+	}
+	if err != nil {
+		r.mu.Unlock()
+		log.Printf("capture reopen for exclusive buffer failed: device=%q buffer_ms=%d error=%v", deviceID, ExclusiveCaptureBufferMS(), err)
+		if handler != nil {
+			handler(false)
+		}
+		return true
+	}
+	r.recorder = next
+	r.generation++
+	r.cond.Broadcast()
+	r.mu.Unlock()
+	log.Printf("capture reopened for exclusive buffer: device=%q buffer_ms=%d", deviceID, ExclusiveCaptureBufferMS())
+	return true
 }
 
 func (r *SwitchableRecorder) Switch(deviceID string) error {

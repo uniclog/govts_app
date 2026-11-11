@@ -425,8 +425,8 @@ export const en = {
         output: "Output device",
         deafen: "Deafen",
         deafenHint: "Incoming voice is still processed, but not played.",
-        forceMotion: "Animations even when disabled in Windows",
-        forceMotionHint: "The app plays animations regardless of the system setting. The Windows setting itself does not change.",
+        reduceMotion: "Turn off animations",
+        reduceMotionHint: "Removes animations and smooth transitions in the app. The Windows setting does not affect the app.",
         rememberVolumes: "Remember participant volume",
         rememberVolumesHint: "Volume and Mute are saved for your account on this server and applied when the participant comes back.",
         tray: "Close to tray",
@@ -446,8 +446,8 @@ export const en = {
     theme: {
         names: {
             light: "Light",
-            neutral: "Dark",
-            dark: "Navy",
+            dark: "Dark",
+            navy: "Navy",
             beige: "Beige",
             brown: "Brown",
             purple: "Purple",

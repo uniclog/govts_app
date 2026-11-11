@@ -9,30 +9,31 @@ import (
 	"github.com/gen2brain/malgo"
 )
 
-// openMalgoStream also reports whether the stream holds the endpoint in
-// exclusive mode, so a device switch knows it must release it first.
-func openMalgoStream(kind malgo.DeviceType, codec CodecConfig, deviceID string, callbacks malgo.DeviceCallbacks) (*malgo.AllocatedContext, *malgo.Device, bool, error) {
+// openMalgoStream also reports the buffer of an exclusive-mode stream in
+// milliseconds, or 0 for a shared one. A device switch must release an
+// exclusive endpoint first, and a buffer change reopens it.
+func openMalgoStream(kind malgo.DeviceType, codec CodecConfig, deviceID string, callbacks malgo.DeviceCallbacks) (*malgo.AllocatedContext, *malgo.Device, int, error) {
 	var context *malgo.AllocatedContext
 	var device *malgo.Device
-	var exclusive bool
+	var exclusiveMS int
 	var err error
 	withAudioThread(func() {
-		context, device, exclusive, err = openMalgoStreamOnThread(kind, codec, deviceID, callbacks)
+		context, device, exclusiveMS, err = openMalgoStreamOnThread(kind, codec, deviceID, callbacks)
 	})
-	return context, device, exclusive, err
+	return context, device, exclusiveMS, err
 }
 
-func openMalgoStreamOnThread(kind malgo.DeviceType, codec CodecConfig, deviceID string, callbacks malgo.DeviceCallbacks) (*malgo.AllocatedContext, *malgo.Device, bool, error) {
-	context, device, err := startMalgoDevice(kind, codec, deviceID, false, malgo.Shared, callbacks)
+func openMalgoStreamOnThread(kind malgo.DeviceType, codec CodecConfig, deviceID string, callbacks malgo.DeviceCallbacks) (*malgo.AllocatedContext, *malgo.Device, int, error) {
+	context, device, err := startMalgoDevice(kind, codec, deviceID, false, malgo.Shared, 0, callbacks)
 	if err == nil {
-		return context, device, false, nil
+		return context, device, 0, nil
 	}
 	first := err
 	log.Printf("audio device open failed: kind=%d device=%q error=%v", kind, deviceID, err)
 
-	context, device, err = startMalgoDevice(kind, codec, deviceID, true, malgo.Shared, callbacks)
+	context, device, err = startMalgoDevice(kind, codec, deviceID, true, malgo.Shared, 0, callbacks)
 	if err == nil {
-		return context, device, false, nil
+		return context, device, 0, nil
 	}
 	log.Printf("audio device native-format open failed: kind=%d device=%q error=%v", kind, deviceID, err)
 	sharedErr := errors.Join(first, err)
@@ -40,14 +41,14 @@ func openMalgoStreamOnThread(kind malgo.DeviceType, codec CodecConfig, deviceID 
 	// Remote Desktop exposes "Remote Audio" as the system default. Opening that
 	// endpoint by id is rejected, while the default endpoint plays through RDP.
 	if deviceID != "" && deviceIsDefault(kind, deviceID) {
-		context, device, err = startMalgoDevice(kind, codec, "", false, malgo.Shared, callbacks)
+		context, device, err = startMalgoDevice(kind, codec, "", false, malgo.Shared, 0, callbacks)
 		if err == nil {
-			return context, device, false, nil
+			return context, device, 0, nil
 		}
 		log.Printf("default audio device open failed: kind=%d error=%v", kind, err)
-		context, device, err = startMalgoDevice(kind, codec, "", true, malgo.Shared, callbacks)
+		context, device, err = startMalgoDevice(kind, codec, "", true, malgo.Shared, 0, callbacks)
 		if err == nil {
-			return context, device, false, nil
+			return context, device, 0, nil
 		}
 		log.Printf("default audio device native-format open failed: kind=%d error=%v", kind, err)
 	}
@@ -55,15 +56,16 @@ func openMalgoStreamOnThread(kind malgo.DeviceType, codec CodecConfig, deviceID 
 	// shared mode with E_INVALIDARG, but accept PCM in exclusive mode. Keep the
 	// selected endpoint and only try this after the shared-mode workarounds fail.
 	if shouldTryExclusiveCapture(runtime.GOOS, kind, sharedErr) {
-		context, device, err = startMalgoDevice(kind, codec, deviceID, true, malgo.Exclusive, callbacks)
+		bufferMS := ExclusiveCaptureBufferMS()
+		context, device, err = startMalgoDevice(kind, codec, deviceID, true, malgo.Exclusive, bufferMS, callbacks)
 		if err == nil {
-			log.Printf("capture device opened in exclusive fallback: device=%q internal_format=%d internal_channels=%d internal_rate=%d", deviceID, device.CaptureInternalFormat(), device.CaptureInternalChannels(), device.CaptureInternalSampleRate())
-			return context, device, true, nil
+			log.Printf("capture device opened in exclusive fallback: device=%q buffer_ms=%d internal_format=%d internal_channels=%d internal_rate=%d", deviceID, bufferMS, device.CaptureInternalFormat(), device.CaptureInternalChannels(), device.CaptureInternalSampleRate())
+			return context, device, bufferMS, nil
 		}
-		log.Printf("capture device exclusive fallback failed: device=%q error=%v", deviceID, err)
-		return nil, nil, false, errors.Join(sharedErr, fmt.Errorf("exclusive capture fallback: %w", err))
+		log.Printf("capture device exclusive fallback failed: device=%q buffer_ms=%d error=%v", deviceID, bufferMS, err)
+		return nil, nil, 0, errors.Join(sharedErr, fmt.Errorf("exclusive capture fallback: %w", err))
 	}
-	return nil, nil, false, first
+	return nil, nil, 0, first
 }
 
 // shouldTryExclusiveCapture limits the exclusive fallback to Windows capture
@@ -73,7 +75,7 @@ func shouldTryExclusiveCapture(goos string, kind malgo.DeviceType, sharedErr err
 	return goos == "windows" && kind == malgo.Capture && errors.Is(sharedErr, malgo.ErrInvalidArgs)
 }
 
-func startMalgoDevice(kind malgo.DeviceType, codec CodecConfig, deviceID string, native bool, shareMode malgo.ShareMode, callbacks malgo.DeviceCallbacks) (*malgo.AllocatedContext, *malgo.Device, error) {
+func startMalgoDevice(kind malgo.DeviceType, codec CodecConfig, deviceID string, native bool, shareMode malgo.ShareMode, exclusiveMS int, callbacks malgo.DeviceCallbacks) (*malgo.AllocatedContext, *malgo.Device, error) {
 	label := "playback"
 	if kind == malgo.Capture {
 		label = "capture"
@@ -113,9 +115,11 @@ func startMalgoDevice(kind malgo.DeviceType, codec CodecConfig, deviceID string,
 	}
 	if shareMode == malgo.Exclusive {
 		// miniaudio sizes an exclusive buffer as period * periods and gets one
-		// event per buffer. The default three periods would deliver 60 ms
-		// bursts; one period keeps capture at the 20 ms frame cadence.
-		deviceConfig.Periods = 1
+		// event per buffer, so the buffer is also how late the capture thread
+		// may wake before the device overwrites unread audio. A single 20 ms
+		// period lost audio on fully loaded CPUs. The recorder paces the
+		// resulting bursts back to one frame per 20 ms.
+		deviceConfig.Periods = uint32(max(1, exclusiveMS/ExclusiveCaptureBufferStepMS))
 	}
 	releaseDeviceID, err := configureDeviceID(&target.DeviceID, deviceID)
 	if err != nil {

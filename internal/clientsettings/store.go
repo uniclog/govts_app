@@ -66,13 +66,16 @@ type RecentServer struct {
 
 const (
 	// ThemeSystem is the legacy unset value. The desktop UI treats it as ThemeDark.
-	ThemeSystem  = "system"
-	ThemeLight   = "light"
-	ThemeNeutral = "neutral"
-	ThemeDark    = "dark"
-	ThemeBeige   = "beige"
-	ThemeBrown   = "brown"
-	ThemePurple  = "purple"
+	ThemeSystem = "system"
+	ThemeLight  = "light"
+	ThemeDark   = "dark"
+	ThemeNavy   = "navy"
+	ThemeBeige  = "beige"
+	ThemeBrown  = "brown"
+	ThemePurple = "purple"
+
+	// themeLegacyNeutral was the grey dark theme; the navy one took its place.
+	themeLegacyNeutral = "neutral"
 )
 
 // Notification sound packs. internal/client renders them; this package owns
@@ -260,8 +263,10 @@ func NormalizeLocale(value string) (string, bool) {
 
 func NormalizeTheme(value string) string {
 	switch value {
-	case ThemeLight, ThemeNeutral, ThemeDark, ThemeBeige, ThemeBrown, ThemePurple:
+	case ThemeLight, ThemeDark, ThemeNavy, ThemeBeige, ThemeBrown, ThemePurple:
 		return value
+	case themeLegacyNeutral:
+		return ThemeNavy
 	default:
 		return ThemeSystem
 	}
