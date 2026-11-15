@@ -362,7 +362,10 @@ func JitterLoop(
 			return ctx.Err()
 		case <-changes:
 			buffers.Prune(state)
-		case now := <-ticker.C:
+		case <-ticker.C:
+			// A queued ticker timestamp predates a scheduler/decoder stall.
+			// Use the actual consumer time for both recovery and deadlines.
+			now := time.Now()
 			buffers.Prune(state)
 			buffers.RemoveInactive(now, DefaultStreamIdleTimeout)
 			if err := sendOrderedFrames(ctx, orderedCh, buffers.TickAt(now)); err != nil {

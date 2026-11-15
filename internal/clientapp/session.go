@@ -31,10 +31,12 @@ func runSession(parent context.Context, conn *udp.ClientPacketConn, state *voice
 	oldSnapshot := state.Snapshot()
 	audioCh := make(chan audio.Frame)
 	pcmCh := make(chan audio.PCMFrame)
-	encodedInCh := make(chan audio.MediaFrame)
-	orderedInCh := make(chan audio.MediaFrame)
+	// Small bounded queues keep a short decoder/mixer stall from immediately
+	// blocking UDP reads and the playout clock on slower computers.
+	encodedInCh := make(chan audio.MediaFrame, 8)
+	orderedInCh := make(chan audio.MediaFrame, 4)
 	controlCh := make(chan protocol.VoicePacket, 16)
-	decodedCh := make(chan audio.MediaPCMFrame)
+	decodedCh := make(chan audio.MediaPCMFrame, 4)
 	pcmOutCh := make(chan audio.PCMFrame)
 	codecConfig := clientAudioConfig()
 	encoder, err := audio.NewOpusEncoder(codecConfig)
