@@ -3,7 +3,7 @@ module uniclog.io/sonoryx
 go 1.27.1
 
 require (
-	github.com/MarcosTypeAP/go-rnnoise v1.1.0
+	github.com/VoiceBlender/rnnoise-go v0.3.0
 	github.com/gen2brain/malgo v0.11.26
 	github.com/klauspost/compress v1.20.3
 	github.com/ncruces/go-sqlite3 v0.35.6

@@ -1,5 +1,5 @@
-github.com/MarcosTypeAP/go-rnnoise v1.1.0 h1:5FR9z/DPv4A3IzyTsLeINWk8dgDWh9xggQyYFv2XnLw=
-github.com/MarcosTypeAP/go-rnnoise v1.1.0/go.mod h1:bOtQERNhfI+s9v0gs0Rt3WfFUFPS+CfqDjLtzzgMKCc=
+github.com/VoiceBlender/rnnoise-go v0.3.0 h1:X2MK3k6jmStDRuHl7o5muVRDPQtW9lUHEZF9edFxXxU=
+github.com/VoiceBlender/rnnoise-go v0.3.0/go.mod h1:BUtrncDe1lkAL0Hu5bWCLWxztywbBaRVwm4QKju+oxM=
 github.com/coder/websocket v1.8.15 h1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=
 github.com/coder/websocket v1.8.15/go.mod h1:NX3SzP+inril6yawo5CQXx8+fk145lPDC6pumgx0mVg=
 github.com/ebitengine/purego v0.11.1 h1:2zpWRSQNVKN4eKsKO9eM1ILDgWfYMY9GwqRmK6XeQ/0=

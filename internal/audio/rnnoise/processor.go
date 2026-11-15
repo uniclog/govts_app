@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"math"
 
-	lib "github.com/MarcosTypeAP/go-rnnoise"
+	lib "github.com/VoiceBlender/rnnoise-go"
+	"github.com/VoiceBlender/rnnoise-go/model"
 
 	"uniclog.io/sonoryx/internal/audio"
 )
 
 const (
 	SampleRate = 48000
-	FrameSize  = lib.FrameSize
+	FrameSize  = SampleRate / 100
 )
 
 var ErrClosed = errors.New("RNNoise processor is closed")
@@ -22,7 +23,7 @@ var _ audio.PCMFilter = (*Processor)(nil)
 // Processor applies the built-in RNNoise model to one mono 48 kHz PCM stream.
 // It must be used sequentially because the model keeps history between frames.
 type Processor struct {
-	state      *lib.DenoiseState
+	state      *lib.Denoiser
 	frame      []float32
 	settings   Settings
 	needsReset bool
@@ -45,11 +46,19 @@ func New(settings ...Settings) (*Processor, error) {
 }
 
 func (p *Processor) Reset() error {
-	state, err := lib.New(nil)
-	if err != nil {
-		return fmt.Errorf("initialize RNNoise: %w", err)
+	if p.state != nil {
+		p.state.Reset()
+	} else {
+		weights, err := model.Load()
+		if err != nil {
+			return fmt.Errorf("load RNNoise model: %w", err)
+		}
+		state, err := lib.New(lib.Options{SampleRate: SampleRate, Model: weights})
+		if err != nil {
+			return fmt.Errorf("initialize RNNoise: %w", err)
+		}
+		p.state = state
 	}
-	p.state = state
 	p.needsReset = false
 	if len(p.frame) != FrameSize {
 		p.frame = make([]float32, FrameSize)
@@ -82,7 +91,9 @@ func (p *Processor) Process(samples []int16) error {
 		for i := range FrameSize {
 			p.frame[i] = float32(samples[offset+i])
 		}
-		p.state.ProcessFrame(p.frame, p.frame)
+		if _, err := p.state.Process(p.frame, p.frame); err != nil {
+			return fmt.Errorf("process RNNoise frame: %w", err)
+		}
 		strength := float32(1)
 		if p.settings != nil {
 			strength = p.settings.RNNoiseSensitivity()
