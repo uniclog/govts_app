@@ -1,9 +1,8 @@
 /* Shared visual language for settings, administration, dialogs and popovers. */
 :root {
-  --menu-accent: var(--accent);
+  --menu-accent: var(--accent-blue);
   --menu-shadow: 0 18px 48px color-mix(in srgb, var(--shadow) 28%, transparent);
 }
-:root:is([data-theme="dark"], [data-theme="light"]) { --menu-accent: var(--accent-blue); }
 :root:not([data-theme="custom"]) :is(.settings-window, .screen-share-dialog, .link-confirm, .participant-menu, .server-actions-menu, .chat-context-menu, .file-photo-menu, .app-select-options, .connection-stats-popup) { font-family: Arial, sans-serif; }
 .settings-overlay { padding: 18px; background: color-mix(in srgb, var(--window) 70%, transparent); }
 .settings-window { width: min(1080px, 100%); border: 1px solid var(--line); border-radius: 22px; background: var(--window); box-shadow: var(--menu-shadow); }

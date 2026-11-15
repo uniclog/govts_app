@@ -16,6 +16,15 @@
   mountains, pines, clouds, horizon, city, stars, plain, image.
   У встроенных тем сцена с кольцами и мягким свечением. Своя тема сохраняет выбранную подложку.
   Встроенные темы нельзя экспортировать. Файл своей темы — JSON sonoryx-theme.
+
+  Два акцента и их роли одинаковы во всех темах:
+  --accent («Акцент») — голос и связь: говорит, подключено, микрофон включён,
+  демонстрация идёт, успешное действие.
+  --accent-blue («Выделение») — выбор и бренд: выбранный канал, сервер и пункт,
+  переключатели, ползунки, меню, фокус, цель перетаскивания, главная кнопка.
+  --on-accent читается на заливке обоих.
+  Компоненты не проверяют data-theme для цвета: всё, чем темы различаются,
+  задаётся здесь переменными (палитра, --field-bg, --control-*, --stage-*).
 */
 
 :root {
@@ -63,79 +72,99 @@
   --stage-fill: linear-gradient(155deg, var(--card-strong), var(--window) 85%);
   --stage-ridge: var(--card);
   --stage-image: none;
+  /* How far a control lifts off its surface and how strongly a pressed state
+     tints it. The same share of text reads far weaker on a light surface, so
+     light themes raise both instead of restyling the controls. */
+  --control-lift: 3%;
+  --control-state: 12%;
+  /* Participants stage: base surface and the strength of its two corner glows. */
+  --stage-base: var(--card-strong);
+  --stage-tint: 13%;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --window: #f2f0eb;
-  --card: #ffffff;
-  --card-strong: #ece9e2;
-  --line: #e4e1da;
-  --text: #25272b;
-  --muted: #858890;
-  --accent: #2ba97c;
-  --accent-blue: #e56f38;
-  --danger: #db3653;
-  --warning: #b88712;
+  --window: #d1d7dd;
+  --card: #f2f4f7;
+  --card-strong: #e1e6ec;
+  --line: #d4dae2;
+  --text: #1f2630;
+  --muted: #586373;
+  --accent: #21785e;
+  --accent-blue: #3d62a0;
+  --danger: #b8394b;
+  --warning: #875f0f;
   --on-accent: #ffffff;
+  --control-lift: 8%;
+  --control-state: 16%;
+  /* The window is too close to the card here for the default mix to recess a field. */
+  --field-bg: var(--window);
+  --stage-base: color-mix(in srgb, var(--window) 55%, var(--card));
+  --stage-tint: 7%;
 }
 
-:root[data-theme="neutral"] {
+:root[data-theme="navy"] {
   color-scheme: dark;
-  --window: #141416;
-  --card: #1e1e22;
-  --card-strong: #2a2a30;
-  --line: #3e3e46;
-  --text: #ececf1;
-  --muted: #a1a1ab;
-  --accent: #3dccb0;
-  --accent-blue: #6eb6e0;
-  --danger: #f07480;
-  --warning: #e2b56c;
-  --on-accent: #10211c;
+  --window: #0b1426;
+  --card: #121e36;
+  --card-strong: #1b2a48;
+  --line: #2a3d62;
+  --text: #e8eefb;
+  --muted: #94a3c0;
+  --accent: #4cc9f0;
+  --accent-blue: #5b9bff;
+  --danger: #ff6b81;
+  --warning: #f5d06f;
+  --on-accent: #06202b;
 }
 
 :root[data-theme="beige"] {
   color-scheme: light;
-  --window: #e7e0d4;
-  --card: #f4efe6;
-  --card-strong: #e8dfd2;
-  --line: #d0c4b2;
-  --text: #3a3228;
-  --muted: #74685a;
-  --accent: #2f6f5c;
-  --accent-blue: #3a6988;
-  --danger: #b23e3e;
-  --warning: #8f5a22;
-  --on-accent: #f7f3ec;
+  --window: #d8cfc1;
+  --card: #f5f0e8;
+  --card-strong: #e7dfd2;
+  --line: #d8cdbd;
+  --text: #2d261e;
+  --muted: #6a5e4f;
+  --accent: #2f7a55;
+  --accent-blue: #a1572c;
+  --danger: #b4383f;
+  --warning: #87590b;
+  --on-accent: #ffffff;
+  /* Same light-surface tuning as the light theme. */
+  --control-lift: 8%;
+  --control-state: 16%;
+  --field-bg: var(--window);
+  --stage-base: color-mix(in srgb, var(--window) 55%, var(--card));
+  --stage-tint: 7%;
 }
 
 :root[data-theme="brown"] {
   color-scheme: dark;
-  --window: #1a1410;
-  --card: #271c16;
-  --card-strong: #3a2a20;
-  --line: #534033;
-  --text: #f3eadf;
-  --muted: #b7a08c;
-  --accent: #e0a15c;
-  --accent-blue: #7eb4cc;
-  --danger: #e4847a;
-  --warning: #e8c48a;
-  --on-accent: #2a1a0e;
+  --window: #15100c;
+  --card: #1e1712;
+  --card-strong: #2a211a;
+  --line: #3a2e25;
+  --text: #f3eae0;
+  --muted: #ae9d8c;
+  --accent: #8fc48a;
+  --accent-blue: #e4a35f;
+  --danger: #f07f73;
+  --warning: #f2d06b;
+  --on-accent: #1f1409;
 }
 
 :root[data-theme="purple"] {
   color-scheme: dark;
-  --window: #17141f;
-  --card: #221e2c;
-  --card-strong: #302a40;
-  --line: #463f5c;
-  --text: #f2eef8;
-  --muted: #b3a8c6;
-  --accent: #b7a3ef;
-  --accent-blue: #7dcec4;
-  --danger: #ef8d98;
-  --warning: #e4b86e;
-  --on-accent: #241833;
+  --window: #110e19;
+  --card: #191523;
+  --card-strong: #241e32;
+  --line: #342c46;
+  --text: #f0ecf8;
+  --muted: #a69db9;
+  --accent: #5fd4a8;
+  --accent-blue: #a98bff;
+  --danger: #ff6f8d;
+  --warning: #f3cc6b;
+  --on-accent: #170f2b;
 }

@@ -10,7 +10,7 @@ import {errorText, rawError, type Messages} from "../../locales";
 import {LocaleSwitch, useLocale} from "../../locales/Locale";
 import {InterfaceSettings} from "./InterfaceSettings";
 import {HotkeySettings} from "./HotkeySettings";
-import {loadForceMotion, saveForceMotion} from "./motion";
+import {loadReduceMotion, saveReduceMotion} from "./motion";
 import {AudioWaveform, SensitivitySlider} from "./AudioWaveform";
 
 function vadModeOptions(m: Messages): SelectOption[] {
@@ -72,7 +72,7 @@ export function SettingsPage({view, invoke, appearance, setTheme, createCustomTh
     updates: UpdatesState;
 }) {
     const {m} = useLocale();
-    const [forceMotion, setForceMotion] = useState(loadForceMotion);
+    const [reduceMotion, setReduceMotion] = useState(loadReduceMotion);
     const [sensitivity, setSensitivity] = useState(view.audio.vadSensitivity);
     useEffect(() => setSensitivity(view.audio.vadSensitivity), [view.audio.vadSensitivity]);
     const [rnnoiseSensitivity, setRNNoiseSensitivity] = useState(view.audio.rnnoiseSensitivity);
@@ -235,8 +235,8 @@ export function SettingsPage({view, invoke, appearance, setTheme, createCustomTh
                         <LocaleSwitch labelledBy="locale-label"/>
                     </div>
                     <InterfaceSettings appearance={appearance} onTheme={(value) => invoke(() => setTheme(value))} onCreate={createCustomTheme} onChange={updateAppearance} onOpenSaved={openSavedTheme} onSave={saveNamedTheme} onImport={importThemeFile} onExport={exportTheme} onDelete={deleteSavedTheme}/>
-                    <SettingToggle title={m.settings.forceMotion} description={m.settings.forceMotionHint} checked={forceMotion}
-                                   onChange={async (value) => { saveForceMotion(value); setForceMotion(value); }}/>
+                    <SettingToggle title={m.settings.reduceMotion} description={m.settings.reduceMotionHint} checked={reduceMotion}
+                                   onChange={async (value) => { saveReduceMotion(value); setReduceMotion(value); }}/>
                 </section>
                 <section className="settings-card"><h3>{m.settings.sounds}</h3>
                     <Select id="sound-pack" label={m.settings.soundPack} hint={m.settings.soundPackHint}
