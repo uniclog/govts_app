@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"uniclog.io/sonoryx/internal/filetransfer"
+	"uniclog.io/sonoryx/internal/atomicfile"
 	"uniclog.io/sonoryx/internal/persist"
 )
 
@@ -70,7 +70,7 @@ func waitDeployActivation(ctx context.Context, store *persist.Store, ready, acti
 			if err != nil {
 				return err
 			}
-			return filetransfer.CommitFile(out.Name(), ready)
+			return atomicfile.Commit(out.Name(), ready)
 		}
 		if !errors.Is(err, os.ErrNotExist) {
 			return err

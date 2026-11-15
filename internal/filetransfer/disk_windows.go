@@ -17,16 +17,4 @@ func freeBytes(path string) (uint64, error) {
 	e = windows.GetDiskFreeSpaceEx(p, &free, &total, &all)
 	return free, e
 }
-func syncDirectory(path string) error { return nil } // Publication uses MoveFileEx WRITE_THROUGH after File.Sync.
-func publishFile(source, destination string) error {
-	from, err := windows.UTF16PtrFromString(source)
-	if err != nil {
-		return err
-	}
-	to, err := windows.UTF16PtrFromString(destination)
-	if err != nil {
-		return err
-	}
-	return windows.MoveFileEx(from, to, windows.MOVEFILE_REPLACE_EXISTING|windows.MOVEFILE_WRITE_THROUGH)
-}
 func hideProcess(cmd *exec.Cmd) { cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true} }

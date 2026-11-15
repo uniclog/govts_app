@@ -17,7 +17,9 @@
 | Экран | `internal/media/`, `internal/mediasignal/`, `internal/clientapp/media.go` | HTTPS signaling, WebRTC/SFU, учет потоков и подписок |
 | Desktop UI | `cmd/desktop/`, `internal/ui/wails/`, `cmd/desktop/frontend/` | Wails 3, сервис для React/TypeScript, настройки и окна |
 | Обновления клиента | `internal/clientupdate/`, `internal/updatemanifest/`, `cmd/update-sign/` | Подписанные GitHub Releases, загрузка, перезапуск и восстановление EXE |
-| Общий контракт | `internal/domain/`, `internal/protocol/`, `internal/transport/udp/` | Модели состояния, бинарный UDP-протокол, граница сокета и кодека |
+| Файлообмен | `internal/filetransfer/`, `internal/filesignal/`, `internal/atomicfile/`, `internal/clientapp/files*.go` | HTTPS-сервер файлов, общий контракт клиента и сервера, атомарная публикация, клиентская очередь |
+| Общий контракт | `internal/domain/`, `internal/protocol/`, `internal/transport/udp/`, `internal/voiceflow/` | Модели состояния, бинарный UDP-протокол, граница сокета и кодека, адаптивная избыточность голоса |
+| Окружение desktop | `internal/hotkeys/`, `internal/apppopup/`, `internal/serverstatus/`, `internal/clientsettings/` | Глобальные горячие клавиши, всплывающие окна, опрос статуса серверов, локальные настройки |
 
 Пакеты `internal/` доступны только коду этого Go-модуля: публичного Go API
 проект пока не предоставляет.
@@ -55,8 +57,6 @@
   загружает имя, каналы и пороги из БД.
 
 Отдельного исполняемого консольного голосового клиента в текущем дереве нет.
-Низкоуровневые клиентские команды в `internal/client/command.go` остаются
-частью пакета, но точка входа `cmd/client2` удалена.
 
 ## Голос и состояние
 
@@ -71,13 +71,16 @@ React UI
    `internal/ui/wails/dto.go`; события для WebView — в `event_bridge.go`.
 2. `internal/clientapp/app.go`, `session.go`, `supervisor.go` и
    `reconnect.go` управляют соединением, параллельными циклами, остановкой
-   и повторным подключением без зависимости от Wails.
+   и повторным подключением без зависимости от Wails. `app_audio.go`
+   содержит звуковые настройки и устройства, `app_presence.go` — away и wake.
 3. `internal/client/` выполняет защищённый handshake, контрольные запросы, heartbeat,
    прием пакетов, обновление состояния и сбор статистики. `internal/protocol/`
    описывает формат пакетов и полезных нагрузок;
    `internal/transport/udp/` читает/пишет датаграммы.
 4. `internal/voice/hub.go` — источник истины о сессиях, каналах,
-   участниках, потоках экрана и ревизии состояния. `control.go`,
+   участниках, потоках экрана и ревизии состояния. Методы хаба разнесены по
+   `hub_sessions.go`, `hub_channels.go`, `hub_voice.go` (учёт Sequence и
+   избыточность) и `hub_attention.go` (wake и presence). `control.go`,
    `delivery.go`, `events.go`, `snapshot.go` и `screen.go` обслуживают
    соответствующие операции. `internal/server/config.go` загружает
    стартовое дерево, `persistent.go` сохраняет/восстанавливает его из БД,
@@ -184,7 +187,8 @@ WebRTC требуется корректный `-media-advertised-ip`.
 ## Desktop UI и локальные данные
 
 - `cmd/desktop/frontend/src/App.tsx` собирает экран приложения и
-  синхронизирует UI с backend. `api.ts` — вызовы Wails и клиентские DTO,
+  синхронизирует UI с backend. Страница сервера и дерево каналов —
+  `features/channels/`, окно настроек — `features/settings/SettingsPage.tsx`. `api.ts` — вызовы Wails и клиентские DTO,
   `model.ts` — преобразования состояния.
 - `features/connection/` — подключение, статус и статистика соединения;
   `features/participants/` — строка участника;

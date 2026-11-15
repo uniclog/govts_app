@@ -1,11 +1,7 @@
 package filetransfer
 
-import "path/filepath"
+import "uniclog.io/sonoryx/internal/atomicfile"
 
-// CommitFile publishes a closed, synced temporary file on the same filesystem.
-func CommitFile(source, destination string) error {
-	if err := publishFile(source, destination); err != nil {
-		return err
-	}
-	return syncDirectory(filepath.Dir(destination))
-}
+func publishFile(source, destination string) error { return atomicfile.Publish(source, destination) }
+
+func syncDirectory(path string) error { return atomicfile.SyncDir(path) }

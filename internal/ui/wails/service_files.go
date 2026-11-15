@@ -12,8 +12,7 @@ import (
 	"time"
 	"uniclog.io/sonoryx/internal/clientapp"
 	"uniclog.io/sonoryx/internal/domain"
-	"uniclog.io/sonoryx/internal/filetransfer"
-	"uniclog.io/sonoryx/internal/persist"
+	"uniclog.io/sonoryx/internal/filesignal"
 )
 
 // Wails' Windows file dialog returns an internal sentinel with this message.
@@ -105,7 +104,7 @@ func (s *Service) FilePick(expected, kind, targetID string) ([]clientapp.FileTas
 	}
 	return list, nil
 }
-func (s *Service) FileMetadata(expected string, ids []string) ([]persist.FileAttachment, error) {
+func (s *Service) FileMetadata(expected string, ids []string) ([]filesignal.FileAttachment, error) {
 	if len(ids) > 64 {
 		return nil, errors.New("too many attachment IDs")
 	}
@@ -149,7 +148,7 @@ func (s *Service) FileSave(expected, id string) (clientapp.FileTask, error) {
 	if app == nil {
 		return clientapp.FileTask{}, errors.New("file dialog unavailable")
 	}
-	path, err := app.Dialog.SaveFile().SetFilename(filetransfer.SafeName(att.Name)).PromptForSingleSelection()
+	path, err := app.Dialog.SaveFile().SetFilename(filesignal.SafeName(att.Name)).PromptForSingleSelection()
 	if fileDialogCancelled(err) {
 		return clientapp.FileTask{}, nil
 	}
@@ -227,7 +226,7 @@ func (s *Service) FileStageFinish(expected, kind, targetID, id, name string) (cl
 	if err != nil {
 		return clientapp.FileTask{}, err
 	}
-	return s.client.Files().Add(clientapp.FileTask{Context: expected, Kind: target.Kind, TargetID: target.ID, Direction: "upload", Path: path, Name: filetransfer.SafeName(name), Staged: true})
+	return s.client.Files().Add(clientapp.FileTask{Context: expected, Kind: target.Kind, TargetID: target.ID, Direction: "upload", Path: path, Name: filesignal.SafeName(name), Staged: true})
 }
 func (s *Service) FileStageCancel(id string) error {
 	path, err := stagePath(id)
