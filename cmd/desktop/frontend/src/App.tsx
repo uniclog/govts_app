@@ -24,7 +24,7 @@ import {ChatPanel} from "./features/chat/ChatPanel";
 import {ChatStore} from "./features/chat/chatStore";
 import {useWorkspaceResize} from "./components/useWorkspaceResize";
 import {UpdateButton, UpdateDialog, UpdatesPanel, useUpdates, type UpdatesState} from "./features/updates/Updates";
-import {applyAppearance, createCustomAppearance, downloadThemeFile, loadAppearance, maxSavedThemes, normalizeTheme, readThemeFile, saveAppearance, snapshotTheme, themeColor, type Appearance, type SavedTheme, type StageBackdrop} from "./appearance";
+import {applyAppearance, loadAppearance, normalizeTheme, saveAppearance, themeColor, type Appearance, type AppearanceOptions, type StageBackdrop} from "./appearance";
 import {attentionLockSeconds, errorCode, errorText, rawError, type Messages} from "./locales";
 import {freshWakeGate, wakeClock, wakeDecision, wakeFailed, wakeRejected, wakeSent, type WakeGate} from "./features/participants/wakeLimit";
 import {LocaleSwitch, useLocale} from "./locales/Locale";
@@ -74,10 +74,6 @@ function App() {
         void desktopAPI.theme().then((value) => {
             if (!active) return;
             const current = loadAppearance();
-            if (current.theme === "custom") {
-                setAppearanceState(current);
-                return;
-            }
             const mode = normalizeTheme(value);
             if (current.theme === mode) {
                 setAppearanceState(current);
@@ -98,11 +94,6 @@ function App() {
     const setTheme = async (value: string) => {
         const previous = loadAppearance();
         const mode = normalizeTheme(value);
-        if (mode === "custom") {
-            if (!previous.hasCustom && !previous.hasDraft) return;
-            remember({...previous, theme: "custom", activeSavedId: previous.hasDraft ? "" : previous.activeSavedId});
-            return;
-        }
         remember({...previous, theme: mode});
         try { await desktopAPI.setTheme(mode); }
         catch (error) {
@@ -110,118 +101,19 @@ function App() {
             throw error;
         }
     };
-    const createCustomTheme = () => {
-        remember(createCustomAppearance(loadAppearance()));
-    };
-    const updateAppearance = (patch: Partial<Appearance>) => {
-        const current = loadAppearance();
-        const next: Appearance = {...current, ...patch, custom: patch.custom ?? current.custom, savedThemes: current.savedThemes};
-        if (next.theme === "custom" && next.activeSavedId) {
-            next.savedThemes = next.savedThemes.map((theme) => theme.id === next.activeSavedId ? {
-                ...theme,
-                palette: {...next.custom},
-                fontFamily: next.fontFamily,
-                fontSize: next.fontSize,
-                stageBackdrop: next.stageBackdrop,
-                stageImage: next.stageBackdrop === "image" ? next.stageImage : "",
-            } : theme);
-        }
-        remember(next);
-    };
-    const openSavedTheme = (id: string) => {
-        const current = loadAppearance();
-        const saved = current.savedThemes.find((theme) => theme.id === id);
-        if (!saved) return;
-        remember({
-            ...current,
-            theme: "custom",
-            hasCustom: true,
-            hasDraft: false,
-            activeSavedId: saved.id,
-            customName: saved.name,
-            custom: {...saved.palette},
-            fontFamily: saved.fontFamily,
-            fontSize: saved.fontSize,
-            stageBackdrop: saved.stageBackdrop,
-            stageImage: saved.stageImage,
-        });
-    };
-    const saveNamedTheme = (name: string) => {
-        const current = loadAppearance();
-        if (current.theme !== "custom") return;
-        const snapshot = snapshotTheme({...current, customName: name}, name);
-        if (current.activeSavedId) {
-            remember({
-                ...current,
-                customName: snapshot.name,
-                hasDraft: false,
-                savedThemes: current.savedThemes.map((theme) => theme.id === current.activeSavedId ? {...snapshot, id: current.activeSavedId} : theme),
-            });
-            return;
-        }
-        if (current.savedThemes.length >= maxSavedThemes) throw new Error(errorCode("theme-limit"));
-        remember({
-            ...current,
-            theme: "custom",
-            hasCustom: true,
-            hasDraft: false,
-            activeSavedId: snapshot.id,
-            customName: snapshot.name,
-            savedThemes: [...current.savedThemes, snapshot],
-        });
-    };
-    const importThemeFile = async (file: File) => {
-        const theme = await readThemeFile(file);
-        const current = loadAppearance();
-        if (current.savedThemes.length >= maxSavedThemes) throw new Error(errorCode("theme-limit"));
-        remember({
-            ...current,
-            theme: "custom",
-            hasCustom: true,
-            hasDraft: false,
-            activeSavedId: theme.id,
-            customName: theme.name,
-            custom: {...theme.palette},
-            fontFamily: theme.fontFamily,
-            fontSize: theme.fontSize,
-            stageBackdrop: theme.stageBackdrop,
-            stageImage: theme.stageImage,
-            savedThemes: [...current.savedThemes, theme],
-        });
-    };
-    const deleteSavedTheme = (id: string) => {
-        const current = loadAppearance();
-        const savedThemes = current.savedThemes.filter((theme) => theme.id !== id);
-        const active = current.activeSavedId === id;
-        remember({
-            ...current,
-            savedThemes,
-            hasCustom: savedThemes.length > 0 || current.theme === "custom" || current.hasDraft,
-            activeSavedId: active ? "" : current.activeSavedId,
-            customName: active ? "" : current.customName,
-            hasDraft: active || current.hasDraft,
-        });
-    };
-    const exportTheme = (theme: SavedTheme) => {
-        if (theme.id === "draft" && loadAppearance().theme !== "custom") return;
-        downloadThemeFile(theme);
+    const updateAppearance = (patch: AppearanceOptions) => {
+        remember({...loadAppearance(), ...patch});
     };
     const params = new URLSearchParams(window.location.search);
     const streamID = params.get("screen");
     if (streamID) return <><ScreenViewerWindow streamID={streamID} ownerName={params.get("owner") || m.screen.participant}/><MediaTrustDialog/></>;
-    return <MainApp appearance={appearance} setTheme={setTheme} createCustomTheme={createCustomTheme} updateAppearance={updateAppearance} openSavedTheme={openSavedTheme} saveNamedTheme={saveNamedTheme} importThemeFile={importThemeFile} deleteSavedTheme={deleteSavedTheme} exportTheme={exportTheme}/>;
+    return <MainApp appearance={appearance} setTheme={setTheme} updateAppearance={updateAppearance}/>;
 }
 
-function MainApp({appearance, setTheme, createCustomTheme, updateAppearance, openSavedTheme, saveNamedTheme, importThemeFile, deleteSavedTheme, exportTheme}: {
+function MainApp({appearance, setTheme, updateAppearance}: {
     appearance: Appearance;
     setTheme: (value: string) => Promise<void>;
-    createCustomTheme: () => void;
-    updateAppearance: (patch: Partial<Appearance>) => void;
-    openSavedTheme: (id: string) => void;
-    saveNamedTheme: (name: string) => void;
-    importThemeFile: (file: File) => Promise<void>;
-    deleteSavedTheme: (id: string) => void;
-    exportTheme: (theme: SavedTheme) => void;
+    updateAppearance: (patch: AppearanceOptions) => void;
 }) {
     const {m} = useLocale();
     const [view, setView] = useState<ClientViewDTO>(emptyView);
@@ -438,8 +330,8 @@ function MainApp({appearance, setTheme, createCustomTheme, updateAppearance, ope
             <StatusBar view={view} updateAction={<UpdateButton updates={updates}/>}/>
             {actionError && <div className="error-banner" role="alert">{errorText(actionError, m)}</div>}
             {wakeUntil > wakeNow && <WakeNotice until={wakeUntil} now={wakeNow} label={wakeLabel}/>}
-            <ChannelsPage onPageChange={setPage} referenceBackdrop={appearance.theme !== "custom"} view={view} screenMedia={screenMedia.current} events={events} invoke={invoke} onWake={wakeParticipant} refreshingServers={refreshingServers} onRefreshServers={refreshServers}
-                          stageBackdrop={appearance.theme === "custom" ? appearance.stageBackdrop : "mountains"}
+            <ChannelsPage onPageChange={setPage} view={view} screenMedia={screenMedia.current} events={events} invoke={invoke} onWake={wakeParticipant} refreshingServers={refreshingServers} onRefreshServers={refreshServers}
+                          stageBackdrop={appearance.stageBackdrop}
                           onReconnect={(address) => invoke(async () => {
                               if (sharing.pending) throw new Error(errorCode("screen-picker-switch"));
                               await screenMedia.current?.close();
@@ -454,7 +346,7 @@ function MainApp({appearance, setTheme, createCustomTheme, updateAppearance, ope
             <AdminPanel view={view}/>
         </SettingsOverlay>}
         {page === "settings" && <SettingsOverlay onClose={closeSettings}>
-            <SettingsPage view={view} invoke={invoke} appearance={appearance} setTheme={setTheme} createCustomTheme={createCustomTheme} updateAppearance={updateAppearance} openSavedTheme={openSavedTheme} saveNamedTheme={saveNamedTheme} importThemeFile={importThemeFile} deleteSavedTheme={deleteSavedTheme} exportTheme={exportTheme} updates={updates}/>
+            <SettingsPage view={view} invoke={invoke} appearance={appearance} setTheme={setTheme} updateAppearance={updateAppearance} updates={updates}/>
         </SettingsOverlay>}
         <ScreenShareDialog sharing={sharing}/>
         <UpdateDialog updates={updates}/>
@@ -477,9 +369,8 @@ function WakeNotice({until, now, label}: {until: number; now: number; label: str
     </div>;
 }
 
-function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onReconnect, onWake, contentTab, setContentTab, directChats, setDirectChats, chatStore, refreshingServers, onRefreshServers, stageBackdrop, onPageChange, referenceBackdrop}: {
+function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onReconnect, onWake, contentTab, setContentTab, directChats, setDirectChats, chatStore, refreshingServers, onRefreshServers, stageBackdrop, onPageChange}: {
     onPageChange: (page: Page) => void;
-    referenceBackdrop: boolean;
     screenMedia: ScreenMediaController;
     refreshingServers: boolean;
     onRefreshServers: () => void;
@@ -591,8 +482,8 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                         <span className="channel-member-stack" aria-label={m.channels.members}>{members.slice(0, 4).map((person) => <span key={person.sessionId} style={avatarStyle(person.displayName)} title={person.displayName}>{person.displayName.slice(0, 1).toUpperCase()}</span>)}{members.length > 4 && <small>+{members.length - 4}</small>}</span>
                         <button className="info-toggle" title={m.channels.info} aria-label={m.channels.info} aria-expanded={showInfo} onClick={() => setShowInfo(!showInfo)}><Icon name="info"/></button>
                     </header>
-                    <div className="participants-stage" data-backdrop={stageBackdrop} data-reference-backdrop={referenceBackdrop} role="region" tabIndex={0} aria-label={m.channels.stage}>
-                        {referenceBackdrop ? <div className="workspace-stage-art" aria-hidden="true"><i/><i/><i/><i/></div> : <StageScene backdrop={stageBackdrop}/>}
+                    <div className="participants-stage" data-backdrop={stageBackdrop} role="region" tabIndex={0} aria-label={m.channels.stage}>
+                        <StageScene backdrop={stageBackdrop}/>
                         <div className={`stage-speaking-summary ${speakingMembers.length ? "is-speaking" : ""}`}><Icon name="voice"/><span>{speakingMembers.length ? `${m.channels.speakingNow} ${speakingMembers.map((person) => person.displayName).join(", ")}` : m.channels.quiet}</span></div>
                         <div className="stage-member-summary"><Icon name="users"/>{members.length}{selected.maxUsers ? ` / ${selected.maxUsers}` : ""}</div>
                         <div className="participants-strip" data-single={members.length + channelStreams.length === 1}>
@@ -790,18 +681,12 @@ function SettingsOverlay({onClose, children, label, closeLabel}: {onClose: () =>
     </div>;
 }
 
-function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, updateAppearance, openSavedTheme, saveNamedTheme, importThemeFile, deleteSavedTheme, exportTheme, updates}: {
+function SettingsPage({view, invoke, appearance, setTheme, updateAppearance, updates}: {
     view: ClientViewDTO;
     invoke: (operation: () => Promise<unknown>) => Promise<void>;
     appearance: Appearance;
     setTheme: (value: string) => Promise<void>;
-    createCustomTheme: () => void;
-    updateAppearance: (patch: Partial<Appearance>) => void;
-    openSavedTheme: (id: string) => void;
-    saveNamedTheme: (name: string) => void;
-    importThemeFile: (file: File) => Promise<void>;
-    deleteSavedTheme: (id: string) => void;
-    exportTheme: (theme: SavedTheme) => void;
+    updateAppearance: (patch: AppearanceOptions) => void;
     updates: UpdatesState;
 }) {
     const {m} = useLocale();
@@ -967,7 +852,7 @@ function SettingsPage({view, invoke, appearance, setTheme, createCustomTheme, up
                         <p>{m.language.hint}</p>
                         <LocaleSwitch labelledBy="locale-label"/>
                     </div>
-                    <InterfaceSettings appearance={appearance} onTheme={(value) => invoke(() => setTheme(value))} onCreate={createCustomTheme} onChange={updateAppearance} onOpenSaved={openSavedTheme} onSave={saveNamedTheme} onImport={importThemeFile} onExport={exportTheme} onDelete={deleteSavedTheme}/>
+                    <InterfaceSettings appearance={appearance} onTheme={(value) => invoke(() => setTheme(value))} onChange={updateAppearance}/>
                     <SettingToggle title={m.settings.forceMotion} description={m.settings.forceMotionHint} checked={forceMotion}
                                    onChange={async (value) => { saveForceMotion(value); setForceMotion(value); }}/>
                 </section>

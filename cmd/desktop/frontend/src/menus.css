@@ -4,7 +4,7 @@
   --menu-shadow: 0 18px 48px color-mix(in srgb, var(--shadow) 28%, transparent);
 }
 :root:is([data-theme="dark"], [data-theme="light"]) { --menu-accent: var(--accent-blue); }
-:root:not([data-theme="custom"]) :is(.settings-window, .screen-share-dialog, .link-confirm, .participant-menu, .server-actions-menu, .chat-context-menu, .file-photo-menu, .app-select-options, .connection-stats-popup) { font-family: Arial, sans-serif; }
+:root[data-font="default"] :is(.settings-window, .screen-share-dialog, .link-confirm, .participant-menu, .server-actions-menu, .chat-context-menu, .file-photo-menu, .app-select-options, .connection-stats-popup) { font-family: Arial, sans-serif; }
 .settings-overlay { padding: 18px; background: color-mix(in srgb, var(--window) 70%, transparent); }
 .settings-window { width: min(1080px, 100%); border: 1px solid var(--line); border-radius: 22px; background: var(--window); box-shadow: var(--menu-shadow); }
 .settings-window .settings-page { min-width: 0; padding: 24px; }
@@ -22,7 +22,7 @@
 .settings-card :is(.device-hint, .theme-note) { line-height: 1.6; }
 .settings-card .setting-toggle { gap: 16px; margin-top: 18px; padding-top: 18px; }
 .setting-toggle strong { font-weight: 500; }
-.settings-window :is(.primary-button, .secondary-button, .monitor-button, .theme-actions button, .locale-switch button), .screen-dialog-actions button { min-height: 36px; padding: 8px 14px; border-radius: 10px; font-size: .75rem; font-weight: 600; line-height: 1.4; box-shadow: none; }
+.settings-window :is(.primary-button, .secondary-button, .monitor-button, .locale-switch button), .screen-dialog-actions button { min-height: 36px; padding: 8px 14px; border-radius: 10px; font-size: .75rem; font-weight: 600; line-height: 1.4; box-shadow: none; }
 .settings-window :is(.secondary-button, .monitor-button), .screen-dialog-actions button { border: 1px solid transparent; color: var(--text); background: var(--card-strong); }
 .settings-window .primary-button, .screen-dialog-actions .primary-button { color: var(--on-accent); border-color: transparent; background: var(--menu-accent); }
 .settings-window :is(.secondary-button, .monitor-button):hover:not(:disabled), .screen-dialog-actions button:hover:not(:disabled) { border-color: var(--line); filter: brightness(1.04); }
@@ -42,8 +42,7 @@
 .switch input:disabled + span { opacity: .45; cursor: default; }
 .settings-window :is(.locale-switch button[aria-pressed="true"], .theme-swatch-open[aria-pressed="true"]) { border-color: var(--menu-accent); background: color-mix(in srgb, var(--menu-accent) 10%, var(--card)); }
 .theme-swatch { border-radius: 12px; box-shadow: none; }
-.theme-editor, .palette-group { min-width: 0; }
-.palette-field { border-radius: 12px; }
+.appearance-options { min-width: 0; }
 .hotkey-combo kbd, .monitor-button.hotkey-key { border-radius: 8px; background: var(--window); box-shadow: none; }
 .admin-accounts { gap: 14px; }
 .admin-account-row { min-height: 42px; padding: 9px 10px; border-radius: 10px; }

@@ -1,21 +1,19 @@
 /*
   Контракт внешнего вида.
 
-  Встроенные темы задают только базовую палитру и лежат в клиенте: их нельзя
-  скачать или подменить файлом. У каждого цвета одна роль, и эта роль одинакова
-  на авторизации и в основном окне. Производные значения считаются из базы,
-  поэтому своя тема подменяет только перечисленные ниже переменные.
+  Цвета задают только встроенные темы: они лежат в клиенте, пользователь их
+  не меняет. У каждого цвета одна роль, и эта роль одинакова на авторизации
+  и в основном окне. Производные значения считаются из базовой палитры.
 
-  Базовый шрифт — Noto Sans, у встроенной страницы сервера — Arial.
-  В своей теме можно выбрать ещё семь семейств.
+  Шрифт, размер и подложка выбираются независимо от темы.
+  Шрифт по умолчанию (data-font="default") — Arial в основных окнах и Noto Sans
+  в остальных. Выбранное семейство (их восемь) действует везде.
   В комплекте латиница, кириллица и расширенная кириллица (en, ru, kg: Ң, Ө, Ү).
-  Размер текста своей темы — фиксированный --font-size на корне (14–18px),
-  остальные размеры шрифта заданы в rem.
+  Размер текста — --font-size на корне (14–18px), остальные размеры шрифта заданы в rem.
 
   Подложка сцены участников — data-backdrop на сцене:
-  mountains, pines, clouds, horizon, city, stars, plain, image.
-  У встроенных тем сцена с кольцами и мягким свечением. Своя тема сохраняет выбранную подложку.
-  Встроенные темы нельзя экспортировать. Файл своей темы — JSON sonoryx-theme.
+  rings (по умолчанию), mountains, pines, clouds, horizon, city, stars, plain.
+  Все подложки анимированы. Без анимации каждая показывает статичный кадр.
 */
 
 :root {
@@ -61,8 +59,9 @@
   --speaking: color-mix(in srgb, var(--accent) 24%, var(--text));
   --overlay: color-mix(in srgb, var(--shadow) 62%, transparent);
   --stage-fill: linear-gradient(155deg, var(--card-strong), var(--window) 85%);
-  --stage-ridge: var(--card);
-  --stage-image: none;
+  /* Lightened towards white: lifts the ridges off the dark themes and keeps them white on the light ones. */
+  --stage-ridge: linear-gradient(color-mix(in srgb, #fff 7%, var(--card)), color-mix(in srgb, #fff 3%, var(--card)) 70%);
+  --workspace-brand: #ff7942;
 }
 
 :root[data-theme="light"] {
@@ -78,6 +77,7 @@
   --danger: #db3653;
   --warning: #b88712;
   --on-accent: #ffffff;
+  --workspace-brand: #e87038;
 }
 
 :root[data-theme="neutral"] {

@@ -1,27 +1,5 @@
+import {memo, type CSSProperties} from "react";
 import type {StageBackdrop} from "../../appearance";
-
-const stars: {x: number; y: number; size: number; opacity: number}[] = [
-    {x: 4, y: 18, size: 1.5, opacity: 0.95},
-    {x: 8, y: 62, size: 0.55, opacity: 0.35},
-    {x: 13, y: 28, size: 0.9, opacity: 0.6},
-    {x: 18, y: 74, size: 0.5, opacity: 0.3},
-    {x: 22, y: 14, size: 2, opacity: 1},
-    {x: 27, y: 42, size: 0.7, opacity: 0.45},
-    {x: 33, y: 22, size: 1.15, opacity: 0.7},
-    {x: 38, y: 66, size: 0.6, opacity: 0.35},
-    {x: 43, y: 12, size: 0.75, opacity: 0.5},
-    {x: 47, y: 48, size: 1.8, opacity: 0.95},
-    {x: 53, y: 26, size: 0.55, opacity: 0.35},
-    {x: 58, y: 70, size: 0.85, opacity: 0.5},
-    {x: 63, y: 16, size: 1.3, opacity: 0.8},
-    {x: 69, y: 40, size: 0.6, opacity: 0.4},
-    {x: 74, y: 20, size: 2.1, opacity: 1},
-    {x: 79, y: 58, size: 0.7, opacity: 0.45},
-    {x: 84, y: 14, size: 1.05, opacity: 0.65},
-    {x: 89, y: 36, size: 0.55, opacity: 0.35},
-    {x: 93, y: 68, size: 1.4, opacity: 0.75},
-    {x: 97, y: 22, size: 0.65, opacity: 0.4},
-];
 
 function mulberry32(seed: number) {
     return () => {
@@ -46,6 +24,16 @@ const pines: {x: number; h: number; w: number; far: boolean}[] = [];
     }
 }
 
+// Качание: фаза зависит от положения дерева, поэтому по лесу проходит волна ветра.
+// Свой генератор, чтобы не сдвинуть раскладку деревьев.
+const pineSway = (() => {
+    const random = mulberry32(0x7e3a51);
+    return pines.map((pine) => ({
+        animationDuration: `${(4.2 + random() * 1.6).toFixed(2)}s`,
+        animationDelay: `${(-(pine.x * 0.035) - random() * 0.7).toFixed(2)}s`,
+    }));
+})();
+
 const buildings: {x: number; h: number; w: number; far: boolean}[] = [];
 {
     const random = mulberry32(0xc17e11);
@@ -58,23 +46,74 @@ const buildings: {x: number; h: number; w: number; far: boolean}[] = [];
     }
 }
 
-function shownScene(backdrop: StageBackdrop): StageBackdrop {
-    const value: string = backdrop;
-    if (value === "dunes") return "pines";
-    if (value === "waves") return "clouds";
-    if (value === "aurora") return "city";
-    return backdrop;
+// Окна зажигаются и гаснут восемью группами: анимируются восемь слоёв, а не сотни элементов.
+const cityLightGroups = 8;
+const cityLights: {x: number; y: number}[][] = Array.from({length: cityLightGroups}, () => []);
+{
+    const random = mulberry32(0x2f6b19);
+    for (const building of buildings) {
+        if (building.far) continue;
+        for (let y = 5; y < building.h - 4; y += 7) {
+            if (random() < 0.55) cityLights[Math.floor(random() * cityLightGroups)].push({x: building.x + 2 + random() * (building.w - 5), y});
+        }
+    }
 }
 
-export function StageScene({backdrop}: {backdrop: StageBackdrop}) {
-    const scene = shownScene(backdrop);
-    if (scene === "plain" || scene === "image") return null;
-    return <div className={`stage-scene stage-scene-${scene}`} aria-hidden="true">
-        {scene === "mountains" && <div className="stage-ridge"/>}
-        {scene === "pines" && <div className="stage-pines">{pines.map((pine, index) => <i key={index} className={pine.far ? "stage-pine stage-pine-far" : "stage-pine"} style={{left: `${pine.x}cqh`, height: `${pine.h}cqh`, width: `${pine.w}cqh`}}/>)}</div>}
-        {scene === "clouds" && <><i className="stage-cloud stage-cloud-a"/><i className="stage-cloud stage-cloud-b"/><i className="stage-cloud stage-cloud-c"/></>}
-        {scene === "horizon" && <><div className="stage-sun"/><div className="stage-ground"/></>}
-        {scene === "city" && <div className="stage-city">{buildings.map((building, index) => <i key={index} className={building.far ? "stage-building stage-building-far" : "stage-building"} style={{left: `${building.x}cqh`, height: `${building.h}cqh`, width: `${building.w}cqh`}}/>)}</div>}
-        {scene === "stars" && <div className="stage-stars">{stars.map((star) => <i key={`${star.x}-${star.y}`} className={star.size >= 1.7 ? "stage-star-bright" : undefined} style={{left: `${star.x}%`, top: `${star.y}%`, width: `${star.size}cqh`, height: `${star.size}cqh`, opacity: star.opacity}}/>)}</div>}
+// Звёзды — точки в 1–2 px. Группа 0 светит ровно, остальные мерцают каждая в своём ритме.
+const starGroups: {x: number; y: number; size: number; opacity: number; bright: boolean}[][] = [[], [], [], []];
+{
+    const random = mulberry32(0x5ea7f1);
+    for (let index = 0; index < 110; index++) {
+        const roll = random();
+        const bright = roll > 0.95;
+        starGroups[Math.floor(random() * starGroups.length)].push({
+            x: random() * 100,
+            y: random() * 100,
+            size: bright ? 2 : roll > 0.75 ? 1.5 : 1,
+            opacity: bright ? 1 : 0.3 + random() * 0.55,
+            bright,
+        });
+    }
+}
+
+// Метеоры в разных частях неба. Периоды взаимно простые, поэтому порядок появления не повторяется.
+const meteors: {x: number; y: number; angle: number; period: number; delay: number}[] = [
+    {x: 8, y: 8, angle: 24, period: 18, delay: -1.4},
+    {x: 62, y: 4, angle: 156, period: 23, delay: -8},
+    {x: 30, y: 34, angle: 18, period: 25, delay: -16},
+    {x: 84, y: 26, angle: 148, period: 31, delay: -4},
+    {x: 46, y: 12, angle: 34, period: 37, delay: -27},
+    {x: 14, y: 52, angle: 12, period: 41, delay: -12},
+    {x: 72, y: 46, angle: 162, period: 49, delay: -36},
+];
+
+function PineLayer({far}: {far: boolean}) {
+    return <div className={far ? "stage-pines stage-pines-far" : "stage-pines"}>
+        {pines.map((pine, index) => pine.far === far && <i key={index} className={far ? "stage-pine stage-pine-far" : "stage-pine"} style={{left: `${pine.x}cqh`, height: `${pine.h}cqh`, width: `${pine.w}cqh`, ...pineSway[index]}}/>)}
     </div>;
 }
+
+// memo: сцена не должна пересобираться на каждое событие речи участников.
+// Туман, огни, метеоры и блик видны только в движении (opacity: 0 в CSS).
+export const StageScene = memo(function StageScene({backdrop}: {backdrop: StageBackdrop}) {
+    if (backdrop === "rings") return <div className="workspace-stage-art" aria-hidden="true"><i/><i/><i/><i/></div>;
+    return <div className={`stage-scene stage-scene-${backdrop}`} aria-hidden="true">
+        {backdrop === "mountains" && <><div className="stage-ridge"/><i className="stage-mist stage-mist-a"/><i className="stage-mist stage-mist-b"/></>}
+        {backdrop === "pines" && <><PineLayer far/><PineLayer far={false}/></>}
+        {backdrop === "clouds" && <><i className="stage-cloud stage-cloud-a"/><i className="stage-cloud stage-cloud-b"/><i className="stage-cloud stage-cloud-c"/></>}
+        {backdrop === "horizon" && <><i className="stage-horizon-glow"/><div className="stage-sun"/></>}
+        {backdrop === "city" && <>
+            <div className="stage-city">{buildings.map((building, index) => <i key={index} className={building.far ? "stage-building stage-building-far" : "stage-building"} style={{left: `${building.x}cqh`, height: `${building.h}cqh`, width: `${building.w}cqh`}}/>)}</div>
+            {cityLights.map((group, index) => <div key={index} className="stage-city-lights" style={{animationDelay: `${index * -5}s`}}>
+                {group.map((light, key) => <i key={key} style={{left: `${light.x}cqh`, bottom: `${light.y}cqh`}}/>)}
+            </div>)}
+        </>}
+        {backdrop === "stars" && <>
+            {starGroups.map((group, index) => <div key={index} className="stage-stars" style={{animationDuration: `${4.2 + index * 2.3}s`, animationDelay: `${index * -1.75}s`}}>
+                {group.map((star, key) => <i key={key} className={star.bright ? "stage-star-bright" : undefined} style={{left: `${star.x}%`, top: `${star.y}%`, width: `${star.size}px`, height: `${star.size}px`, opacity: star.opacity}}/>)}
+            </div>)}
+            {meteors.map((meteor, index) => <i key={index} className="stage-meteor" style={{left: `${meteor.x}%`, top: `${meteor.y}%`, "--meteor-angle": `${meteor.angle}deg`, animationDuration: `${meteor.period}s`, animationDelay: `${meteor.delay}s`} as CSSProperties}/>)}
+        </>}
+        {backdrop === "plain" && <i className="stage-sheen"/>}
+    </div>;
+});
