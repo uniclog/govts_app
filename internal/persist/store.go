@@ -104,7 +104,7 @@ func (s *Store) initialize() error {
 	if err := tx.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&version); err != nil {
 		return err
 	}
-	if version < 0 || version > 11 {
+	if version < 0 || version > 12 {
 		return fmt.Errorf("unsupported database schema version %d", version)
 	}
 	if version == 0 {
@@ -270,6 +270,11 @@ func (s *Store) initialize() error {
 			if _, err := tx.ExecContext(ctx, statement); err != nil {
 				return fmt.Errorf("migrate server password: %w", err)
 			}
+		}
+	}
+	if version < 12 {
+		if err = migrateChatPins(ctx, tx); err != nil {
+			return err
 		}
 	}
 	return tx.Commit()

@@ -10,6 +10,7 @@ import {desktopAPI, type ChatMessageDTO, type FileCapabilities} from "../../api"
 import {AttachmentCard, stageFiles, TransferQueue, useTransfers} from "./files";
 import {EMOJI_GROUPS, isEmojiOnly, REACTION_EMOJI} from "./emoji";
 import {EmojiPopover} from "./EmojiPopover";
+import {PinnedMessages} from "./PinnedMessages";
 
 function ignoreMiddleClick(event: {button: number; preventDefault: () => void}) {
     if (event.button === 1) event.preventDefault();
@@ -36,9 +37,9 @@ const textEncoder = new TextEncoder();
 const fullDate = (at: number, lang: string) => new Date(at).toLocaleString(lang, {day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"});
 
 // The panel re-renders on every keystroke; a row only when its own props change.
-const ChatMessageRow = memo(function ChatMessageRow({message, own, active, connected, context, menuOpen, onReact, onOpenMenu, onOpenReactions, onCopy}: {
-    message: ChatMessageDTO; own: boolean; active: boolean; connected: boolean; context: string; menuOpen: boolean;
-    onReact: (id: string, emoji: string) => void; onOpenMenu: (id: string, button: HTMLElement) => void; onOpenReactions: (id: string, row: HTMLElement, point: {x: number; y: number}) => void; onCopy: (text: string) => Promise<boolean>;
+const ChatMessageRow = memo(function ChatMessageRow({message, own, active, connected, context, menuOpen, pinned, canPin, highlighted, onReact, onPin, onOpenMenu, onOpenReactions, onCopy}: {
+    message: ChatMessageDTO; own: boolean; active: boolean; connected: boolean; context: string; menuOpen: boolean; pinned: boolean; canPin: boolean; highlighted: boolean;
+    onReact: (id: string, emoji: string) => void; onPin: (id: string) => void; onOpenMenu: (id: string, button: HTMLElement) => void; onOpenReactions: (id: string, row: HTMLElement, point: {x: number; y: number}) => void; onCopy: (text: string) => Promise<boolean>;
 }) {
     const {m, htmlLang} = useLocale();
     const [copied, setCopied] = useState(false);
@@ -48,7 +49,8 @@ const ChatMessageRow = memo(function ChatMessageRow({message, own, active, conne
         return () => window.clearTimeout(timer);
     }, [copied]);
     const canCopy = !message.deleted && !!message.text.trim();
-    return <article data-message-id={message.id} className={`chat-message ${own ? "own" : ""}${message.deleted ? " is-deleted" : ""}`} onContextMenu={(event) => {
+    const hasMenu = own && !message.deleted, hasPin = canPin && !message.deleted;
+    return <article data-message-id={message.id} className={`chat-message ${own ? "own" : ""}${message.deleted ? " is-deleted" : ""}${highlighted ? " is-highlighted" : ""}`} onContextMenu={(event) => {
         // React also bubbles this from portals, such as the photo viewer with its own menu.
         if (message.deleted || !connected || !event.currentTarget.contains(event.target as Node)) return;
         event.preventDefault();
@@ -56,16 +58,17 @@ const ChatMessageRow = memo(function ChatMessageRow({message, own, active, conne
     }}>
         <span className="chat-author-avatar" style={avatarStyle(message.senderName)} aria-hidden="true">{message.senderName.slice(0, 1).toUpperCase()}</span>
         <div className="chat-message-body">
-            <div className="chat-message-meta"><strong className="chat-message-author">{message.senderName}</strong><time title={fullDate(message.sentAtMs, htmlLang)} dateTime={new Date(message.sentAtMs).toISOString()}>{new Date(message.sentAtMs).toLocaleTimeString(htmlLang, {hour: "2-digit", minute: "2-digit"})}</time>{message.deleted && <span className="chat-message-deleted">{m.chat.deleted}</span>}</div>
+            <div className="chat-message-meta"><strong className="chat-message-author">{message.senderName}</strong><time title={fullDate(message.sentAtMs, htmlLang)} dateTime={new Date(message.sentAtMs).toISOString()}>{new Date(message.sentAtMs).toLocaleTimeString(htmlLang, {hour: "2-digit", minute: "2-digit"})}</time>{message.deleted && <span className="chat-message-deleted">{m.chat.deleted}</span>}{pinned && !message.deleted && <span className="chat-message-pin" title={m.chat.pinned} aria-label={m.chat.pinned}><Icon name="pin"/></span>}</div>
             {!message.deleted && message.text && <div className={`chat-message-text${!message.attachmentIds?.length && isEmojiOnly(message.text) ? " chat-emoji is-emoji-only" : ""}`}><ChatMessageText text={message.text}/></div>}
             {active && !message.deleted && message.attachmentIds?.map((id) => <AttachmentCard key={id} context={context} id={id}/>)}
             {!message.deleted && !!message.reactions?.length && <div className="chat-reactions" role="group" aria-label={m.chat.reactions}>
                 {message.reactions.map((reaction) => <button key={reaction.emoji} className={`chat-reaction${reaction.mine ? " is-mine" : ""}`} type="button" aria-pressed={reaction.mine} disabled={!connected} aria-label={m.chat.reactionLabel(reaction.emoji, reaction.count)} title={m.chat.reactionLabel(reaction.emoji, reaction.count)} onClick={() => onReact(message.id, reaction.emoji)}><span className="chat-emoji" aria-hidden="true">{reaction.emoji}</span><span aria-hidden="true">{reaction.count}</span></button>)}
             </div>}
         </div>
-        {(canCopy || (own && !message.deleted)) && <div className="chat-message-actions">
+        {(canCopy || hasPin || hasMenu) && <div className="chat-message-actions">
             {canCopy && <button className={`chat-message-copy-button${copied ? " is-copied" : ""}`} type="button" title={copied ? m.chat.copied : m.chat.copyText} aria-label={copied ? m.chat.copied : m.chat.copyText} onClick={() => void onCopy(safeChatText(message.text)).then(setCopied)}><Icon name={copied ? "check" : "copy"}/></button>}
-            {own && !message.deleted && <button className="chat-message-menu-button" type="button" title={m.chat.actions} aria-label={m.chat.actions} aria-haspopup="menu" aria-expanded={menuOpen} aria-controls={menuOpen ? "chat-message-actions" : undefined} onClick={(event) => onOpenMenu(message.id, event.currentTarget)}>⋯</button>}
+            {hasPin && <button className={`chat-message-pin-button${pinned ? " is-pinned" : ""}`} type="button" title={pinned ? m.chat.unpin : m.chat.pin} aria-label={pinned ? m.chat.unpin : m.chat.pin} aria-pressed={pinned} onClick={() => onPin(message.id)}><Icon name="pin"/></button>}
+            {hasMenu && <button className="chat-message-menu-button" type="button" title={m.chat.actions} aria-label={m.chat.actions} aria-haspopup="menu" aria-expanded={menuOpen} aria-controls={menuOpen ? "chat-message-actions" : undefined} onClick={(event) => onOpenMenu(message.id, event.currentTarget)}>⋯</button>}
         </div>}
     </article>;
 });
@@ -122,6 +125,7 @@ export function ChatPanel({store, target, title, active, connected, online, loca
     const [visible, setVisible] = useState(document.visibilityState === "visible");
     useEffect(() => store.subscribe(refresh), [store]);
     useEffect(() => store.subscribeContent(refresh), [store]);
+    const pinMessage = useCallback((id: string) => void store.pin({kind: target.kind, id: target.id}, id), [store, target.kind, target.id]);
     const reactToMessage = useCallback((id: string, emoji: string) => void store.react({kind: target.kind, id: target.id}, id, emoji), [store, target.kind, target.id]);
     const openMessageMenu = useCallback((id: string, button: HTMLElement) => {
         menuOrigin.current = button;
@@ -138,6 +142,16 @@ export function ChatPanel({store, target, title, active, connected, online, loca
         return () => document.removeEventListener("visibilitychange", changed);
     }, []);
     const c = store.conversation(target);
+    const pins = store.pinsSupported ? c.pinned : [];
+    const pinnedIds = new Set(pins);
+    const canPin = connected && store.pinsSupported;
+    const [highlighted, setHighlighted] = useState<string>();
+    const revealing = useRef<string | null>(null);
+    useEffect(() => {
+        if (!highlighted) return;
+        const timer = window.setTimeout(() => setHighlighted(undefined), 1800);
+        return () => window.clearTimeout(timer);
+    }, [highlighted]);
     const menuMessage = menu ? c.messages.find((message) => message.id === menu.id && !message.deleted) : undefined;
     useEffect(() => {if (menu && !menuMessage) setMenu(undefined);}, [menu, menuMessage]);
     const reactionMessage = emojiPanel?.messageId ? c.messages.find((message) => message.id === emojiPanel.messageId && !message.deleted) : undefined;
@@ -209,6 +223,31 @@ export function ChatPanel({store, target, title, active, connected, online, loca
         } else if (atBottom.current) history.current.scrollTop = history.current.scrollHeight;
         else setNewMessages(true);
     }, [lastID, c.messages[0]?.id, c.messages.length, c.pending.length, active]);
+    // Runs after the scroll effect above, so a revealed message wins over following the end.
+    useLayoutEffect(() => {
+        const id = revealing.current, node = history.current;
+        if (!id || !node || c.loading) return;
+        const row = node.querySelector<HTMLElement>(`[data-message-id="${id}"]`);
+        if (!row) return;
+        revealing.current = null;
+        row.scrollIntoView({block: "center"});
+        atBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 40;
+        setNewMessages(false);
+        setHighlighted(id);
+    });
+    const pinUnavailable = m.chat.pinUnavailable;
+    const revealMessage = useCallback(async (id: string) => {
+        setMessageError("");
+        revealing.current = id;
+        atBottom.current = false;
+        const shown = await store.reveal(target, id);
+        if (!shown) {
+            revealing.current = null;
+            const c = store.conversation(target);
+            if (!c.loading && !c.error) setMessageError(pinUnavailable);
+        }
+        refresh();
+    }, [store, target, pinUnavailable]);
     useEffect(() => {
         if (active && connected && visible && atBottom.current) void store.markRead(target);
     }, [lastID, c.loading, active, connected, visible, store, target.id, target.kind]);
@@ -237,6 +276,7 @@ export function ChatPanel({store, target, title, active, connected, online, loca
         onDrop={(e) => {e.preventDefault(); if (canDropFiles) void addFiles([...e.dataTransfer.files]);}}
         onPaste={(e) => {const files = [...e.clipboardData.files]; if(files.length && caps && connected) {e.preventDefault(); void addFiles(files);}}}>
         {target.kind === "direct" && <header className="chat-heading"><strong>{title}</strong><span>{online ? m.chat.online : m.chat.offline}</span></header>}
+        {active && <PinnedMessages store={store} target={target} pinned={pins} connected={connected} onReveal={(id) => void revealMessage(id)} onCopy={copyMessage}/>}
         {c.error && <div className="chat-error" role="alert">{errorText(c.error, m)}<button onClick={() => void store.sync(target)} disabled={!connected || c.loading}>{m.chat.retry}</button></div>}
         {messageError && <div className="chat-error" role="alert">{messageError}</div>}
         <div ref={history} className="chat-history" aria-label={m.chat.history} onScroll={() => {
@@ -253,7 +293,7 @@ export function ChatPanel({store, target, title, active, connected, online, loca
             {c.hasOlder && <button className="chat-older" disabled={!connected || c.loading} onClick={() => void older()}>{m.chat.older}</button>}
             {!c.loaded && <div className="chat-placeholder"><Icon name="chat"/><p>{c.loading ? m.chat.loading : connected ? m.chat.openToLoad : m.chat.waiting}</p></div>}
             {c.loaded && !c.messages.length && !c.pending.length && <div className="chat-placeholder">{m.chat.empty}</div>}
-            {c.messages.map((message) => <ChatMessageRow key={message.id} message={message} own={message.senderId === store.userId} active={active} connected={connected} context={store.context} menuOpen={menu?.id === message.id} onReact={reactToMessage} onOpenMenu={openMessageMenu} onOpenReactions={openReactionPanel} onCopy={copyMessage}/>)}
+            {c.messages.map((message) => <ChatMessageRow key={message.id} message={message} own={message.senderId === store.userId} active={active} connected={connected} context={store.context} menuOpen={menu?.id === message.id} pinned={pinnedIds.has(message.id)} canPin={canPin} highlighted={highlighted === message.id} onReact={reactToMessage} onPin={pinMessage} onOpenMenu={openMessageMenu} onOpenReactions={openReactionPanel} onCopy={copyMessage}/>)}
             {c.pending.map((p) => <article key={p.clientId} className="chat-message own pending">
                 <time dateTime={new Date(p.sentAtMS).toISOString()}>{messageDate(p.sentAtMS)}</time>{" "}<strong>{localName}</strong>{": "}<ChatMessageText text={p.text}/>{" "}
                 {p.attachmentIds?.length ? <span>📎 {p.attachmentIds.length}</span> : null}

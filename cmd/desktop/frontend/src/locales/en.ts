@@ -173,6 +173,9 @@ export const en = {
     },
     chat: {
         actions: "Message actions", copyText: "Copy text", copied: "Copied", copyFailed: "Could not copy text", deleteMessage: "Delete", deleted: "Message deleted",
+        pin: "Pin", unpin: "Unpin", pinned: "Pinned message", pinnedCount: (count: number) => `Pinned messages: ${count}`,
+        pinnedList: "Pinned messages", showPins: "All pinned messages", hidePins: "Hide list", pinJump: "Go to message",
+        pinAttachment: "Attachment", pinUnavailable: "The message is no longer available",
         online: "Online",
         offline: "Offline",
         retry: "Retry",

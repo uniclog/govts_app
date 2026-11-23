@@ -19,7 +19,7 @@ type chatJob struct {
 	addr    *net.UDPAddr
 	request protocol.ChatRequest
 	user    int64
-	// unchanged marks a repeated reaction: there is nothing to announce.
+	// unchanged marks a repeated reaction or pin: there is nothing to announce.
 	unchanged bool
 }
 
@@ -83,7 +83,7 @@ func (w *chatWorker) enqueue(packet protocol.VoicePacket, addr *net.UDPAddr) err
 			limit = "лимит сообщений чата; повторите позже"
 		}
 		rate.sends++
-	case r.Operation == protocol.ChatReact:
+	case r.Operation == protocol.ChatReact || r.Operation == protocol.ChatPin:
 		if rate.reactions >= 120 {
 			limit = "лимит сообщений чата; повторите позже"
 		}
@@ -219,6 +219,18 @@ func (w *chatWorker) handle(parent context.Context, job chatJob) {
 			message, changed, err = w.auth.store.ReactChat(ctx, actor.UserID, r.Target, r.Cursor, code, r.Forward)
 			job.unchanged = !changed
 			page = domain.ChatPage{UserID: actor.UserID, Messages: []domain.ChatMessage{message}}
+		case protocol.ChatPin:
+			var message domain.ChatMessage
+			var changed bool
+			message, changed, err = w.auth.store.PinChat(ctx, actor.UserID, r.Target, r.Cursor, r.Forward)
+			job.unchanged = !changed
+			page = domain.ChatPage{UserID: actor.UserID, Messages: []domain.ChatMessage{message}}
+		case protocol.ChatPins:
+			if r.Forward {
+				page, err = w.auth.store.ChatPinned(ctx, actor.UserID, r.Target)
+			} else {
+				page, err = w.auth.store.ChatPinPage(ctx, actor.UserID, r.Target, r.Cursor)
+			}
 		case protocol.ChatDialogs:
 			page, err = w.auth.store.ChatDialogs(ctx, actor.UserID, r.Cursor)
 		case protocol.ChatRead:
@@ -254,7 +266,7 @@ func (w *chatWorker) complete(ctx context.Context, job chatJob, actor Session, p
 	// Revalidate reads before exposing history. Writes were authorized on
 	// acceptance and committed by the store: a later channel change cannot
 	// turn a successful commit into a rejection or suppress its notifications.
-	if job.request.Operation == protocol.ChatHistory || job.request.Operation == protocol.ChatDialogs || job.request.Operation == protocol.ChatChanges {
+	if job.request.Operation == protocol.ChatHistory || job.request.Operation == protocol.ChatDialogs || job.request.Operation == protocol.ChatChanges || job.request.Operation == protocol.ChatPins {
 		if _, e := w.check(job); e != nil {
 			err = e
 		}
@@ -268,7 +280,9 @@ func (w *chatWorker) complete(ctx context.Context, job chatJob, actor Session, p
 	if err := w.conn.WritePacket(actor.ID, job.addr, ack); err != nil {
 		log.Printf("chat ack failed: session_id=%d error=%v", actor.ID, err)
 	}
-	if job.request.Operation != protocol.ChatSend && job.request.Operation != protocol.ChatRead && job.request.Operation != protocol.ChatDelete && job.request.Operation != protocol.ChatDeleteFile && job.request.Operation != protocol.ChatReact {
+	switch job.request.Operation {
+	case protocol.ChatSend, protocol.ChatRead, protocol.ChatDelete, protocol.ChatDeleteFile, protocol.ChatReact, protocol.ChatPin:
+	default:
 		return
 	}
 	if job.unchanged {
@@ -284,8 +298,8 @@ func (w *chatWorker) complete(ctx context.Context, job chatJob, actor Session, p
 				eligible = eligible || recipient.UserID == job.request.Target.ID
 			}
 		}
-		// The reacting session already holds the new state in its ack.
-		if eligible && (job.request.Operation != protocol.ChatReact || recipient.ID != actor.ID) {
+		// The reacting or pinning session already holds the new state in its ack.
+		if eligible && ((job.request.Operation != protocol.ChatReact && job.request.Operation != protocol.ChatPin) || recipient.ID != actor.ID) {
 			_ = w.conn.WritePacket(recipient.ID, recipient.Addr, protocol.VoicePacket{Type: protocol.PacketChatChanged, SessionID: recipient.ID})
 		}
 	}
@@ -299,6 +313,10 @@ func fitChatPage(p *domain.ChatPage, r protocol.ChatRequest) ([]byte, error) {
 		}
 		if r.Operation == protocol.ChatHistory && len(p.Messages) > 0 {
 			p.Cursor = p.Messages[len(p.Messages)-1].ID
+		}
+		// A pin page cursor is an offset into the pin list.
+		if r.Operation == protocol.ChatPins && !r.Forward {
+			p.Cursor = r.Cursor + int64(len(p.Messages))
 		}
 		if r.Operation == protocol.ChatDialogs && len(p.Dialogs) > 0 {
 			p.Cursor = p.Dialogs[len(p.Dialogs)-1].UserID

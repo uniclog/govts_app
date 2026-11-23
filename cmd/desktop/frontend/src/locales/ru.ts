@@ -174,6 +174,9 @@ export const ru = {
     },
     chat: {
         actions: "Действия с сообщением", copyText: "Копировать текст", copied: "Скопировано", copyFailed: "Не удалось скопировать текст", deleteMessage: "Удалить", deleted: "Сообщение удалено",
+        pin: "Закрепить", unpin: "Открепить", pinned: "Закреплённое сообщение", pinnedCount: (count: number) => `Закреплённые сообщения: ${count}`,
+        pinnedList: "Закреплённые сообщения", showPins: "Все закреплённые", hidePins: "Скрыть список", pinJump: "Перейти к сообщению",
+        pinAttachment: "Вложение", pinUnavailable: "Сообщение больше недоступно",
         online: "В сети",
         offline: "Не в сети",
         retry: "Повторить",

@@ -60,6 +60,8 @@ type ChatPageDTO struct {
 	HasMore  bool             `json:"hasMore"`
 	Messages []ChatMessageDTO `json:"messages"`
 	Dialogs  []ChatDialogDTO  `json:"dialogs"`
+	// PinnedIDs answers the "pins" operation with forward set: the latest pin first.
+	PinnedIDs []string `json:"pinnedIds,omitempty"`
 }
 
 func (s *Service) Chat(request ChatRequestDTO) (ChatPageDTO, error) {
@@ -88,6 +90,10 @@ func (s *Service) Chat(request ChatRequestDTO) (ChatPageDTO, error) {
 		r.Operation = protocol.ChatDeleteFile
 	case "react":
 		r.Operation = protocol.ChatReact
+	case "pin":
+		r.Operation = protocol.ChatPin
+	case "pins":
+		r.Operation = protocol.ChatPins
 	default:
 		return ChatPageDTO{}, errors.New("неизвестная операция чата")
 	}
@@ -142,6 +148,9 @@ func (s *Service) Chat(request ChatRequestDTO) (ChatPageDTO, error) {
 			}
 			dto.Messages[i].Reactions = append(dto.Messages[i].Reactions, ChatReactionDTO{Emoji: emoji, Count: reaction.Count, Mine: reaction.Mine})
 		}
+	}
+	for _, id := range p.Pinned {
+		dto.PinnedIDs = append(dto.PinnedIDs, strconv.FormatInt(id, 10))
 	}
 	for _, d := range p.Dialogs {
 		dto.Dialogs = append(dto.Dialogs, ChatDialogDTO{UserID: strconv.FormatInt(d.UserID, 10), DisplayName: d.DisplayName, LatestID: strconv.FormatInt(d.LatestID, 10), ReadID: strconv.FormatInt(d.ReadID, 10), Unread: d.Unread})

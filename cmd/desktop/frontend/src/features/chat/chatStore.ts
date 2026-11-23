@@ -8,6 +8,8 @@ export type Conversation = {
     messages: ChatMessageDTO[]; pending: PendingMessage[]; draft: string;
     loaded: boolean; loading: boolean; error: string; hasOlder: boolean;
     cursor: string; changeCursor: string; readId: string; unread: number; olderWindow: boolean; newMessages: boolean;
+    // Pinned message IDs, the latest pin first.
+    pinned: string[];
 };
 const keyOf = (t: ChatTarget) => `${t.kind}:${t.id}`;
 const compare = (a: string, b: string) => BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0;
@@ -47,6 +49,14 @@ export class ChatStore {
     private busy = new Set<string>();
     private reading = new Set<string>();
     private reacting = new Map<string, {conversation: Conversation; id: string; emoji: string; add: boolean}>();
+    // Conversations whose pin list must be read again; a change to any of their messages may be a pin.
+    private pinsStale = new Set<string>();
+    private pinsLoading = new Set<string>();
+    // Message IDs are unique on a server, so pinned texts share one cache. Messages are never
+    // edited, and a deleted message leaves the pin list, so a cached entry stays valid.
+    private pinTexts = new Map<string, ChatMessageDTO>();
+    // A server that predates pins rejects the request; the feature then stays hidden.
+    pinsSupported = true;
     private reactionTail: Promise<unknown> = Promise.resolve();
     private lastReactionAt = 0;
     private listing = false;
@@ -119,6 +129,7 @@ export class ChatStore {
         if (connected === this.connected) return;
         this.connected = connected; this.epoch++; this.lifecycle.abort(); this.lifecycle = new AbortController();
         if (!connected) this.readQueue.clear();
+        else {this.pinsSupported = true; for (const key of this.conversations.keys()) this.pinsStale.add(key);}
         this.nextSyncAt = 0;
     }
     invalidate() { this.nextSyncAt = Math.min(this.nextSyncAt, Date.now() + 3000); }
@@ -168,6 +179,8 @@ export class ChatStore {
             await Promise.all([...this.watched.values()].map(({target}) => this.sync(target, false, true)));
             if (epoch !== this.epoch || !this.connected) return;
             await Promise.all([...this.watched.values()].map(({target}) => this.syncChanges(target)));
+            if (epoch !== this.epoch || !this.connected) return;
+            await Promise.all([...this.watched.values()].map(({target}) => this.syncPins(target)));
             if (!due || epoch !== this.epoch || !this.connected) return;
             await this.refreshDialogs(false, true);
         } finally { this.scheduled = false; }
@@ -187,7 +200,8 @@ export class ChatStore {
                 if (evict) this.conversations.delete(evict[0]);
                 else break; // Only pinned drafts, sends and in-flight requests remain.
             }
-            c = {messages: [], pending: [], draft: "", loaded: false, loading: false, error: "", hasOlder: false, cursor: "0", changeCursor: "0", readId: "0", unread: 0, olderWindow: false, newMessages: false};
+            c = {messages: [], pending: [], draft: "", loaded: false, loading: false, error: "", hasOlder: false, cursor: "0", changeCursor: "0", readId: "0", unread: 0, olderWindow: false, newMessages: false, pinned: []};
+            this.pinsStale.add(key);
             this.conversations.set(key, c);
             c.draft = this.restoredDrafts[key] ?? "";
             delete this.restoredDrafts[key];
@@ -209,7 +223,8 @@ export class ChatStore {
 
     // Reactions have their own lane, so a queue of background reads cannot delay them.
     private async request(operation: string, target?: ChatTarget, extra: Partial<ChatRequestDTO> = {}): Promise<ChatPageDTO> {
-        const reaction = operation === "react", userAction = reaction || operation === "send";
+        // A pin is a user action like a reaction and shares its lane.
+        const reaction = operation === "react" || operation === "pin", userAction = reaction || operation === "send";
         const epoch = this.epoch, signal = this.lifecycle.signal;
         const check = () => {
             if (this.disposed || !this.connected || epoch !== this.epoch || signal.aborted) throw new Error(errorCode("chat-session-ended"));
@@ -332,7 +347,7 @@ export class ChatStore {
             this.merge(c, changes, false, false, true);
             c.changeCursor = maxID(c.changeCursor, changes.cursor);
             if (changes.hasMore) this.invalidate();
-            if (changes.messages?.length) this.notify();
+            if (changes.messages?.length) {this.pinsStale.add(keyOf(target)); this.notify();}
         } catch {
             // Keep the loaded history and retry; this is a background read,
             // not a failed user action. Old-session errors must stay silent.
@@ -437,6 +452,110 @@ export class ChatStore {
         } catch (e) {
             this.reacting.delete(key);
             if (!this.disposed) {apply(!add); c.error = chatError(e); this.notify();}
+        }
+    }
+
+    pinnedMessage(target: ChatTarget, id: string): ChatMessageDTO | undefined {
+        const loaded = this.conversation(target).messages.find((m) => m.id === id && !m.deleted);
+        // Kept for when a jump or the history limit unloads the message.
+        if (loaded && !this.pinTexts.has(id)) this.rememberPinned([loaded]);
+        return loaded ?? this.pinTexts.get(id);
+    }
+    private rememberPinned(messages: ChatMessageDTO[] | null | undefined) {
+        for (const m of messages ?? []) if (!m.deleted) {this.pinTexts.delete(m.id); this.pinTexts.set(m.id, m);}
+        while (this.pinTexts.size > 1024) this.pinTexts.delete(this.pinTexts.keys().next().value!);
+    }
+    private pinsFailed(e: unknown) {
+        if (!/некорректный запрос чата/i.test(chatError(e))) return false;
+        this.pinsSupported = false;
+        this.notify();
+        return true;
+    }
+    // Background reads take the ID list first, then the text of the latest pin for the bar.
+    private async syncPins(target: ChatTarget) {
+        const key = keyOf(target), c = this.conversation(target);
+        if (!this.pinsSupported || !c.loaded || target.id === "0" || !this.pinsStale.has(key) || this.pinsLoading.has(key)) return;
+        const epoch = this.epoch;
+        this.pinsLoading.add(key);
+        this.pinsStale.delete(key);
+        try {
+            const page = await this.request("pins", target, {forward: true});
+            if (epoch !== this.epoch) return;
+            const pinned = page.pinnedIds ?? [];
+            const changed = pinned.join() !== c.pinned.join();
+            c.pinned = pinned;
+            if (pinned[0] && !this.pinnedMessage(target, pinned[0])) await this.loadPinTexts(target, 1);
+            if (changed) this.notify();
+        } catch (e) {
+            if (!this.pinsFailed(e) && !this.disposed && this.connected && epoch === this.epoch) {this.pinsStale.add(key); this.invalidate();}
+        } finally {this.pinsLoading.delete(key);}
+    }
+    // Reads pinned texts in list order until the first `count` pins are known. A page starts
+    // at the first unknown pin; the list holds at most 50 pins, so the loop is bounded.
+    async loadPinTexts(target: ChatTarget, count = Infinity) {
+        const c = this.conversation(target), epoch = this.epoch;
+        let found = false;
+        for (let page = 0; page < 50 && this.pinsSupported && epoch === this.epoch; page++) {
+            const offset = c.pinned.slice(0, count).findIndex((id) => !this.pinnedMessage(target, id));
+            if (offset < 0) break;
+            try {
+                const result = await this.request("pins", target, {cursor: String(offset)});
+                this.rememberPinned(result.messages);
+                found = found || !!result.messages?.length;
+                if (!result.messages?.length) break;
+            } catch (e) {this.pinsFailed(e); break;}
+        }
+        if (found) this.notifyContent();
+    }
+    async pin(target: ChatTarget, id: string) {
+        const c = this.conversation(target), key = keyOf(target);
+        // A pin from the list may name a message outside the loaded history.
+        const message = this.pinnedMessage(target, id);
+        const add = !c.pinned.includes(id), before = c.pinned;
+        if ((add && !message) || this.disposed || !this.connected || !this.pinsSupported) return;
+        // The list answers at once; the server's own list replaces it right after.
+        if (message) this.rememberPinned([message]);
+        c.pinned = add ? [id, ...before] : before.filter((entry) => entry !== id);
+        this.notify();
+        try {
+            this.merge(c, await this.request("pin", target, {cursor: id, forward: add}));
+            c.error = "";
+        } catch (e) {
+            if (!this.disposed) {c.pinned = before; if (!this.pinsFailed(e)) c.error = chatError(e);}
+        } finally {
+            this.pinsStale.add(key);
+            this.notify();
+            void this.syncPins(target);
+        }
+    }
+    // Brings a message into the loaded history. A message outside it opens a window around it,
+    // as reading far back does; the jump button then returns to the latest messages.
+    async reveal(target: ChatTarget, id: string): Promise<boolean> {
+        const c = this.conversation(target), key = keyOf(target);
+        if (c.messages.some((m) => m.id === id)) return true;
+        if (this.busy.has(key) || this.disposed || !this.connected) return false;
+        const epoch = this.epoch;
+        this.busy.add(key); c.loading = true; this.notify();
+        try {
+            const before = await this.request("history", target, {cursor: (BigInt(id) + 1n).toString()});
+            if (epoch !== this.epoch || !before.messages?.some((m) => m.id === id)) return false;
+            const after = await this.request("history", target, {cursor: id, forward: true});
+            if (epoch !== this.epoch) return false;
+            c.messages = [];
+            this.merge(c, before, true, true);
+            this.merge(c, after, true, true);
+            c.hasOlder = before.hasMore;
+            c.olderWindow = after.hasMore;
+            c.newMessages = false;
+            if (!after.hasMore) c.cursor = maxID(c.cursor, after.cursor);
+            c.error = "";
+            return true;
+        } catch (e) {
+            if (!this.disposed && epoch === this.epoch) c.error = chatError(e);
+            return false;
+        } finally {
+            c.loading = false; this.busy.delete(key);
+            this.notify();
         }
     }
 

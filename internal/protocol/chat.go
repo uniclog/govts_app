@@ -19,6 +19,11 @@ const (
 	ChatDelete
 	ChatDeleteFile
 	ChatReact
+	// ChatPin pins (Forward) or unpins the message named by Cursor.
+	ChatPin
+	// ChatPins returns the pinned message IDs (Forward) or a page of pinned
+	// messages, the latest pin first, starting Cursor pins into the list.
+	ChatPins
 )
 
 type ChatRequest struct {
@@ -73,7 +78,7 @@ func DecodeChatRequest(b []byte) (ChatRequest, error) {
 }
 
 func (r ChatRequest) Validate() error {
-	if r.Operation < ChatSend || r.Operation > ChatReact || r.Cursor < 0 {
+	if r.Operation < ChatSend || r.Operation > ChatPins || r.Cursor < 0 {
 		return errors.New("invalid chat operation")
 	}
 	if r.Operation != ChatDialogs {
@@ -109,10 +114,19 @@ func (r ChatRequest) Validate() error {
 		}
 		return nil
 	}
-	if r.Operation == ChatChanges && r.Forward && r.Cursor != 0 {
+	if r.Operation == ChatPin {
+		if r.Cursor <= 0 || r.Text != "" || r.ClientID != ([16]byte{}) || len(r.AttachmentIDs) != 0 {
+			return errors.New("invalid pin request")
+		}
+		return nil
+	}
+	if (r.Operation == ChatChanges || r.Operation == ChatPins) && r.Forward && r.Cursor != 0 {
 		return errors.New("invalid change watermark request")
 	}
-	if r.Text != "" || len(r.AttachmentIDs) > 0 || r.ClientID != ([16]byte{}) || (r.Forward && r.Operation != ChatHistory && r.Operation != ChatChanges) {
+	if r.Operation == ChatPins && r.Cursor >= domain.MaxChatPins {
+		return errors.New("invalid pin page")
+	}
+	if r.Text != "" || len(r.AttachmentIDs) > 0 || r.ClientID != ([16]byte{}) || (r.Forward && r.Operation != ChatHistory && r.Operation != ChatChanges && r.Operation != ChatPins) {
 		return errors.New("unexpected chat data")
 	}
 	return nil
@@ -157,9 +171,17 @@ func EncodeChatPage(p domain.ChatPage) ([]byte, error) {
 	if len(p.Messages) > 16 || len(p.Dialogs) > 16 || p.UserID <= 0 || p.LatestID < 0 || p.ReadID < 0 || p.Cursor < 0 {
 		return nil, errors.New("invalid chat page")
 	}
+	if len(p.Pinned) > domain.MaxChatPins || (!p.PinList && len(p.Pinned) != 0) {
+		return nil, errors.New("invalid chat pins")
+	}
 	b := []byte{ChatSchemaVersion, 0, byte(len(p.Messages)), byte(len(p.Dialogs))}
 	if p.HasMore {
 		b[1] = 1
+	}
+	// Bit 1 adds the pin list section. Only a reply to a pin list request sets
+	// it, so clients that predate pins never receive it.
+	if p.PinList {
+		b[1] |= 2
 	}
 	for _, id := range []int64{p.UserID, p.LatestID, p.ReadID, p.Cursor} {
 		b = binary.BigEndian.AppendUint64(b, uint64(id))
@@ -190,6 +212,19 @@ func EncodeChatPage(p domain.ChatPage) ([]byte, error) {
 			return nil, err
 		}
 	}
+	if p.PinList {
+		seen := make(map[int64]bool, len(p.Pinned))
+		for _, id := range p.Pinned {
+			if id <= 0 || seen[id] {
+				return nil, errors.New("invalid chat pin")
+			}
+			seen[id] = true
+		}
+		b = append(b, byte(len(p.Pinned)))
+		for _, id := range p.Pinned {
+			b = binary.BigEndian.AppendUint64(b, uint64(id))
+		}
+	}
 	if len(b) > MaxPayloadSize {
 		return nil, ErrPayloadTooLarge
 	}
@@ -198,11 +233,11 @@ func EncodeChatPage(p domain.ChatPage) ([]byte, error) {
 
 func DecodeChatPage(b []byte) (domain.ChatPage, error) {
 	var p domain.ChatPage
-	if len(b) < 40 || len(b) > MaxPayloadSize || b[0] != ChatSchemaVersion || b[1] > 1 || b[2] > 16 || b[3] > 16 {
+	if len(b) < 40 || len(b) > MaxPayloadSize || b[0] != ChatSchemaVersion || b[1] > 3 || b[2] > 16 || b[3] > 16 {
 		return p, errors.New("invalid chat page")
 	}
 	nm, nd := int(b[2]), int(b[3])
-	p.HasMore = b[1] == 1
+	p.HasMore, p.PinList = b[1]&1 != 0, b[1]&2 != 0
 	p.UserID, p.LatestID, p.ReadID, p.Cursor = int64(binary.BigEndian.Uint64(b[4:12])), int64(binary.BigEndian.Uint64(b[12:20])), int64(binary.BigEndian.Uint64(b[20:28])), int64(binary.BigEndian.Uint64(b[28:36]))
 	p.Unread = binary.BigEndian.Uint32(b[36:40])
 	b = b[40:]
@@ -261,6 +296,17 @@ func DecodeChatPage(b []byte) (domain.ChatPage, error) {
 			return p, err
 		}
 		p.Dialogs = append(p.Dialogs, d)
+	}
+	if p.PinList {
+		if len(b) < 1 || int(b[0]) > domain.MaxChatPins || len(b) < 1+int(b[0])*8 {
+			return p, errors.New("invalid chat pins")
+		}
+		n := int(b[0])
+		b = b[1:]
+		for i := 0; i < n; i++ {
+			p.Pinned = append(p.Pinned, int64(binary.BigEndian.Uint64(b[:8])))
+			b = b[8:]
+		}
 	}
 	if len(b) != 0 {
 		return p, errors.New("trailing chat data")

@@ -386,6 +386,42 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .chat-error button { margin-left: 8px; }
 .chat-older { display: block; margin: 0 auto 10px; }
 .chat-new { align-self: center; margin-bottom: 6px; }
+/* Pinned messages: the bar shows the latest pin, the list drops over the history. */
+.chat-pins { position: relative; z-index: 3; flex: 0 0 auto; margin: 0 12px; border-bottom: 1px solid var(--line); }
+.server-shell .chat-pins { margin: 0; }
+.chat-pin-bar { display: flex; align-items: center; gap: 2px; min-width: 0; padding: 6px 0; }
+.chat-pin-current { display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; padding: 3px 8px 3px 10px; border: 0; border-left: 2px solid var(--menu-accent); border-radius: 0 6px 6px 0; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.chat-pin-current:hover:not(:disabled) { background: var(--card-strong); }
+.chat-pin-current:disabled { cursor: default; }
+.chat-pin-current svg { flex: 0 0 auto; width: 15px; height: 15px; color: var(--menu-accent); }
+.chat-pin-summary { display: grid; min-width: 0; line-height: 1.35; }
+.chat-pin-summary strong { color: var(--menu-accent); font-size: .6875rem; font-weight: 600; }
+.chat-pin-preview { overflow: hidden; color: var(--muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.chat-pin-preview b { color: var(--text); font-weight: 500; }
+.chat-pin-icon-button { display: grid; flex: 0 0 auto; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; color: var(--muted); background: transparent; cursor: pointer; }
+.chat-pin-icon-button svg { width: 14px; height: 14px; }
+.chat-pin-icon-button:hover:not(:disabled), .chat-pin-icon-button:focus-visible, .chat-pin-toggle[aria-expanded="true"] { color: var(--text); background: var(--card-strong); }
+.chat-pin-icon-button:disabled { opacity: .45; cursor: default; }
+.chat-pin-icon-button.is-copied { color: var(--accent); }
+.chat-pin-toggle svg { transition: transform .15s ease; }
+.chat-pins.is-open .chat-pin-toggle svg { transform: rotate(180deg); }
+.chat-pin-list { position: absolute; top: calc(100% + 4px); right: 0; left: 0; display: grid; gap: 2px; max-height: min(320px, 55vh); margin: 0; padding: 4px; overflow-y: auto; list-style: none; border: 1px solid var(--line); border-radius: 10px; background: var(--card); box-shadow: var(--menu-shadow); }
+.chat-pin-item { display: flex; align-items: center; gap: 2px; padding-right: 4px; border-radius: 8px; }
+.chat-pin-item:hover, .chat-pin-item:focus-within { background: color-mix(in srgb, var(--card-strong) 70%, transparent); }
+.chat-pin-item-main { display: grid; flex: 1; gap: 1px; min-width: 0; padding: 6px 8px; border: 0; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.chat-pin-item-main:disabled { cursor: default; }
+.chat-pin-item-meta { display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: .6875rem; }
+.chat-pin-item-meta strong { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.chat-pin-item-meta time { flex: 0 0 auto; color: var(--muted); font-size: .625rem; }
+.chat-pin-item-text { display: -webkit-box; overflow: hidden; color: var(--muted); font-size: .75rem; line-height: 1.4; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.chat-message-pin { display: inline-grid; align-self: center; place-items: center; color: var(--muted); }
+.chat-message-pin svg { width: 11px; height: 11px; }
+.chat-message.is-highlighted { animation: chat-message-flash 1.8s ease-out; }
+@keyframes chat-message-flash { 0%, 35% { background: color-mix(in srgb, var(--menu-accent) 18%, transparent); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-force-motion]) .chat-pin-toggle svg { transition: none; }
+  :root:not([data-force-motion]) .chat-message.is-highlighted { animation: none; background: color-mix(in srgb, var(--menu-accent) 14%, transparent); }
+}
 .settings-page { margin: 0; padding: 24px 28px 22px; }
 @media (max-width: 1100px) {
   .channel-stage { padding-inline: 12px; }
@@ -544,14 +580,15 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 @keyframes chat-reaction-in { from { opacity: 0; transform: scale(.8); } }
 
 .chat-message-actions { display: flex; gap: 2px; }
-.chat-message .chat-message-copy-button { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; color: var(--muted); background: transparent; cursor: pointer; }
-.chat-message-copy-button svg { width: 14px; height: 14px; }
-.chat-message .chat-message-copy-button:hover, .chat-message .chat-message-copy-button:focus-visible { color: var(--text); background: var(--card-strong); }
+.chat-message :is(.chat-message-copy-button, .chat-message-pin-button) { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; color: var(--muted); background: transparent; cursor: pointer; }
+:is(.chat-message-copy-button, .chat-message-pin-button) svg { width: 14px; height: 14px; }
+.chat-message :is(.chat-message-copy-button, .chat-message-pin-button):is(:hover, :focus-visible) { color: var(--text); background: var(--card-strong); }
 .chat-message .chat-message-copy-button.is-copied { color: var(--accent); }
+.chat-message .chat-message-pin-button.is-pinned { color: var(--menu-accent); }
 .server-shell .chat-message-actions { position: absolute; top: 5px; right: 4px; opacity: 0; }
 .server-shell .chat-message:hover .chat-message-actions, .server-shell .chat-message:focus-within .chat-message-actions, .server-shell .chat-message-actions:has([aria-expanded="true"], .is-copied) { opacity: 1; }
 .server-shell .chat-message .chat-message-actions .chat-message-menu-button { position: static; opacity: 1; }
-.server-shell .chat-message:not(.is-deleted):not(.pending) .chat-message-meta { padding-right: 50px; }
+.server-shell .chat-message:not(.is-deleted):not(.pending) .chat-message-meta { padding-right: 74px; }
 
 .chat-emoji-popover { position: fixed; z-index: 10000; max-width: calc(100vw - 16px); border: 1px solid var(--line); border-radius: 14px; color: var(--text); background: var(--card); box-shadow: var(--menu-shadow); }
 .chat-emoji-popover button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; font-size: 1.125rem; line-height: 1; cursor: pointer; }

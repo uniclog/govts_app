@@ -173,6 +173,9 @@ export const ky = {
     },
     chat: {
         actions: "Билдирүү аракеттери", copyText: "Текстти көчүрүү", copied: "Көчүрүлдү", copyFailed: "Текст көчүрүлгөн жок", deleteMessage: "Өчүрүү", deleted: "Билдирүү өчүрүлдү",
+        pin: "Бекитүү", unpin: "Бекитүүнү алуу", pinned: "Бекитилген билдирүү", pinnedCount: (count: number) => `Бекитилген билдирүүлөр: ${count}`,
+        pinnedList: "Бекитилген билдирүүлөр", showPins: "Бардык бекитилгендер", hidePins: "Тизмени жашыруу", pinJump: "Билдирүүгө өтүү",
+        pinAttachment: "Тиркеме", pinUnavailable: "Билдирүү мындан ары жеткиликсиз",
         online: "Тармакта",
         offline: "Тармакта эмес",
         retry: "Кайталоо",
