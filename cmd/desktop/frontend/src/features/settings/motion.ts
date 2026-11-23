@@ -1,18 +1,19 @@
-const forceMotionKey = "sonoryx.forceMotion";
+const reduceMotionKey = "sonoryx.reduceMotion";
 
-// Windows "animation effects" reach the app as prefers-reduced-motion. This preference
-// only makes the app's CSS ignore that signal; the Windows setting itself stays untouched.
-export function loadForceMotion(): boolean {
-    try { return localStorage.getItem(forceMotionKey) !== "false"; }
-    catch { return true; }
+// The app always animates, whatever Windows "animation effects" say
+// (prefers-reduced-motion is ignored). This preference turns animations off in
+// the app only; the CSS reads it as :root[data-reduce-motion].
+export function loadReduceMotion(): boolean {
+    try { return localStorage.getItem(reduceMotionKey) === "true"; }
+    catch { return false; }
 }
 
-export function applyForceMotion(enabled: boolean): void {
-    if (enabled) document.documentElement.dataset.forceMotion = "true";
-    else delete document.documentElement.dataset.forceMotion;
+export function applyReduceMotion(enabled: boolean): void {
+    if (enabled) document.documentElement.dataset.reduceMotion = "true";
+    else delete document.documentElement.dataset.reduceMotion;
 }
 
-export function saveForceMotion(enabled: boolean): void {
-    try { localStorage.setItem(forceMotionKey, String(enabled)); } catch { /* Session choice survives. */ }
-    applyForceMotion(enabled);
+export function saveReduceMotion(enabled: boolean): void {
+    try { localStorage.setItem(reduceMotionKey, String(enabled)); } catch { /* Session choice survives. */ }
+    applyReduceMotion(enabled);
 }

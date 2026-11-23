@@ -33,7 +33,7 @@ import {AdminPanel} from "./features/admin/AdminPanel";
 import {StageScene} from "./features/settings/StageScene";
 import {HotkeySettings} from "./features/settings/HotkeySettings";
 import {NotificationsCard, PresenceAvatar} from "./features/notify/NotifyControls";
-import {loadForceMotion, saveForceMotion} from "./features/settings/motion";
+import {loadReduceMotion, saveReduceMotion} from "./features/settings/motion";
 
 const contentTabs = ["chat", "events"] as const;
 type ContentTab = typeof contentTabs[number] | `direct:${string}`;
@@ -707,7 +707,7 @@ function SettingsPage({view, invoke, appearance, setTheme, updateAppearance, upd
     updates: UpdatesState;
 }) {
     const {m} = useLocale();
-    const [forceMotion, setForceMotion] = useState(loadForceMotion);
+    const [reduceMotion, setReduceMotion] = useState(loadReduceMotion);
     const [sensitivity, setSensitivity] = useState(view.audio.vadSensitivity);
     useEffect(() => setSensitivity(view.audio.vadSensitivity), [view.audio.vadSensitivity]);
     const [rnnoiseSensitivity, setRNNoiseSensitivity] = useState(view.audio.rnnoiseSensitivity);
@@ -870,8 +870,8 @@ function SettingsPage({view, invoke, appearance, setTheme, updateAppearance, upd
                         <LocaleSwitch labelledBy="locale-label"/>
                     </div>
                     <InterfaceSettings appearance={appearance} onTheme={(value) => invoke(() => setTheme(value))} onChange={updateAppearance}/>
-                    <SettingToggle title={m.settings.forceMotion} description={m.settings.forceMotionHint} checked={forceMotion}
-                                   onChange={async (value) => { saveForceMotion(value); setForceMotion(value); }}/>
+                    <SettingToggle title={m.settings.reduceMotion} description={m.settings.reduceMotionHint} checked={reduceMotion}
+                                   onChange={async (value) => { saveReduceMotion(value); setReduceMotion(value); }}/>
                 </section>
                 <section className="settings-card"><h3>{m.settings.sounds}</h3>
                     <Select id="sound-pack" label={m.settings.soundPack} hint={m.settings.soundPackHint}

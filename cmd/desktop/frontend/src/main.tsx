@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import {applyAppearance, loadAppearance} from "./appearance";
-import {applyForceMotion, loadForceMotion} from "./features/settings/motion";
+import {applyReduceMotion, loadReduceMotion} from "./features/settings/motion";
 import {LocaleProvider} from "./locales/Locale";
 import "./fonts.css";
 import "./theme.css";
@@ -14,7 +14,7 @@ import "./menus.css";
 import "./features/notify/notify.css";
 
 applyAppearance(loadAppearance());
-applyForceMotion(loadForceMotion());
+applyReduceMotion(loadReduceMotion());
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
