@@ -80,17 +80,23 @@ func HandleDisconnectPacket(
 	addr *net.UDPAddr,
 ) error {
 	if err := ValidateSessionAddr(hub, packet.SessionID, addr); err != nil {
+		// The client repeats Disconnect in case one is lost; a copy that
+		// arrives after the removal finds nothing and is not an error.
+		if errors.Is(err, ErrSessionNotFound) {
+			return nil
+		}
 		return err
 	}
 	session, ok := hub.Get(packet.SessionID)
 	if !ok {
-		return fmt.Errorf("session %d not found", packet.SessionID)
+		return nil
 	}
 	removed, ok := hub.Remove(session.ID)
 	if !ok {
-		return fmt.Errorf("session %d not found", packet.SessionID)
+		return nil
 	}
 	cache.RemoveSession(session.ID)
+	hub.ForgetArrival(removed.UserID, time.Now())
 	log.Printf("client disconnected: id=%d, name=%s", packet.SessionID, removed.Name)
 	return nil
 }

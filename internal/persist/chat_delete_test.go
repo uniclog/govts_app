@@ -17,7 +17,7 @@ func TestVersionEightMigrationPreservesMessagesAndAttachments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, statement := range []string{`DROP TRIGGER chat_reactions_tombstone`, `DROP TABLE chat_reactions`, `ALTER TABLE server_settings DROP COLUMN password`, `DROP TABLE chat_changes`, `ALTER TABLE chat_messages DROP COLUMN deleted`, `ALTER TABLE chat_message_files DROP COLUMN hidden`, `PRAGMA user_version=8`} {
+	for _, statement := range []string{`DROP TRIGGER chat_pins_tombstone`, `DROP TABLE chat_pins`, `DROP TRIGGER chat_reactions_tombstone`, `DROP TABLE chat_reactions`, `ALTER TABLE server_settings DROP COLUMN password`, `DROP TABLE chat_changes`, `ALTER TABLE chat_messages DROP COLUMN deleted`, `ALTER TABLE chat_message_files DROP COLUMN hidden`, `PRAGMA user_version=8`} {
 		if _, err = s.db.Exec(statement); err != nil {
 			t.Fatal(err)
 		}

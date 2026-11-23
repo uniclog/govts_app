@@ -4,6 +4,7 @@ import {Icon} from "../../components/Icon";
 import {useLocale} from "../../locales/Locale";
 import {RecentServers} from "./RecentServers";
 import {VoiceMark} from "./ConnectionViews";
+import {NotificationsToggle} from "../notify/NotifyControls";
 
 export function ServerSwitcher({view, refreshingServers, onRefreshServers, onReconnect, onError}: {
     view: ClientViewDTO;
@@ -34,12 +35,15 @@ export function ServerSwitcher({view, refreshingServers, onRefreshServers, onRec
         };
     }, [open]);
     return <header className="workspace-server-header server-switcher" ref={headerRef}>
+        <div className="server-switcher-row">
         <button ref={triggerRef} type="button" className="server-switcher-trigger" title={m.connection.switchServer}
             aria-label={`${m.connection.switchServer}: ${view.server.name || m.connection.server}`}
             aria-expanded={open} aria-controls="server-switcher-panel" onClick={() => setOpen((value) => !value)}>
             <span className="server-switcher-brand"><VoiceMark/></span>
             <strong>{view.server.name || m.connection.server}</strong><Icon name="chevronDown"/>
         </button>
+        <NotificationsToggle className="server-header-notify"/>
+        </div>
         {open && <div id="server-switcher-panel" className="server-switcher-popover" role="region" aria-label={m.connection.servers}>
             <RecentServers standalone view={view} expanded onToggle={() => {}} disabled={view.connectionStatus !== "connected"}
                 headerAction={<button className="server-switcher-close" type="button" title={m.connection.closeServers} aria-label={m.connection.closeServers} onClick={close}><Icon name="close"/></button>}

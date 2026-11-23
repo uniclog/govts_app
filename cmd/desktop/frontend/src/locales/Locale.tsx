@@ -40,6 +40,7 @@ export function LocaleProvider({children}: {children: ReactNode}) {
     // shell keeps the current language's titles instead of asking for them.
     useEffect(() => {
         void desktopAPI.setHotkeyNotices(current.messages.hotkeyNotices).catch(() => undefined);
+        void desktopAPI.setNoticeTexts(current.messages.notify.popup).catch(() => undefined);
     }, [current.messages]);
 
     const setLocale = (id: string) => {

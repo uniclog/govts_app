@@ -30,6 +30,8 @@ func init() {
 	application.RegisterEvent[bool]("server-status-changed")
 	application.RegisterEvent[wailsui.AudioMeterDTO]("audio-meter")
 	application.RegisterEvent[bool]("tray-screen-share")
+	application.RegisterEvent[bool]("notifications-changed")
+	application.RegisterEvent[bool]("main-window-shown")
 }
 
 func main() {
@@ -169,8 +171,29 @@ func main() {
 		quitting.Store(true)
 		app.Quit()
 	})
-	installTray(app, mainWindow, client, service, &quitting)
-	trackMainWindowVisibility(mainWindow, service)
+	notificationsItem := installTray(app, mainWindow, client, service, &quitting)
+	trackMainWindowVisibility(mainWindow, service, func() { app.Event.Emit("main-window-shown", true) })
+	wailsui.ConfigureNotifications(service,
+		func() bool { return !mainWindowHidden.Load() && mainWindowFocused.Load() },
+		func(message apppopup.Message) error {
+			window := popup.Load()
+			if window == nil {
+				return nil
+			}
+			window.SetLook(apppopup.ParseLook(service.PopupLook()))
+			return window.ShowMessage(message)
+		},
+		func() { showMainWindow(mainWindow) },
+		func() {
+			// The hotkey thread calls this too; it must not wait for the main thread.
+			go func() {
+				notificationsItem.SetChecked(service.NotificationsMuted())
+				app.Event.Emit("notifications-changed", true)
+			}()
+		})
+	// Connecting to a subscribed server replaces its background watcher, and
+	// leaving it brings the watcher back.
+	app.Event.On("client-state-changed", func(*application.CustomEvent) { service.ConnectionChanged() })
 	fitWindowToScreen(mainWindow)
 	wailsui.ConfigureHotkeyNotifications(service,
 		func() bool { return mainWindowHidden.Load() },
@@ -197,6 +220,10 @@ func main() {
 // waiting for that handler; a window call would wait for the main thread too.
 var mainWindowHidden atomic.Bool
 
+// mainWindowFocused is true while the main window has keyboard focus. A
+// notification for the chat on screen then only plays its sound.
+var mainWindowFocused atomic.Bool
+
 // fitWindowToScreen keeps the default window size inside the work area of a
 // small screen, such as 1280x720 without the taskbar.
 func fitWindowToScreen(window *application.WebviewWindow) {
@@ -217,21 +244,31 @@ func fitWindowToScreen(window *application.WebviewWindow) {
 	})
 }
 
-func trackMainWindowVisibility(window *application.WebviewWindow, service *wailsui.Service) {
+// shown runs when the window comes back from the tray or the taskbar, or a
+// second launch from the Start menu brings it forward; the interface then
+// refreshes the saved server statuses (at most once a minute).
+func trackMainWindowVisibility(window *application.WebviewWindow, service *wailsui.Service, shown func()) {
 	hide := func(*application.WindowEvent) {
 		mainWindowHidden.Store(true)
+		mainWindowFocused.Store(false)
 		service.SetHotkeyWindowInactive(true)
 	}
-	show := func(*application.WindowEvent) { mainWindowHidden.Store(false) }
+	show := func(*application.WindowEvent) {
+		mainWindowHidden.Store(false)
+		// The hook runs on the UI thread; the event must not wait for it.
+		go shown()
+	}
 	window.RegisterHook(events.Common.WindowHide, hide)
 	window.RegisterHook(events.Common.WindowMinimise, hide)
 	window.RegisterHook(events.Common.WindowShow, show)
 	window.RegisterHook(events.Common.WindowRestore, show)
 	window.RegisterHook(events.Common.WindowUnMinimise, show)
 	window.RegisterHook(events.Common.WindowLostFocus, func(*application.WindowEvent) {
+		mainWindowFocused.Store(false)
 		service.SetHotkeyWindowInactive(true)
 	})
 	window.RegisterHook(events.Common.WindowFocus, func(*application.WindowEvent) {
+		mainWindowFocused.Store(true)
 		service.SetHotkeyWindowInactive(false)
 	})
 }
@@ -241,9 +278,10 @@ func showMainWindow(window *application.WebviewWindow) {
 	window.Show()
 	window.Focus()
 	mainWindowHidden.Store(false)
+	mainWindowFocused.Store(true)
 }
 
-func installTray(app *application.App, window *application.WebviewWindow, client *clientapp.App, service *wailsui.Service, quitting *atomic.Bool) {
+func installTray(app *application.App, window *application.WebviewWindow, client *clientapp.App, service *wailsui.Service, quitting *atomic.Bool) *application.MenuItem {
 	menu := app.NewMenu()
 	menu.Add("Открыть").OnClick(func(*application.Context) {
 		showMainWindow(window)
@@ -306,6 +344,11 @@ func installTray(app *application.App, window *application.WebviewWindow, client
 		}
 	}()
 	menu.AddSeparator()
+	notifications := menu.AddCheckbox("Не получать уведомления", service.NotificationsMuted())
+	notifications.OnClick(func(*application.Context) {
+		notifications.SetChecked(service.ToggleNotificationsMuted())
+	})
+	menu.AddSeparator()
 	menu.Add("Выход").OnClick(func(*application.Context) {
 		quitting.Store(true)
 		app.Quit()
@@ -316,6 +359,7 @@ func installTray(app *application.App, window *application.WebviewWindow, client
 	tray.SetTooltip("Sonoryx")
 	tray.SetMenu(menu)
 	tray.OnClick(func() { showMainWindow(window) })
+	return notifications
 }
 
 func syncTrayMenu(client *clientapp.App, hasCapture bool, microphone, speaker, screen *application.MenuItem) {

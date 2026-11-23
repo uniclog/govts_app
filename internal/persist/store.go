@@ -333,6 +333,11 @@ func (s *Store) AccountExists(ctx context.Context, key [32]byte) (bool, error) {
 	return err == nil, err
 }
 
+// AccountByKey finds the live account of key without creating or renaming it.
+func (s *Store) AccountByKey(ctx context.Context, key [32]byte) (Account, error) {
+	return scanAccount(s.db.QueryRowContext(ctx, `SELECT `+accountColumns+` FROM users WHERE public_key=? AND deleted=0`, key[:]))
+}
+
 func (s *Store) Account(ctx context.Context, id int64) (Account, error) {
 	return scanAccount(s.db.QueryRowContext(ctx, `SELECT `+accountColumns+` FROM users WHERE id=? AND deleted=0`, id))
 }

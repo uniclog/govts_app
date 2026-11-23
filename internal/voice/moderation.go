@@ -111,6 +111,8 @@ func (h *Hub) RemoveUserSessions(userID int64) []uint64 {
 		h.emitLocked(domain.StateEvent{Kind: domain.ParticipantLeft, SessionID: id})
 		removed = append(removed, id)
 	}
+	// A banned or deleted account loses its notices as well.
+	removed = append(removed, h.removeUserWatchersLocked(userID)...)
 	sort.Slice(removed, func(i, j int) bool { return removed[i] < removed[j] })
 	return removed
 }

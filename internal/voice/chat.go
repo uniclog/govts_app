@@ -36,10 +36,15 @@ type chatWorker struct {
 	mu      sync.Mutex
 	pending map[int64]int
 	rate    map[int64]chatRate
+	// notified holds the latest message IDs announced by a notice, so a send
+	// repeated after a lost ack does not pop up again. Worker goroutine only.
+	notified     map[int64]struct{}
+	notifiedRing [256]int64
+	notifiedNext int
 }
 
 func newChatWorker(a *Authenticator, conn *udp.ServerPacketConn, hub *Hub) *chatWorker {
-	return &chatWorker{auth: a, conn: conn, hub: hub, queue: make(chan chatJob, 128), pending: make(map[int64]int), rate: make(map[int64]chatRate)}
+	return &chatWorker{auth: a, conn: conn, hub: hub, queue: make(chan chatJob, 128), pending: make(map[int64]int), rate: make(map[int64]chatRate), notified: make(map[int64]struct{})}
 }
 
 func (w *chatWorker) enqueue(packet protocol.VoicePacket, addr *net.UDPAddr) error {
@@ -285,6 +290,9 @@ func (w *chatWorker) complete(ctx context.Context, job chatJob, actor Session, p
 	default:
 		return
 	}
+	if job.request.Operation == protocol.ChatSend && len(page.Messages) == 1 && w.firstNotice(page.Messages[0].ID) {
+		sendMessageNotice(w.conn, w.hub, job.request.Target, page.Messages[0])
+	}
 	if job.unchanged {
 		return
 	}
@@ -303,6 +311,19 @@ func (w *chatWorker) complete(ctx context.Context, job chatJob, actor Session, p
 			_ = w.conn.WritePacket(recipient.ID, recipient.Addr, protocol.VoicePacket{Type: protocol.PacketChatChanged, SessionID: recipient.ID})
 		}
 	}
+}
+
+func (w *chatWorker) firstNotice(id int64) bool {
+	if _, seen := w.notified[id]; seen || id <= 0 {
+		return false
+	}
+	if old := w.notifiedRing[w.notifiedNext]; old != 0 {
+		delete(w.notified, old)
+	}
+	w.notifiedRing[w.notifiedNext] = id
+	w.notifiedNext = (w.notifiedNext + 1) % len(w.notifiedRing)
+	w.notified[id] = struct{}{}
+	return true
 }
 
 func fitChatPage(p *domain.ChatPage, r protocol.ChatRequest) ([]byte, error) {

@@ -42,7 +42,10 @@ func (s *Service) enableSettings(path string) error {
 	if s.trustedMediaKeys == nil {
 		s.trustedMediaKeys = make(map[string]string)
 	}
+	s.presence = clientsettings.NormalizePresence(settings.Presence)
+	s.notificationsMuted = settings.NotificationsMuted
 	s.settingsMu.Unlock()
+	s.client.SetNoticePresence(s.PresenceStatus() == clientsettings.PresenceOnline)
 	var restoreErrors []error
 	if err := s.client.SetVoiceReserveKiB(settings.VoiceUplinkReserveKiB); err != nil {
 		restoreErrors = append(restoreErrors, err)
@@ -112,6 +115,8 @@ func (s *Service) saveSettings() (saveErr error) {
 	hotkeysEnabled := s.hotkeysEnabled
 	rememberParticipantVolumes := s.rememberParticipantVolumes
 	participantVolumes := cloneParticipantVolumes(s.participantVolumes)
+	presence := clientsettings.NormalizePresence(s.presence)
+	notificationsMuted := s.notificationsMuted
 	s.settingsMu.RUnlock()
 	return s.settings.Save(clientsettings.Settings{
 		DisplayName:                displayName,
@@ -140,6 +145,8 @@ func (s *Service) saveSettings() (saveErr error) {
 		HotkeysEnabled:             hotkeysEnabled,
 		RememberParticipantVolumes: rememberParticipantVolumes,
 		ParticipantVolumes:         participantVolumes,
+		Presence:                   presence,
+		NotificationsMuted:         notificationsMuted,
 	})
 }
 

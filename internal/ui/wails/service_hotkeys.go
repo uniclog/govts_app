@@ -316,8 +316,17 @@ func (s *Service) runHotkey(action string) {
 		if changed {
 			s.notifyHotkey(action, cueFor(away, clientsettings.CueAway, clientsettings.CueReturned))
 		}
+	case clientsettings.HotkeyNotifications:
+		muted := s.ToggleNotificationsMuted()
+		s.notifyHotkey(action, cueFor(muted, noticeNotificationsOff, noticeNotificationsOn))
 	}
 }
+
+// Popup titles of the notification switch; they have no sound of their own.
+const (
+	noticeNotificationsOff = "notifications-off"
+	noticeNotificationsOn  = "notifications-on"
+)
 
 func cueFor(on bool, whenOn, whenOff string) string {
 	if on {
@@ -402,6 +411,8 @@ var hotkeyNoticeCues = []string{
 	clientsettings.CueSpeakerOn,
 	clientsettings.CueAway,
 	clientsettings.CueReturned,
+	noticeNotificationsOff,
+	noticeNotificationsOn,
 }
 
 const maxHotkeyNoticeLength = 128

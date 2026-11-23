@@ -75,6 +75,15 @@ func ControlLoop(
 				if packet.RequestID == 0 && len(packet.Payload) == 0 {
 					state.PlayNotification(NotificationWake)
 				}
+			case protocol.PacketNotice:
+				if packet.RequestID != 0 {
+					continue
+				}
+				if notice, err := protocol.DecodeNotice(packet.Payload); err == nil {
+					state.Notice(notice)
+				} else {
+					invalidEvents.RecordKind("notice", err, packet.SessionID)
+				}
 			case protocol.PacketAccountPrivileges:
 				if packet.RequestID != 0 || len(packet.Payload) != 3 {
 					continue
@@ -94,7 +103,7 @@ func ControlLoop(
 			case protocol.PacketJoinChannelAck, protocol.PacketStateSnapshotAck, protocol.PacketModerationAck,
 				protocol.PacketHeartbeatAck, protocol.PacketSessionInvalid, protocol.PacketMediaCredentialAck,
 				protocol.PacketAudioStateAck, protocol.PacketChatAck, protocol.PacketFileAccessAck,
-				protocol.PacketPresenceAck, protocol.PacketAttentionAck, protocol.PacketAdminAck:
+				protocol.PacketPresenceAck, protocol.PacketAttentionAck, protocol.PacketAdminAck, protocol.PacketNoticePrefsAck:
 				response := ControlResponse{
 					Type:      packet.Type,
 					RequestID: packet.RequestID,
@@ -219,12 +228,28 @@ func heartbeatProbe(ctx context.Context, conn *udp.ClientPacketConn, state *Stat
 	return nil
 }
 
+// disconnectCopies and disconnectSpacing: Disconnect has no acknowledgement,
+// so a deliberate exit sends a few copies; the server ignores the extra ones.
+const (
+	disconnectCopies  = 3
+	disconnectSpacing = 15 * time.Millisecond
+)
+
 func Disconnect(conn *udp.ClientPacketConn, sessionID uint64) error {
 	packet := protocol.VoicePacket{
 		Type:      protocol.PacketDisconnect,
 		SessionID: sessionID,
 	}
-	return conn.SendPacket(packet)
+	var err error
+	for copy := 0; copy < disconnectCopies; copy++ {
+		if copy > 0 {
+			time.Sleep(disconnectSpacing)
+		}
+		if sendErr := conn.SendPacket(packet); sendErr != nil {
+			err = sendErr
+		}
+	}
+	return err
 }
 
 func JoinChannel(

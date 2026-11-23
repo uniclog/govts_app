@@ -51,9 +51,22 @@ func HandlePacket(
 		return HandlePresencePacket(conn, hub, cache, packet, addr)
 	case protocol.PacketAttention:
 		return HandleAttentionPacket(conn, hub, cache, packet, addr)
+	case protocol.PacketNoticePrefs:
+		return HandleNoticePrefsPacket(conn, hub, cache, packet, addr)
 	default:
 		return fmt.Errorf("invalid packet type: %d", packet.Type)
 	}
+}
+
+// isVoiceTraffic reports the high-rate voice packet types.
+func isVoiceTraffic(packetType uint8) bool {
+	switch packetType {
+	case protocol.PacketVoice, protocol.PacketVoiceBundle, protocol.PacketVoiceBundleV2,
+		protocol.PacketVoiceSummary, protocol.PacketVoiceReport,
+		protocol.PacketVoiceState, protocol.PacketVoiceStateAck, protocol.PacketVoiceStateRequest:
+		return true
+	}
+	return false
 }
 
 func ServeUDP(
@@ -102,6 +115,17 @@ func ServeUDP(
 		if protocol.IsServerStatusPacket(packet.Type) {
 			handleServerStatus(conn, hub, &statusLimit, packet, addr)
 			continue
+		}
+		// Watchers are not participants: they reach only their own handler.
+		// Voice traffic skips the lookup: a watcher sends none, and a voice
+		// packet with a watcher's ID finds no participant session anyway.
+		if packet.SessionID != 0 && !isVoiceTraffic(packet.Type) {
+			if handled, err := HandleWatcherPacket(conn, hub, cache, packet, addr); handled {
+				if err != nil {
+					log.Printf("watcher packet rejected: session_id=%d type=%d error=%v", packet.SessionID, packet.Type, err)
+				}
+				continue
+			}
 		}
 		if packet.Type == protocol.PacketChatRequest {
 			if err := chat.enqueue(packet, addr); err != nil {

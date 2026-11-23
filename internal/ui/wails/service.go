@@ -79,10 +79,29 @@ type Service struct {
 	hotkeyNotifier        *hotkeyNotifier
 	hotkeyNotices         map[string]string
 	popupLook             map[string]string
+	// presence and notificationsMuted are guarded by settingsMu.
+	presence           string
+	notificationsMuted bool
+	// Notification routing; guarded by noticeMu. See service_notify.go.
+	noticeMu     sync.Mutex
+	noticeWindow *noticeWindow
+	noticeTexts  map[string]string
+	activeChat   string
+	noticeSeen   map[string]bool
+	burstCount   int
+	burstUntil   time.Time
+	lastCue      time.Time
+	watchServer  string
+	noticeRing   [128]string
+	noticeNext   int
+	watchKey     string
+	watchSynced  bool
+	watchSeq     uint64
+	watchApplyMu sync.Mutex
 }
 
 func NewService(client *clientapp.App) *Service {
-	return &Service{client: client, serverStatus: serverstatus.NewCache(), hotkeyKeys: clientsettings.NormalizeHotkeys(nil), hotkeyNotifications: true}
+	return &Service{client: client, serverStatus: serverstatus.NewCache(), hotkeyKeys: clientsettings.NormalizeHotkeys(nil), hotkeyNotifications: true, presence: clientsettings.PresenceOnline}
 }
 
 // LogDiagnostic receives infrequent browser-side lifecycle events. It accepts

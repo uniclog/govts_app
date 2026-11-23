@@ -32,6 +32,7 @@ import {InterfaceSettings} from "./features/settings/InterfaceSettings";
 import {AdminPanel} from "./features/admin/AdminPanel";
 import {StageScene} from "./features/settings/StageScene";
 import {HotkeySettings} from "./features/settings/HotkeySettings";
+import {NotificationsCard, PresenceAvatar} from "./features/notify/NotifyControls";
 import {loadForceMotion, saveForceMotion} from "./features/settings/motion";
 
 const contentTabs = ["chat", "events"] as const;
@@ -145,15 +146,23 @@ function MainApp({appearance, setTheme, updateAppearance}: {
     }, []);
     const [refreshingServers, setRefreshingServers] = useState(false);
     const refreshingServersRef = useRef(false);
-    const refreshServers = useCallback(async () => {
+    const lastServersRefresh = useRef(0);
+    // quiet: an automatic refresh shows the spinner but no error banner.
+    const refreshServers = useCallback(async (quiet = false) => {
         if (refreshingServersRef.current) return;
         refreshingServersRef.current = true;
+        lastServersRefresh.current = Date.now();
         setRefreshingServers(true);
-        setActionError("");
+        if (!quiet) setActionError("");
         try { await desktopAPI.refreshServerStatuses(); }
-        catch (error) { setActionError(rawError(error)); }
+        catch (error) { if (!quiet) setActionError(rawError(error)); }
         finally { refreshingServersRef.current = false; setRefreshingServers(false); }
     }, []);
+    // Opening the window from the tray, the taskbar or the Start menu refreshes
+    // the saved servers, but not within a minute of the previous refresh.
+    useEffect(() => desktopAPI.onMainWindowShown(() => {
+        if (Date.now() - lastServersRefresh.current >= 60_000) void refreshServers(true);
+    }), [refreshServers]);
     const startupStatusesRequested = useRef(false);
     useEffect(() => {
         if (startupStatusesRequested.current) return;
@@ -322,7 +331,7 @@ function MainApp({appearance, setTheme, updateAppearance}: {
                     onError={setActionError}
                     onRefresh={refresh}
                     refreshingServers={refreshingServers}
-                    onRefreshServers={refreshServers}
+                    onRefreshServers={() => void refreshServers()}
                     onClearEvents={clearEvents}
                     onConnected={() => setPage("channels")}
                 />
@@ -330,7 +339,7 @@ function MainApp({appearance, setTheme, updateAppearance}: {
             <StatusBar view={view} updateAction={<UpdateButton updates={updates}/>}/>
             {actionError && <div className="error-banner" role="alert">{errorText(actionError, m)}</div>}
             {wakeUntil > wakeNow && <WakeNotice until={wakeUntil} now={wakeNow} label={wakeLabel}/>}
-            <ChannelsPage onPageChange={setPage} view={view} screenMedia={screenMedia.current} events={events} invoke={invoke} onWake={wakeParticipant} refreshingServers={refreshingServers} onRefreshServers={refreshServers}
+            <ChannelsPage onPageChange={setPage} view={view} screenMedia={screenMedia.current} events={events} invoke={invoke} onWake={wakeParticipant} refreshingServers={refreshingServers} onRefreshServers={() => void refreshServers()}
                           stageBackdrop={appearance.stageBackdrop}
                           onReconnect={(address) => invoke(async () => {
                               if (sharing.pending) throw new Error(errorCode("screen-picker-switch"));
@@ -442,6 +451,14 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
         requestAnimationFrame(() => document.getElementById(`${next}-tab`)?.focus());
     };
     const infoVisible = showInfo && Boolean(selected) && view.connectionStatus === "connected";
+    // Go plays only the sound for a message in the chat on screen; the popup
+    // is for every other conversation.
+    const chatOnScreen = !selected || view.connectionStatus !== "connected" || infoVisible ? "" : contentTab === "chat" ? `channel:${view.channelId}` : contentTab.startsWith("direct:") ? contentTab : "";
+    useEffect(() => {
+        const [kind = "", id = ""] = chatOnScreen.split(":");
+        void desktopAPI.setActiveChat(kind, id).catch(() => undefined);
+    }, [chatOnScreen]);
+    useEffect(() => () => { void desktopAPI.setActiveChat("", "").catch(() => undefined); }, []);
     const workspaceResize = useWorkspaceResize(infoVisible);
     const members = participants.filter((item) => item.channelId === selectedID);
     const localParticipant = participants.find((person) => person.local);
@@ -467,7 +484,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                 }}/></div>
                 </section>
                 <footer className="workspace-user-footer">
-                    <span className={`footer-avatar ${localParticipant?.speaking && !view.audio.muted ? "speaking" : ""}`} style={avatarStyle(localChatName)}>{localChatName.slice(0, 1).toUpperCase()}</span>
+                    <PresenceAvatar initial={localChatName.slice(0, 1).toUpperCase()} style={avatarStyle(localChatName)} speaking={!!localParticipant?.speaking && !view.audio.muted}/>
                     <div className="workspace-user-identity"><strong title={localChatName}>{localChatName}</strong><ConnectionStatsPopup sessionId={view.sessionId} status={view.connectionStatus} channelId={view.channelId} sharing={sharing} screenMedia={screenMedia}/></div>
                     {view.canAdmin && view.connectionStatus === "connected" && <button id="open-admin" type="button" aria-label={m.admin.open} title={m.admin.open} onClick={() => onPageChange("admin")}><Icon name="shield"/></button>}
                     <button id="open-settings" type="button" aria-label={m.connection.settings} title={m.connection.settings} onClick={() => onPageChange("settings")}><Icon name="settings"/></button>
@@ -897,6 +914,7 @@ function SettingsPage({view, invoke, appearance, setTheme, updateAppearance, upd
                                        }
                                    })}/>
                 </section>
+                <NotificationsCard/>
                 <section className="settings-card">
                     <SettingToggle title={m.settings.rememberVolumes} description={m.settings.rememberVolumesHint}
                                    checked={rememberVolumes}

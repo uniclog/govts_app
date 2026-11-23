@@ -69,6 +69,39 @@ func CheckOrTrust(path, endpoint string, publicKey ed25519.PublicKey) error {
 	return writePins(path, pins)
 }
 
+// ErrServerNotPinned reports a voice endpoint with no pinned key.
+var ErrServerNotPinned = errors.New("voice server key is not pinned")
+
+// CheckPinned accepts only the key already pinned for endpoint. Background
+// connections use it: they cannot ask the user to trust a first or new key.
+func CheckPinned(path, endpoint string, publicKey ed25519.PublicKey) error {
+	if len(publicKey) != ed25519.PublicKeySize || endpoint == "" || path == "" {
+		return errors.New("invalid voice server identity")
+	}
+	trustMu.Lock()
+	defer trustMu.Unlock()
+	pins := make(map[string]string)
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return ErrServerNotPinned
+	}
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(data, &pins); err != nil {
+		return fmt.Errorf("decode voice server pins: %w", err)
+	}
+	encoded := base64.StdEncoding.EncodeToString(publicKey)
+	previous, known := pins[endpoint]
+	if !known {
+		return ErrServerNotPinned
+	}
+	if previous != encoded {
+		return &ServerKeyChangedError{Endpoint: endpoint, Previous: previous, NewKey: encoded}
+	}
+	return nil
+}
+
 // ReplaceServerKey replaces only the exact pin shown for confirmation. It
 // never removes the pin or trusts a different key on the next connection.
 func ReplaceServerKey(path string, change ServerKeyChangedError) error {

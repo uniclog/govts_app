@@ -6,6 +6,7 @@ package apppopup
 import (
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Popup owns a single silent notification window. It does not activate or take
@@ -40,7 +41,20 @@ func (p *Popup) SetLook(look Look) {
 // Show queues plain notification text without waiting for a UI thread.
 // Calls are safe from multiple goroutines; only the latest pending text is kept.
 func (p *Popup) Show(title, body string) error {
-	return p.backend.show(title, body)
+	return p.backend.show(Message{Title: title, Body: body})
+}
+
+// Message is one popup. Lifetime zero keeps the 2.8-second default. OnClick,
+// when set, runs on its own goroutine after a click dismisses the popup.
+type Message struct {
+	Title, Body string
+	Lifetime    time.Duration
+	OnClick     func()
+}
+
+// ShowMessage queues a popup like Show, with its own lifetime and click action.
+func (p *Popup) ShowMessage(message Message) error {
+	return p.backend.show(message)
 }
 
 // Close releases the popup's resources. Repeated calls are harmless.
@@ -72,7 +86,7 @@ func parseHex(value string, fallback uint32) uint32 {
 }
 
 type backend interface {
-	show(title, body string) error
+	show(Message) error
 	setLook(Look)
 	close()
 }

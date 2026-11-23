@@ -48,12 +48,23 @@ func (e *AuthenticationRejectedError) Temporary() bool {
 }
 
 func PerformSecureHandshakeAttempts(ctx context.Context, conn *udp.ClientPacketConn, codec *protocol.SecureDatagramCodec, name string, private ed25519.PrivateKey, pinPath, endpoint string, timeout time.Duration, attempts int, minimumVersion string, passwords ...string) (SecureHandshakeResult, error) {
-	if conn == nil || codec == nil || timeout <= 0 || attempts <= 0 {
-		return SecureHandshakeResult{}, errors.New("invalid secure handshake arguments")
-	}
 	password := ""
 	if len(passwords) > 0 {
 		password = passwords[0]
+	}
+	return performSecureHandshake(ctx, conn, codec, name, private, pinPath, endpoint, timeout, attempts, minimumVersion, password, false)
+}
+
+// PerformWatchHandshake opens a watcher session: the server sends it notices
+// only and never shows it as a participant. The server key must already be
+// pinned, since nobody is there to confirm a new one.
+func PerformWatchHandshake(ctx context.Context, conn *udp.ClientPacketConn, codec *protocol.SecureDatagramCodec, name string, private ed25519.PrivateKey, pinPath, endpoint string, timeout time.Duration, attempts int, minimumVersion, password string) (SecureHandshakeResult, error) {
+	return performSecureHandshake(ctx, conn, codec, name, private, pinPath, endpoint, timeout, attempts, minimumVersion, password, true)
+}
+
+func performSecureHandshake(ctx context.Context, conn *udp.ClientPacketConn, codec *protocol.SecureDatagramCodec, name string, private ed25519.PrivateKey, pinPath, endpoint string, timeout time.Duration, attempts int, minimumVersion, password string, watch bool) (SecureHandshakeResult, error) {
+	if conn == nil || codec == nil || timeout <= 0 || attempts <= 0 {
+		return SecureHandshakeResult{}, errors.New("invalid secure handshake arguments")
 	}
 	if err := auth.ValidatePassword(password); err != nil {
 		return SecureHandshakeResult{}, err
@@ -70,8 +81,9 @@ func PerformSecureHandshakeAttempts(ctx context.Context, conn *udp.ClientPacketC
 	if err != nil {
 		return SecureHandshakeResult{}, err
 	}
+	init.Watch = watch
 	initPacket := protocol.VoicePacket{Type: protocol.PacketAuthInit, RequestID: requestID, Sequence: uint32(version), Payload: init.Encode()}
-	challengePacket, err := exchangeAuth(ctx, conn, initPacket, protocol.PacketAuthChallenge, requestID, timeout, attempts, version)
+	challengePacket, err := exchangeAuthLogged(ctx, conn, initPacket, protocol.PacketAuthChallenge, requestID, timeout, attempts, version, watch)
 	if err != nil {
 		return SecureHandshakeResult{}, err
 	}
@@ -85,7 +97,11 @@ func PerformSecureHandshakeAttempts(ctx context.Context, conn *udp.ClientPacketC
 	if err := auth.VerifyChallenge(init, challenge, requestID, uint32(version)); err != nil {
 		return SecureHandshakeResult{}, err
 	}
-	if err := identity.CheckOrTrust(pinPath, endpoint, ed25519.PublicKey(challenge.ServerKey[:])); err != nil {
+	check := identity.CheckOrTrust
+	if watch {
+		check = identity.CheckPinned
+	}
+	if err := check(pinPath, endpoint, ed25519.PublicKey(challenge.ServerKey[:])); err != nil {
 		return SecureHandshakeResult{}, err
 	}
 	digest := auth.Transcript(init, challenge, requestID, uint32(version))
@@ -101,7 +117,7 @@ func PerformSecureHandshakeAttempts(ctx context.Context, conn *udp.ClientPacketC
 		}
 		finish.Payload = append(finish.Payload, encrypted...)
 	}
-	ack, err := exchangeAuth(ctx, conn, finish, protocol.PacketAuthAck, requestID, timeout, attempts, version)
+	ack, err := exchangeAuthLogged(ctx, conn, finish, protocol.PacketAuthAck, requestID, timeout, attempts, version, watch)
 	if err != nil {
 		return SecureHandshakeResult{}, err
 	}
@@ -121,6 +137,13 @@ func PerformSecureHandshakeAttempts(ctx context.Context, conn *udp.ClientPacketC
 }
 
 func exchangeAuth(ctx context.Context, conn *udp.ClientPacketConn, request protocol.VoicePacket, wantType uint8, requestID uint32, timeout time.Duration, attempts int, minimum appversion.Number) (protocol.VoicePacket, error) {
+	return exchangeAuthLogged(ctx, conn, request, wantType, requestID, timeout, attempts, minimum, false)
+}
+
+// exchangeAuthLogged is exchangeAuth; quiet leaves out the per-phase lines.
+// A watcher retries an unreachable server for as long as it is subscribed,
+// and its outcome is logged once by the watcher instead.
+func exchangeAuthLogged(ctx context.Context, conn *udp.ClientPacketConn, request protocol.VoicePacket, wantType uint8, requestID uint32, timeout time.Duration, attempts int, minimum appversion.Number, quiet bool) (protocol.VoicePacket, error) {
 	defer conn.SetReadDeadline(time.Time{})
 	rejected := logging.NewFailures("secure_handshake_decode")
 	defer rejected.Close()
@@ -139,7 +162,9 @@ func exchangeAuth(ctx context.Context, conn *udp.ClientPacketConn, request proto
 			log.Printf("authentication send failed: phase=%d request_id=%d attempt=%d error=%v", request.Type, requestID, attempt+1, err)
 			return protocol.VoicePacket{}, err
 		}
-		log.Printf("authentication phase sent: phase=%d request_id=%d attempt=%d attempts=%d timeout=%s", request.Type, requestID, attempt+1, attempts, timeout)
+		if !quiet {
+			log.Printf("authentication phase sent: phase=%d request_id=%d attempt=%d attempts=%d timeout=%s", request.Type, requestID, attempt+1, attempts, timeout)
+		}
 		for {
 			response, err := conn.ReceivePacket()
 			if err != nil {
@@ -149,7 +174,9 @@ func exchangeAuth(ctx context.Context, conn *udp.ClientPacketConn, request proto
 				}
 				var netErr net.Error
 				if errors.As(err, &netErr) && netErr.Timeout() {
-					log.Printf("authentication phase timeout: phase=%d request_id=%d attempt=%d", request.Type, requestID, attempt+1)
+					if !quiet {
+						log.Printf("authentication phase timeout: phase=%d request_id=%d attempt=%d", request.Type, requestID, attempt+1)
+					}
 					break
 				}
 				return protocol.VoicePacket{}, err
@@ -164,7 +191,9 @@ func exchangeAuth(ctx context.Context, conn *udp.ClientPacketConn, request proto
 				return protocol.VoicePacket{}, &AuthenticationRejectedError{Reason: string(response.Payload)}
 			}
 			if response.Type == wantType {
-				log.Printf("authentication phase completed: phase=%d request_id=%d attempt=%d", request.Type, requestID, attempt+1)
+				if !quiet {
+					log.Printf("authentication phase completed: phase=%d request_id=%d attempt=%d", request.Type, requestID, attempt+1)
+				}
 				return response, nil
 			}
 		}

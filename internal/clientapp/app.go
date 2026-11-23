@@ -110,6 +110,17 @@ type App struct {
 	chatClientIdentity string
 	lastError          string
 	pendingServerKey   *pendingServerKey
+
+	// identityMu guards the lazy resolution of identityPath and pinsPath.
+	identityMu sync.Mutex
+
+	// Notifications: see notice.go and watch.go.
+	noticeMu      sync.Mutex
+	notice        noticeState
+	noticePublish sync.Mutex
+	standaloneCue sync.Mutex
+	watches       watchSet
+	watchChanged  func()
 }
 
 func New(options Options) *App {
@@ -121,7 +132,7 @@ func New(options Options) *App {
 	}
 	events := newEventLog()
 	events.logger = options.Logger
-	return &App{
+	app := &App{
 		lifetimeCtx:        ctx,
 		cancelLifetime:     cancel,
 		state:              state,
@@ -131,7 +142,10 @@ func New(options Options) *App {
 		pinsPath:           options.PinsPath,
 		listAudioDevices:   audio.ListDevices,
 		audioDeviceChanges: make(chan audioDeviceChange),
+		notice:             noticeState{online: true},
 	}
+	state.SetNoticeHandler(app.mainNotice)
+	return app
 }
 
 func (a *App) Connect(options ConnectOptions) error {
@@ -182,6 +196,7 @@ func (a *App) Connect(options ConnectOptions) error {
 	a.lastError = ""
 	a.serverEndpoint = endpoint
 	a.connectionPassword = options.Password
+	a.resetNotices()
 	a.events.clear()
 	a.events.append("connection", "Подключение к "+endpoint.String(), 0)
 	go a.run(runCtx, done, endpoint, options)
@@ -332,6 +347,7 @@ func (a *App) runConnection(ctx context.Context, endpoint netip.AddrPort, name, 
 				a.events.append("connection", "Подключено", uint64(a.state.SnapshotView().Revision))
 			}
 			everConnected = true
+			go a.publishNotices(chatCtx, conn)
 		}, cancelChat)
 		a.logger.Printf("session ended: session_id=%d server=%s local=%s duration=%s error=%v", sessionID, endpoint, conn.LocalAddr(), time.Since(sessionStarted), sessionErr)
 		a.mu.Lock()
@@ -489,6 +505,7 @@ func (a *App) Close(ctx context.Context) error {
 	}
 	a.mu.Unlock()
 	a.stopMonitor()
+	a.stopWatches()
 	err := errors.Join(a.Disconnect(ctx), a.Files().Wait(ctx))
 	a.fileTransportMu.Lock()
 	if a.fileTransport != nil {
@@ -842,6 +859,10 @@ func ParseServerEndpoint(server string) (netip.AddrPort, error) {
 // loadClientIdentity loads or creates the client key and resolves the server
 // pin store. Unset paths default to the Sonoryx user config directory.
 func (a *App) loadClientIdentity() (ed25519.PrivateKey, error) {
+	// Watchers load the identity next to the main connection; the paths are
+	// resolved once, under the lock, so neither writes them while another reads.
+	a.identityMu.Lock()
+	defer a.identityMu.Unlock()
 	seedPath := a.identityPath
 	if seedPath == "" || a.pinsPath == "" {
 		configDir, err := os.UserConfigDir()

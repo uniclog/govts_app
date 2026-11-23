@@ -11,6 +11,7 @@ import "./workspace.css";
 import "./features/connection/connection.css";
 import "./server-workspace.css";
 import "./menus.css";
+import "./features/notify/notify.css";
 
 applyAppearance(loadAppearance());
 applyForceMotion(loadForceMotion());

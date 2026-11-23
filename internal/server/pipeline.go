@@ -62,7 +62,7 @@ func cleanupLoop(ctx context.Context, hub *voice.Hub, cache *voice.RequestCache,
 			cache.RemoveExpired()
 			if len(codecs) > 0 && codecs[0] != nil {
 				for _, id := range codecs[0].SessionIDs() {
-					if _, ok := hub.Get(id); !ok {
+					if !hub.Known(id) {
 						codecs[0].Remove(id)
 						cache.RemoveSession(id)
 					}

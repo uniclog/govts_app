@@ -6,6 +6,7 @@ import (
 	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/subtle"
+	"database/sql"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -235,6 +236,14 @@ func (a *Authenticator) handleFinish(conn *udp.ServerPacketConn, hub *Hub, cache
 		log.Printf("authentication account lookup failed: addr=%s request_id=%d error=%v", addr, packet.RequestID, err)
 		return errors.New(authenticationServerErrorForClient)
 	}
+	if pending.init.Watch {
+		// A watcher never registers an account: only someone who has joined
+		// the server before may subscribe to it.
+		if !known {
+			return ErrWatcherNeedsAccount
+		}
+		return a.finishWatcher(conn, hub, cache, packet, addr, pending, c2s, s2c, ackKey, digest)
+	}
 	if !known && !allowRateLocked(a.accountRate, network, now, newAccountWindow, maxNewAccountsPerNetworkPerHour) {
 		return errors.New("too many new accounts from this network; retry later")
 	}
@@ -268,6 +277,46 @@ func (a *Authenticator) handleFinish(conn *udp.ServerPacketConn, hub *Hub, cache
 	ack := protocol.VoicePacket{Type: protocol.PacketAuthAck, SessionID: session.ID, RequestID: packet.RequestID, Sequence: pending.version, Payload: payload}
 	pending.ack = &ack
 	log.Printf("client authenticated: session_id=%d user_id=%d name=%q addr=%s request_id=%d replaced_sessions=%v", session.ID, account.ID, session.Name, addr, packet.RequestID, replaced)
+	return conn.WritePacket(0, addr, ack)
+}
+
+// finishWatcher completes a watcher handshake. The account is looked up, not
+// created or renamed; the acknowledgement has the participant format.
+func (a *Authenticator) finishWatcher(conn *udp.ServerPacketConn, hub *Hub, cache *RequestCache, packet protocol.VoicePacket, addr *net.UDPAddr, pending *pendingAuth, c2s, s2c, ackKey, digest [32]byte) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	account, err := a.store.AccountByKey(ctx, pending.init.PublicKey)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrWatcherNeedsAccount
+	}
+	if err != nil {
+		log.Printf("watcher account lookup failed: addr=%s request_id=%d error=%v", addr, packet.RequestID, err)
+		return errors.New(authenticationServerErrorForClient)
+	}
+	if account.Banned {
+		return errors.New("account is banned")
+	}
+	watcher, replaced, err := hub.CreateWatcher(addr, account.ID, account.JoinLevel)
+	if err != nil {
+		return err
+	}
+	for _, oldID := range replaced {
+		a.codec.Remove(oldID)
+		cache.RemoveSession(oldID)
+	}
+	if err := a.codec.Install(watcher.ID, c2s, s2c); err != nil {
+		hub.RemoveWatcher(watcher.ID)
+		log.Printf("watcher key install failed: session_id=%d error=%v", watcher.ID, err)
+		return errors.New(authenticationServerErrorForClient)
+	}
+	privileges := account.Privileges()
+	mac := auth.AckMAC(ackKey, digest, watcher.ID, account.JoinLevel, privileges)
+	payload := append([]byte(nil), mac[:]...)
+	payload = binary.BigEndian.AppendUint16(payload, account.JoinLevel)
+	payload = append(payload, privileges)
+	ack := protocol.VoicePacket{Type: protocol.PacketAuthAck, SessionID: watcher.ID, RequestID: packet.RequestID, Sequence: pending.version, Payload: payload}
+	pending.ack = &ack
+	log.Printf("watcher authenticated: session_id=%d user_id=%d addr=%s request_id=%d replaced_sessions=%v", watcher.ID, account.ID, addr, packet.RequestID, replaced)
 	return conn.WritePacket(0, addr, ack)
 }
 

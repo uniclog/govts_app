@@ -15,6 +15,9 @@ type RecentServerDTO struct {
 	clientsettings.RecentServer
 	serverstatus.Status
 	Current bool `json:"current"`
+	// Watch is the background watcher state of a subscribed server; empty
+	// while the client is connected to it or not subscribed.
+	Watch string `json:"watch,omitempty"`
 }
 
 func (s *Service) recordServerVisit(view ClientViewDTO) {
@@ -52,6 +55,7 @@ func (s *Service) recordServerVisit(view ClientViewDTO) {
 	}
 	s.recentServers[index].LastVisited = time.Now().UnixMilli()
 	s.recentServers[index].Version = view.Server.Version
+	s.rememberVisitLocked(&s.recentServers[index], view.Server.Name)
 	sort.SliceStable(s.recentServers, func(i, j int) bool {
 		left, right := s.recentServers[i], s.recentServers[j]
 		if left.Favorite != right.Favorite {
@@ -80,6 +84,7 @@ func (s *Service) RecentServers() []RecentServerDTO {
 	s.connectionMu.Lock()
 	defer s.connectionMu.Unlock()
 	view := viewDTO(s.client.Snapshot(), s.client.LastError())
+	watches := s.client.WatchStates()
 	s.settingsMu.RLock()
 	defer s.settingsMu.RUnlock()
 	endpoint, _ := clientapp.ParseServerEndpoint(s.serverAddress)
@@ -108,7 +113,9 @@ func (s *Service) RecentServers() []RecentServerDTO {
 				status.OnlineCount = &count
 			}
 		}
-		result = append(result, RecentServerDTO{RecentServer: server, Current: current, Status: status})
+		// The stored password never leaves Go.
+		server.WatchSecret = ""
+		result = append(result, RecentServerDTO{RecentServer: server, Current: current, Status: status, Watch: watches[server.Address]})
 	}
 	sort.SliceStable(result, func(i, j int) bool {
 		if result[i].Favorite != result[j].Favorite {

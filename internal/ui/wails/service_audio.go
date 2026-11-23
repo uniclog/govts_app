@@ -56,7 +56,13 @@ func (s *Service) Wake(sessionID string) error {
 	return s.client.Wake(ctx, id)
 }
 
-func (s *Service) MessageReceived() { s.client.MessageReceived() }
+// MessageReceived plays the cue for a message the chat store found. A server
+// with notices sends the cue through handleNotice instead, so it plays once.
+func (s *Service) MessageReceived() {
+	if !s.client.NoticesSupported() {
+		s.client.MessageReceived()
+	}
+}
 
 func (s *Service) PreviewSoundPack() error { return s.client.PreviewSoundPack() }
 
