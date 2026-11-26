@@ -251,3 +251,26 @@ describe("request scheduler", () => {
         await vi.advanceTimersByTimeAsync(1); await dialogs; expect(chat).toHaveBeenCalledTimes(4);
     });
 });
+
+describe("received message handler", () => {
+    it("reports only new messages of other people after the history is loaded", async () => {
+        const received = vi.fn();
+        store.setMessageReceivedHandler(received);
+        chat.mockResolvedValueOnce(page()); // Change watermark before the first history.
+        chat.mockResolvedValueOnce(page({messages: [message(1)], cursor: "1"}));
+        let sync = store.sync(channel);
+        await vi.advanceTimersByTimeAsync(2000); await sync;
+        expect(received).not.toHaveBeenCalled();
+
+        chat.mockResolvedValueOnce(page({messages: [message(2), message(3, "1"), {...message(4), deleted: true}], cursor: "4"}));
+        sync = store.sync(channel, false, true);
+        await vi.advanceTimersByTimeAsync(1000); await sync;
+        expect(received).toHaveBeenCalledTimes(1);
+        expect(received.mock.calls[0][0].map((m: {id: string}) => m.id)).toEqual(["2"]);
+
+        chat.mockResolvedValueOnce(page({messages: [message(2)], cursor: "4"}));
+        sync = store.sync(channel, false, true);
+        await vi.advanceTimersByTimeAsync(1000); await sync;
+        expect(received).toHaveBeenCalledTimes(1);
+    });
+});

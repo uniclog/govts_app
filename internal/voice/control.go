@@ -96,7 +96,6 @@ func HandleDisconnectPacket(
 		return nil
 	}
 	cache.RemoveSession(session.ID)
-	hub.ForgetArrival(removed.UserID, time.Now())
 	log.Printf("client disconnected: id=%d, name=%s", packet.SessionID, removed.Name)
 	return nil
 }

@@ -71,6 +71,10 @@
 .channel-member-stack small { margin-left: 4px; font-size: .625rem; color: var(--muted); }
 .server-shell .info-toggle { width: 36px; height: 36px; flex-shrink: 0; border: 0; border-radius: 11px; background: var(--card-strong); color: var(--muted); }
 .server-shell .info-toggle:hover { color: var(--text); }
+/* Muted channel: the header bell is crossed out and the tree row carries the mark. */
+.server-shell .channel-notify-toggle.is-muted { color: var(--text); background: color-mix(in srgb, var(--text) var(--control-state), var(--card-strong)); }
+.channel-muted { display: grid; flex-shrink: 0; place-items: center; color: var(--muted); }
+.channel-muted svg { width: 12px; height: 12px; }
 .server-shell .participants-stage { position: relative; min-width: 0; min-height: 0; border-radius: 18px; overflow: hidden; }
 :is(.participants-stage, .backdrop-preview)[data-backdrop="rings"] { background: radial-gradient(ellipse at 6% 8%, color-mix(in srgb, var(--workspace-brand) var(--stage-tint), transparent), transparent 48%), radial-gradient(ellipse at 95% 94%, color-mix(in srgb, var(--accent) var(--stage-tint), transparent), transparent 44%), var(--stage-base); }
 .workspace-stage-art { position: absolute; inset: 0; pointer-events: none; overflow: hidden; contain: strict; }

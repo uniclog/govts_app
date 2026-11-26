@@ -54,24 +54,6 @@ type Settings struct {
 	// ParticipantVolumes maps "server|local user id" to the volume of each
 	// remote user id. Zero is a muted participant; the default volume is absent.
 	ParticipantVolumes map[string]map[string]float32 `json:"participantVolumes,omitempty"`
-	// Presence is PresenceOnline (empty) or PresenceInvisible. An invisible
-	// client does not announce its arrival on a server.
-	Presence string `json:"presence,omitempty"`
-	// NotificationsMuted turns off every notification popup and its sound.
-	NotificationsMuted bool `json:"notificationsMuted"`
-}
-
-const (
-	PresenceOnline    = "online"
-	PresenceInvisible = "invisible"
-)
-
-// NormalizePresence maps unknown values to online.
-func NormalizePresence(value string) string {
-	if value == PresenceInvisible {
-		return value
-	}
-	return PresenceOnline
 }
 
 type RecentServer struct {
@@ -80,14 +62,6 @@ type RecentServer struct {
 	Version     string `json:"version,omitempty"`
 	Favorite    bool   `json:"favorite"`
 	LastVisited int64  `json:"lastVisited"`
-	// Subscribed keeps a background watcher on the server for arrival and
-	// message notifications while the client is not connected to it.
-	Subscribed bool `json:"subscribed,omitempty"`
-	// Name is the server name last seen on connection, for notifications.
-	Name string `json:"name,omitempty"`
-	// WatchSecret is the server password protected by ProtectSecret, kept only
-	// for a subscribed server, so its watcher can enter.
-	WatchSecret string `json:"watchSecret,omitempty"`
 }
 
 const (
@@ -194,20 +168,18 @@ func SoundCueStates(cues map[string]bool) map[string]bool {
 
 // Global hotkey actions.
 const (
-	HotkeyMute          = "mute"
-	HotkeyDeafen        = "deafen"
-	HotkeyAway          = "away"
-	HotkeyNotifications = "notifications"
+	HotkeyMute   = "mute"
+	HotkeyDeafen = "deafen"
+	HotkeyAway   = "away"
 )
 
 // HotkeyActions is the stable order of actions that have a global hotkey.
-var HotkeyActions = []string{HotkeyMute, HotkeyDeafen, HotkeyAway, HotkeyNotifications}
+var HotkeyActions = []string{HotkeyMute, HotkeyDeafen, HotkeyAway}
 
 var defaultHotkeys = map[string]string{
-	HotkeyMute:          "Ctrl+Alt+M",
-	HotkeyDeafen:        "Ctrl+Alt+D",
-	HotkeyAway:          "Ctrl+Alt+E",
-	HotkeyNotifications: "Ctrl+Alt+N",
+	HotkeyMute:   "Ctrl+Alt+M",
+	HotkeyDeafen: "Ctrl+Alt+D",
+	HotkeyAway:   "Ctrl+Alt+E",
 }
 
 func KnownHotkeyAction(action string) bool {
@@ -363,7 +335,6 @@ func (store *Store) Load() (Settings, error) {
 		}
 	}
 	persisted.Hotkeys = NormalizeHotkeys(persisted.Hotkeys)
-	persisted.Presence = NormalizePresence(persisted.Presence)
 	if persisted.SoundVolume < 0 || persisted.SoundVolume > 1 {
 		persisted.SoundVolume = DefaultSoundVolume
 	}

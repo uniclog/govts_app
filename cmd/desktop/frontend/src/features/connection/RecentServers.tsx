@@ -24,20 +24,6 @@ function ServerPopulation({server}: {server: RecentServer}) {
     </span>;
 }
 
-// The feed sign subscribes to arrivals and messages of a server. Its title tells
-// how the background watcher is doing, and a problem tints the sign.
-function SubscribeButton({server, disabled, onToggle}: {server: RecentServer; disabled: boolean; onToggle: () => void}) {
-    const {m} = useLocale();
-    const name = server.alias || server.name || server.address;
-    const action = server.subscribed ? m.notify.unsubscribe(name) : m.notify.subscribe(name);
-    const problem = server.subscribed && !!server.watch && server.watch !== "active" && server.watch !== "connecting";
-    const state = server.subscribed && server.watch ? `\n${m.notify.watch[server.watch]}` : "";
-    return <button type="button" className={`server-subscribe${problem ? " has-problem" : ""}`} aria-pressed={!!server.subscribed}
-        aria-label={action} title={`${action}\n${m.notify.subscribeHint}${state}`} disabled={disabled} onClick={onToggle}>
-        <Icon name="subscribe"/>
-    </button>;
-}
-
 function serverInitials(alias: string): string {
     const words = alias.trim().split(/\s+/);
     return (words.length > 1 ? words.slice(0, 2).map((word) => Array.from(word)[0]).join("")
@@ -103,8 +89,6 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
     const visibleSnapshotFresh = expanded ? view.snapshotFresh : undefined;
     useEffect(() => { void load(); }, [load, view.chatContext, view.sessionId, view.connectionStatus, visibleParticipantCount, visibleSnapshotFresh, expanded]);
     useEffect(() => desktopAPI.onServerStatusChanged(() => { if (expanded) void load(); }), [load, expanded]);
-    // A subscription watcher changed state, so its bell may need another tint.
-    useEffect(() => desktopAPI.onNotificationsChanged(() => { if (expanded) void load(); }), [load, expanded]);
     const run = async (operation: () => Promise<void>) => {
         if (busy.current) return;
         busy.current = true; setPending(true);
@@ -185,7 +169,6 @@ export function RecentServers({view, expanded, onToggle, onReconnect, onError, r
                         onClick={() => void share(server.address)}>
                     <Icon name={copied === server.address ? "check" : "share"}/>
                 </button>}
-                <SubscribeButton server={server} disabled={pending} onToggle={() => void run(() => desktopAPI.setServerSubscribed(server.address, !server.subscribed))}/>
                 <button type="button" className="server-favorite" aria-pressed={server.favorite}
                         aria-label={m.connection.favoriteLabel(server.favorite ? m.connection.unpin : m.connection.pin, server.alias || server.address)}
                         title={server.favorite ? m.connection.favoriteOff : m.connection.favoriteOn} disabled={pending}

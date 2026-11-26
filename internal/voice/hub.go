@@ -59,9 +59,6 @@ type Hub struct {
 	voicePool                                     *voiceflow.Pool
 	mu                                            sync.RWMutex
 	sessions                                      map[uint64]*Session
-	watchers                                      map[uint64]*Watcher
-	arrivals                                      map[int64]time.Time
-	exits                                         map[int64]arrivalExit
 	screenStreams                                 map[domain.StreamID]domain.ScreenStream
 	streamByOwner                                 map[uint64]domain.StreamID
 	channels                                      map[domain.ChannelID]*domain.Channel
@@ -130,9 +127,6 @@ func newHubWithServerInfo(newSessionID sessionIDGenerator, info domain.ServerInf
 
 	hub := &Hub{
 		sessions:      make(map[uint64]*Session),
-		watchers:      make(map[uint64]*Watcher),
-		arrivals:      make(map[int64]time.Time),
-		exits:         make(map[int64]arrivalExit),
 		screenStreams: make(map[domain.StreamID]domain.ScreenStream),
 		streamByOwner: make(map[uint64]domain.StreamID),
 		channels:      make(map[domain.ChannelID]*domain.Channel),
@@ -730,7 +724,6 @@ func (h *Hub) ApplyJoinLevel(userID int64, level uint16) []uint64 {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	var removed []uint64
-	h.applyWatcherJoinLevelLocked(userID, level)
 	for id, session := range h.sessions {
 		if session.UserID != userID {
 			continue
@@ -955,12 +948,6 @@ func (h *Hub) CreateAuthenticatedSession(name string, addr *net.UDPAddr, userID 
 		h.emitLocked(domain.StateEvent{Kind: domain.ParticipantLeft, SessionID: id})
 		replaced = append(replaced, id)
 	}
-	for id, old := range h.watchers {
-		if sameUDPAddr(old.Addr, addr) {
-			delete(h.watchers, id)
-			replaced = append(replaced, id)
-		}
-	}
 	id, err := h.availableSessionID()
 	if err != nil {
 		return Session{}, replaced, err
@@ -995,9 +982,7 @@ func (h *Hub) availableSessionID() (uint64, error) {
 		if id == 0 {
 			continue
 		}
-		_, session := h.sessions[id]
-		_, watcher := h.watchers[id]
-		if !session && !watcher {
+		if _, exists := h.sessions[id]; !exists {
 			return id, nil
 		}
 	}
@@ -1078,7 +1063,6 @@ func (h *Hub) RemoveInactive(now time.Time, timeout time.Duration) []Session {
 		h.emitLocked(domain.StateEvent{Kind: domain.ParticipantLeft, SessionID: id})
 		removed = append(removed, *cloneSession(session))
 	}
-	removed = append(removed, h.removeInactiveWatchersLocked(now, timeout)...)
 	sortSessionsByID(removed)
 	return removed
 }

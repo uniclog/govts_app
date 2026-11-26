@@ -45,12 +45,8 @@ const adminCall = <T>(method: string, ...args: unknown[]): Promise<T> =>
     Call.ByName(`uniclog.io/sonoryx/internal/ui/wails.Service.${method}`, ...args) as Promise<T>;
 
 let diagnosticsInFlight = 0;
-// watch: the background watcher of a subscribed server the client is not connected to.
-export type WatchState = "connecting" | "active" | "password" | "account" | "untrusted" | "unsupported" | "banned" | "unavailable";
 export type RecentServer = {address: string; alias?: string; version?: string; favorite: boolean; lastVisited: number; current: boolean;
-    onlineCount: number | null; status: "unknown" | "available" | "unavailable"; updatedAt: number; lastAttemptAt: number;
-    subscribed?: boolean; name?: string; watch?: WatchState};
-export type PresenceStatus = "online" | "invisible";
+    onlineCount: number | null; status: "unknown" | "available" | "unavailable"; updatedAt: number; lastAttemptAt: number};
 export function logDiagnostic(operation: string, message: unknown): void {
     if (diagnosticsInFlight >= 16) return;
     diagnosticsInFlight++;
@@ -60,7 +56,7 @@ export function logDiagnostic(operation: string, message: unknown): void {
         .finally(() => { diagnosticsInFlight--; });
 }
 
-export type HotkeyAction = "mute" | "deafen" | "away" | "notifications";
+export type HotkeyAction = "mute" | "deafen" | "away";
 // Complete shortcut: optional Ctrl/Alt/Shift/Win modifiers and A-Z, 0-9 or F1-F12.
 export type Hotkey = {action: HotkeyAction; key: string; status: "active" | "off" | "failed"};
 
@@ -77,20 +73,11 @@ export const desktopAPI = {
     setHotkeyNotifications: (value: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetHotkeyNotifications", value),
     setHotkeyNotices: (texts: Record<string, string>): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetHotkeyNotices", texts),
     setPopupLook: (colors: Record<string, string>): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetPopupLook", colors),
-    setNoticeTexts: (texts: Record<string, string>): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetNoticeTexts", texts),
-    presenceStatus: (): Promise<PresenceStatus> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.PresenceStatus"),
-    setPresenceStatus: (value: PresenceStatus): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetPresenceStatus", value),
-    notificationsMuted: (): Promise<boolean> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.NotificationsMuted"),
-    setNotificationsMuted: (value: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetNotificationsMuted", value),
-    onNotificationsChanged: (listener: () => void) => Events.On("notifications-changed", () => listener()),
-    // The main window came back from the tray, the taskbar or a Start menu launch.
-    onMainWindowShown: (listener: () => void) => Events.On("main-window-shown", () => listener()),
-    setServerSubscribed: (address: string, subscribed: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetServerSubscribed", address, subscribed),
-    // kind "channel" or "direct"; an empty kind when no chat is on screen.
-    setActiveChat: (kind: string, id: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetActiveChat", kind, id),
     recentServers: (): Promise<RecentServer[]> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.RecentServers"),
     refreshServerStatuses: (): Promise<void> => Service.RefreshServerStatuses(),
     onServerStatusChanged: (listener: () => void) => Events.On("server-status-changed", listener),
+    // The main window came back from the tray, the taskbar or a Start menu launch.
+    onMainWindowShown: (listener: () => void) => Events.On("main-window-shown", () => listener()),
     setServerAlias: (address: string, alias: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetServerAlias", address, alias),
     deleteRecentServer: (address: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.DeleteRecentServer", address),
     setServerFavorite: (address: string, favorite: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetServerFavorite", address, favorite),
@@ -138,7 +125,8 @@ export const desktopAPI = {
     setMuted: (value: boolean) => Service.SetMuted(value),
     setAway: (away: boolean) => Service.SetAway(away),
     wake: (sessionID: string) => Service.Wake(sessionID),
-    messageReceived: () => Service.MessageReceived(),
+    // Plays the message cue; title and body fill the popup shown while the window is out of focus.
+    messageReceived: (title: string, body: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.MessageReceived", title, body),
     previewSoundPack: () => Service.PreviewSoundPack(),
     stopSoundPreview: () => Service.StopSoundPreview(),
     setSoundPack: (id: string) => Service.SetSoundPack(id),

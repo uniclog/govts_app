@@ -7,7 +7,6 @@ import {Icon} from "../../components/Icon";
 import {errorCode, errorText, rawError} from "../../locales";
 import {LocaleSwitch, useLocale} from "../../locales/Locale";
 import type {ScreenSharingState} from "../screen/ScreenShareDialog";
-import {NotificationsToggle, PresencePicker} from "../notify/NotifyControls";
 
 export type Page = "channels" | "settings" | "admin";
 const serverAddressStorageKey = "sonoryx.serverAddress";
@@ -118,7 +117,6 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
         </div>
         </section>
         <aside className="connection-card connection-server-card">
-            <PresencePicker/>
             <RecentServers view={view} expanded={true} onToggle={() => {}} standalone disabled={pending} selectedAddress={server.replace(/^srx:\/\//i, "").trim()}
                 refreshingServers={refreshingServers} onRefreshServers={onRefreshServers}
                 onSelect={selectServer} onReconnect={connect} onError={onError}/>
@@ -145,7 +143,6 @@ export function LobbyBar({version, updateAction, onPageChange}: {
     return <header className="status-bar lobby-bar">
         <div className="app-brand"><span className="brand-mark"><VoiceMark/></span><strong>SRX — {m.connection.lobbyTitle}</strong>{version && <span className="server-version" aria-label={m.connection.clientVersion(version)}>{version}</span>}{updateAction}</div>
         <LocaleSwitch variant="header"/>
-        <NotificationsToggle className="status-pill lobby-notify"/>
         <button id="open-settings" className="status-pill settings-pill" type="button" onClick={() => onPageChange("settings")}>
             <Icon name="settings"/><span>{m.connection.settings}</span>
         </button>

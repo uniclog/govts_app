@@ -43,9 +43,6 @@ type Session struct {
 	FileCredentialExpiry         time.Time
 	PreviousFileCredential       [32]byte
 	PreviousFileCredentialExpiry time.Time
-	// notices: the client accepts PacketNotice. subscribed: it wants message
-	// notices from every channel it may join. announced: its arrival was sent.
-	notices, subscribed, announced bool
 	// VoiceBundles reports that the client accepts PacketVoiceBundle.
 	VoiceBundles  bool
 	voiceSeen     map[uint32]struct{}

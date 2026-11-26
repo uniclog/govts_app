@@ -17,18 +17,11 @@ import (
 const InitFixedSize = 1 + 32 + 32 + 16
 const ChallengeSize = 32 + 32 + 16 + ed25519.SignatureSize
 
-// initWatchFlag marks the length byte of a watcher Init. Names are at most
-// 64 bytes, so the high bit is free; servers that predate watchers reject it.
-const initWatchFlag = 0x80
-
 type Init struct {
 	Name      string
 	PublicKey [32]byte
 	Ephemeral [32]byte
 	Nonce     [16]byte
-	// Watch asks for a watcher session: it receives notices only and is not a
-	// participant. The flag is part of the signed transcript.
-	Watch bool
 }
 
 type Challenge struct {
@@ -58,11 +51,7 @@ func NewInit(name string, private ed25519.PrivateKey) (Init, *ecdh.PrivateKey, e
 
 func (i Init) Encode() []byte {
 	payload := make([]byte, 0, InitFixedSize+len(i.Name))
-	size := byte(len(i.Name))
-	if i.Watch {
-		size |= initWatchFlag
-	}
-	payload = append(payload, size)
+	payload = append(payload, byte(len(i.Name)))
 	payload = append(payload, i.PublicKey[:]...)
 	payload = append(payload, i.Ephemeral[:]...)
 	payload = append(payload, i.Nonce[:]...)
@@ -71,14 +60,9 @@ func (i Init) Encode() []byte {
 
 func DecodeInit(payload []byte) (Init, error) {
 	var init Init
-	if len(payload) < InitFixedSize {
+	if len(payload) < InitFixedSize || len(payload) != InitFixedSize+int(payload[0]) || payload[0] == 0 || payload[0] > 64 {
 		return init, errors.New("invalid authentication init")
 	}
-	size := int(payload[0] &^ initWatchFlag)
-	if len(payload) != InitFixedSize+size || size == 0 || size > 64 {
-		return init, errors.New("invalid authentication init")
-	}
-	init.Watch = payload[0]&initWatchFlag != 0
 	init.Name = string(payload[81:])
 	copy(init.PublicKey[:], payload[1:33])
 	copy(init.Ephemeral[:], payload[33:65])

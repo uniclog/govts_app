@@ -76,7 +76,7 @@ export class ChatStore {
     private changeTimer = 0;
     private lastChangeSyncAt = 0;
     private restoredDrafts: Record<string, string> = {};
-    private onMessageReceived: () => void = () => undefined;
+    private onMessageReceived: (messages: ChatMessageDTO[]) => void = () => undefined;
     readonly confirmedAttachments = new Set<string>();
     private attachmentsToFinish = new Set<string>();
     private finishingAttachments = false;
@@ -117,7 +117,8 @@ export class ChatStore {
         } catch { /* A corrupt backup does not block chat startup. */ }
         this.timer = window.setInterval(() => void this.reconcile(), 1000);
     }
-    setMessageReceivedHandler(handler: () => void) { this.onMessageReceived = handler; }
+    // The handler gets the messages of other people that a sync brought in, oldest first.
+    setMessageReceivedHandler(handler: (messages: ChatMessageDTO[]) => void) { this.onMessageReceived = handler; }
     dispose() { this.disposed = true; this.lifecycle.abort(); window.clearInterval(this.timer); window.clearTimeout(this.changeTimer); this.listeners.clear(); this.contentListeners.clear(); }
     prepareUpdate() {
         if ([...this.conversations.values()].some((c) => c.pending.length > 0)) throw new Error(errorCode("chat-pending-refresh"));
@@ -270,16 +271,16 @@ export class ChatStore {
         for (const pending of c.pending) if (confirmed.has(pending.clientId) && pending.attachmentIds?.length) this.confirmAttachments(pending.attachmentIds);
         c.pending = c.pending.filter((p) => !confirmed.has(p.clientId));
         const frozen = c.olderWindow && !older;
-        let received = false;
+        const received: ChatMessageDTO[] = [];
         for (const m of page.messages ?? []) {
             const existing = messages.get(m.id);
             if ((changes && !existing) || (existing && compare(existing.revision ?? "0", m.revision ?? "0") > 0)) continue;
             const fresh = !messages.has(m.id);
-            if (fresh && c.loaded && !older && m.senderId !== this.userId && compare(m.id, c.cursor) > 0) received = true;
+            if (fresh && c.loaded && !older && m.senderId !== this.userId && compare(m.id, c.cursor) > 0 && !m.deleted) received.push(m);
             if (!frozen || messages.has(m.id)) messages.set(m.id, m);
             else c.newMessages = true;
         }
-        if (received) this.onMessageReceived();
+        if (received.length) this.onMessageReceived(received);
         const sorted = [...messages.values()].sort((a, b) => compare(a.id, b.id));
         if (older && sorted.length > 500) { c.messages = sorted.slice(0, 500); c.olderWindow = true; }
         else c.messages = sorted.slice(-500);

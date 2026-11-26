@@ -12,8 +12,6 @@ import (
 )
 
 type State struct {
-	// noticeHandler receives PacketNotice; see notice.go.
-	noticeHandler      atomic.Pointer[noticeHook]
 	voiceFlow          *voiceflow.Endpoint
 	voiceReserve       int
 	mu                 sync.RWMutex

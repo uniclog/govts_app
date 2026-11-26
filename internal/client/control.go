@@ -75,15 +75,6 @@ func ControlLoop(
 				if packet.RequestID == 0 && len(packet.Payload) == 0 {
 					state.PlayNotification(NotificationWake)
 				}
-			case protocol.PacketNotice:
-				if packet.RequestID != 0 {
-					continue
-				}
-				if notice, err := protocol.DecodeNotice(packet.Payload); err == nil {
-					state.Notice(notice)
-				} else {
-					invalidEvents.RecordKind("notice", err, packet.SessionID)
-				}
 			case protocol.PacketAccountPrivileges:
 				if packet.RequestID != 0 || len(packet.Payload) != 3 {
 					continue
@@ -103,7 +94,7 @@ func ControlLoop(
 			case protocol.PacketJoinChannelAck, protocol.PacketStateSnapshotAck, protocol.PacketModerationAck,
 				protocol.PacketHeartbeatAck, protocol.PacketSessionInvalid, protocol.PacketMediaCredentialAck,
 				protocol.PacketAudioStateAck, protocol.PacketChatAck, protocol.PacketFileAccessAck,
-				protocol.PacketPresenceAck, protocol.PacketAttentionAck, protocol.PacketAdminAck, protocol.PacketNoticePrefsAck:
+				protocol.PacketPresenceAck, protocol.PacketAttentionAck, protocol.PacketAdminAck:
 				response := ControlResponse{
 					Type:      packet.Type,
 					RequestID: packet.RequestID,

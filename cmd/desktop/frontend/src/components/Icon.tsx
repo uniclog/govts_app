@@ -1,4 +1,4 @@
-export type IconName = "chevronDown" | "share" | "voice" | "search" | "headphones" | "moon" | "send" | "minimise" | "maximise" | "restoreWindow" | "globe" | "users" | "lock" | "arrowRight" | "channels" | "settings" | "mic" | "sound" | "screen" | "info" | "disconnect" | "hangup" | "chat" | "server" | "close" | "refresh" | "away" | "shield" | "attachment" | "file" | "download" | "check" | "pause" | "play" | "smile" | "copy" | "pin" | "bell" | "bellOff" | "subscribe";
+export type IconName = "chevronDown" | "share" | "voice" | "search" | "headphones" | "moon" | "send" | "minimise" | "maximise" | "restoreWindow" | "globe" | "users" | "lock" | "arrowRight" | "channels" | "settings" | "mic" | "sound" | "screen" | "info" | "disconnect" | "hangup" | "chat" | "server" | "close" | "refresh" | "away" | "shield" | "attachment" | "file" | "download" | "check" | "pause" | "play" | "smile" | "copy" | "pin" | "bell" | "bellOff";
 
 export function Icon({name}: {name: IconName}) {
     const paths: Record<IconName, React.ReactNode> = {
@@ -38,8 +38,6 @@ export function Icon({name}: {name: IconName}) {
         away: <><circle cx="9" cy="8" r="3"/><path d="M3 19v-1a4 4 0 0 1 4-4h2.5"/><path d="M15.5 15.5h5.5M15.5 19.5h5.5"/></>,
         pin: <><path d="M9 3.5h6l-1 5.5 3 3V14H7v-2l3-3-1-5.5Z"/><path d="M12 14v6.5"/></>,
         bell: <><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15Z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></>,
-        // A feed sign: subscription differs from the notification bell.
-        subscribe: <><circle cx="5.5" cy="18.5" r="1.5" fill="currentColor"/><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/></>,
         bellOff: <><path d="M8.4 5.9A6 6 0 0 1 18 11v4.2M16 18H4.5L6 16v-5c0-.9.2-1.8.6-2.6"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/><path d="m3.5 3.5 17 17"/></>,
         copy: <><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V5a2 2 0 0 1 2-2h9a1 1 0 0 1 1 1v1"/></>,
         smile: <><circle cx="12" cy="12" r="9"/><path d="M8 14a4.5 4.5 0 0 0 8 0M9 9.5h.01M15 9.5h.01"/></>,

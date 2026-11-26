@@ -70,12 +70,6 @@ const (
 
 	PacketFileAccessRequest
 	PacketFileAccessAck
-
-	// Notifications of internal/protocol/notice.go: a session opts in with
-	// PacketNoticePrefs; the server then sends it unsolicited PacketNotice.
-	PacketNoticePrefs
-	PacketNoticePrefsAck
-	PacketNotice
 	PacketEnd
 )
 

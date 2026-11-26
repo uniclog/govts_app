@@ -22,6 +22,7 @@ import {WindowControls} from "./components/WindowControls";
 import {Select, type SelectOption} from "./components/Select";
 import {ChatPanel} from "./features/chat/ChatPanel";
 import {ChatStore} from "./features/chat/chatStore";
+import {channelMuted, channelNotificationScope, messagePreview, setChannelMuted, useMutedChannels} from "./features/chat/channelNotifications";
 import {useWorkspaceResize} from "./components/useWorkspaceResize";
 import {UpdateButton, UpdateDialog, UpdatesPanel, useUpdates, type UpdatesState} from "./features/updates/Updates";
 import {applyAppearance, loadAppearance, normalizeTheme, saveAppearance, themeColor, type Appearance, type AppearanceOptions, type StageBackdrop} from "./appearance";
@@ -32,7 +33,6 @@ import {InterfaceSettings} from "./features/settings/InterfaceSettings";
 import {AdminPanel} from "./features/admin/AdminPanel";
 import {StageScene} from "./features/settings/StageScene";
 import {HotkeySettings} from "./features/settings/HotkeySettings";
-import {NotificationsCard, PresenceAvatar} from "./features/notify/NotifyControls";
 import {loadReduceMotion, saveReduceMotion} from "./features/settings/motion";
 
 const contentTabs = ["chat", "events"] as const;
@@ -123,12 +123,23 @@ function MainApp({appearance, setTheme, updateAppearance}: {
     const [directChats, setDirectChats] = useState<DirectChat[]>([]);
     const [chatStore, setChatStore] = useState<ChatStore | null>(null);
     const chatStoreRef = useRef<ChatStore | null>(null);
+    // The handler outlives renders, so it reads the current names from here.
+    const noticeRef = useRef({channels: view.channels, scope: "", m});
+    noticeRef.current = {channels: view.channels, scope: channelNotificationScope(view.chatContext), m};
     useEffect(() => {
         if (view.userId === "0" || view.connectionStatus !== "connected") return;
         if (chatStoreRef.current?.context === view.chatContext) return;
         chatStoreRef.current?.dispose();
         const store = new ChatStore(view.chatContext, view.userId);
-        store.setMessageReceivedHandler(() => { void desktopAPI.messageReceived(); });
+        store.setMessageReceivedHandler((messages) => {
+            const {channels, scope, m} = noticeRef.current;
+            const heard = messages.filter((message) => message.channelId === "0" || !channelMuted(scope, message.channelId));
+            if (!heard.length) return;
+            const latest = heard.reduce((a, b) => BigInt(b.id) > BigInt(a.id) ? b : a);
+            const channel = channels?.find((item) => item.id === latest.channelId)?.name;
+            const title = latest.channelId === "0" ? m.channels.direct(latest.senderName) : channel ? `${latest.senderName} · ${channel}` : latest.senderName;
+            void desktopAPI.messageReceived(title, messagePreview(latest, m.chat.pinAttachment)).catch(() => undefined);
+        });
         chatStoreRef.current = store;
         setChatStore(store); setDirectChats([]); setContentTab("chat");
     }, [view.chatContext, view.userId, view.connectionStatus]);
@@ -137,6 +148,12 @@ function MainApp({appearance, setTheme, updateAppearance}: {
         chatStore?.setConnected(view.connectionStatus === "connected");
     }, [chatStore, view.connectionStatus]);
     useEffect(() => { chatStore?.changed(); }, [chatStore, view.chatRevision]);
+    // The chat of the current channel is followed even when it is not on screen
+    // or the window is minimised, so its messages still ring and pop up.
+    useEffect(() => {
+        if (!chatStore || view.connectionStatus !== "connected" || view.channelId === "0") return;
+        return chatStore.watch({kind: "channel", id: view.channelId});
+    }, [chatStore, view.connectionStatus, view.channelId]);
     const [events, setEvents] = useState<ClientEventDTO[]>([]);
     const [actionError, setActionErrorState] = useState("");
     const [actionErrorTick, setActionErrorTick] = useState(0);
@@ -451,14 +468,9 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
         requestAnimationFrame(() => document.getElementById(`${next}-tab`)?.focus());
     };
     const infoVisible = showInfo && Boolean(selected) && view.connectionStatus === "connected";
-    // Go plays only the sound for a message in the chat on screen; the popup
-    // is for every other conversation.
-    const chatOnScreen = !selected || view.connectionStatus !== "connected" || infoVisible ? "" : contentTab === "chat" ? `channel:${view.channelId}` : contentTab.startsWith("direct:") ? contentTab : "";
-    useEffect(() => {
-        const [kind = "", id = ""] = chatOnScreen.split(":");
-        void desktopAPI.setActiveChat(kind, id).catch(() => undefined);
-    }, [chatOnScreen]);
-    useEffect(() => () => { void desktopAPI.setActiveChat("", "").catch(() => undefined); }, []);
+    const noticeScope = channelNotificationScope(view.chatContext);
+    const mutedChannels = useMutedChannels(noticeScope);
+    const selectedMuted = !!selected && mutedChannels.has(selected.id);
     const workspaceResize = useWorkspaceResize(infoVisible);
     const members = participants.filter((item) => item.channelId === selectedID);
     const localParticipant = participants.find((person) => person.local);
@@ -475,6 +487,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                                                              canDrag={view.canDrag && view.connectionStatus === "connected"}
                                                              wakeEnabled={view.connectionStatus === "connected"}
                                                              currentID={view.channelId}
+                                                             mutedIDs={mutedChannels}
                                                              onError={onError} onMessage={openMessage}
                                                              onWake={(participant) => { onWake(participant.sessionId); }}
                                                              onJoin={(id) => {
@@ -484,7 +497,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                 }}/></div>
                 </section>
                 <footer className="workspace-user-footer">
-                    <PresenceAvatar initial={localChatName.slice(0, 1).toUpperCase()} style={avatarStyle(localChatName)} speaking={!!localParticipant?.speaking && !view.audio.muted}/>
+                    <span className={`footer-avatar ${localParticipant?.speaking && !view.audio.muted ? "speaking" : ""}`} style={avatarStyle(localChatName)}>{localChatName.slice(0, 1).toUpperCase()}</span>
                     <div className="workspace-user-identity"><strong title={localChatName}>{localChatName}</strong><ConnectionStatsPopup sessionId={view.sessionId} status={view.connectionStatus} channelId={view.channelId} sharing={sharing} screenMedia={screenMedia}/></div>
                     {view.canAdmin && view.connectionStatus === "connected" && <button id="open-admin" type="button" aria-label={m.admin.open} title={m.admin.open} onClick={() => onPageChange("admin")}><Icon name="shield"/></button>}
                     <button id="open-settings" type="button" aria-label={m.connection.settings} title={m.connection.settings} onClick={() => onPageChange("settings")}><Icon name="settings"/></button>
@@ -497,6 +510,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
                         <span className="channel-heading-icon"><Icon name="voice"/></span>
                         <div><h2 title={selected.name}>{selected.name}</h2><p title={selected.topic}>{selected.topic || m.channels.voice} · {members.length}{selected.maxUsers ? ` / ${selected.maxUsers}` : ""} · {selected.audio.codec} {m.channels.kbps(selected.audio.bitrate / 1000)}</p></div>
                         <span className="channel-member-stack" aria-label={m.channels.members}>{members.slice(0, 4).map((person) => <span key={person.sessionId} style={avatarStyle(person.displayName)} title={person.displayName}>{person.displayName.slice(0, 1).toUpperCase()}</span>)}{members.length > 4 && <small>+{members.length - 4}</small>}</span>
+                        <button className={`info-toggle channel-notify-toggle${selectedMuted ? " is-muted" : ""}`} type="button" title={selectedMuted ? m.channels.unmuteChannel : m.channels.muteChannel} aria-label={selectedMuted ? m.channels.unmuteChannel : m.channels.muteChannel} aria-pressed={selectedMuted} onClick={() => setChannelMuted(noticeScope, selected.id, !selectedMuted)}><Icon name={selectedMuted ? "bellOff" : "bell"}/></button>
                         <button className="info-toggle" title={m.channels.info} aria-label={m.channels.info} aria-expanded={showInfo} onClick={() => setShowInfo(!showInfo)}><Icon name="info"/></button>
                     </header>
                     <div className="participants-stage" data-backdrop={stageBackdrop} role="region" tabIndex={0} aria-label={m.channels.stage}>
@@ -561,7 +575,7 @@ function ChannelsPage({view, events, invoke, sharing, screenMedia, onError, onRe
     </section>;
 }
 
-function ChannelTree({channels, participants, screenOwners, canKick, canBan, canDrag, wakeEnabled, currentID, onJoin, onMoveParticipant, onError, onMessage, onWake, query = ""}: {
+function ChannelTree({channels, participants, screenOwners, canKick, canBan, canDrag, wakeEnabled, currentID, mutedIDs, onJoin, onMoveParticipant, onError, onMessage, onWake, query = ""}: {
     query?: string;
     channels: ChannelDTO[];
     participants: ParticipantDTO[];
@@ -571,6 +585,7 @@ function ChannelTree({channels, participants, screenOwners, canKick, canBan, can
     canDrag: boolean;
     wakeEnabled: boolean;
     currentID: string;
+    mutedIDs: Set<string>;
     onJoin: (id: string) => void
     onMoveParticipant: (sessionID: string, channelID: string) => void;
     onError: (message: string) => void;
@@ -630,7 +645,7 @@ function ChannelTree({channels, participants, screenOwners, canKick, canBan, can
                     onMoveParticipant(draggingSessionID, channel.id);
                 }}
                 onDoubleClick={() => { if (channel.canJoin) onJoin(channel.id); }}><span className="channel-icon" aria-hidden="true"><Icon name="sound"/></span><span
-                className="channel-name">{channel.name}</span><span className="channel-count">{members.length}{channel.maxUsers ? `/${channel.maxUsers}` : ""}</span>
+                className="channel-name">{channel.name}</span>{mutedIDs.has(channel.id) && <span className="channel-muted" title={m.channels.channelMuted} aria-label={m.channels.channelMuted}><Icon name="bellOff"/></span>}<span className="channel-count">{members.length}{channel.maxUsers ? `/${channel.maxUsers}` : ""}</span>
             </button>
             {members.filter((person) => !normalizedQuery || channel.name.toLocaleLowerCase().includes(normalizedQuery) || person.displayName.toLocaleLowerCase().includes(normalizedQuery)).map((participant) => <ParticipantRow key={participant.sessionId} participant={participant}
                                                           sharingScreen={screenOwners.has(participant.sessionId)}
@@ -914,7 +929,6 @@ function SettingsPage({view, invoke, appearance, setTheme, updateAppearance, upd
                                        }
                                    })}/>
                 </section>
-                <NotificationsCard/>
                 <section className="settings-card">
                     <SettingToggle title={m.settings.rememberVolumes} description={m.settings.rememberVolumesHint}
                                    checked={rememberVolumes}
