@@ -76,6 +76,8 @@ export const desktopAPI = {
     recentServers: (): Promise<RecentServer[]> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.RecentServers"),
     refreshServerStatuses: (): Promise<void> => Service.RefreshServerStatuses(),
     onServerStatusChanged: (listener: () => void) => Events.On("server-status-changed", listener),
+    // The main window came back from the tray, the taskbar or a Start menu launch.
+    onMainWindowShown: (listener: () => void) => Events.On("main-window-shown", () => listener()),
     setServerAlias: (address: string, alias: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetServerAlias", address, alias),
     deleteRecentServer: (address: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.DeleteRecentServer", address),
     setServerFavorite: (address: string, favorite: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.SetServerFavorite", address, favorite),
@@ -123,7 +125,8 @@ export const desktopAPI = {
     setMuted: (value: boolean) => Service.SetMuted(value),
     setAway: (away: boolean) => Service.SetAway(away),
     wake: (sessionID: string) => Service.Wake(sessionID),
-    messageReceived: () => Service.MessageReceived(),
+    // Plays the message cue; title and body fill the popup shown while the window is out of focus.
+    messageReceived: (title: string, body: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/internal/ui/wails.Service.MessageReceived", title, body),
     previewSoundPack: () => Service.PreviewSoundPack(),
     stopSoundPreview: () => Service.StopSoundPreview(),
     setSoundPack: (id: string) => Service.SetSoundPack(id),

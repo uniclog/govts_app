@@ -56,7 +56,42 @@ func (s *Service) Wake(sessionID string) error {
 	return s.client.Wake(ctx, id)
 }
 
-func (s *Service) MessageReceived() { s.client.MessageReceived() }
+// MessageReceived plays the cue for a message the chat store found. While the
+// main window is minimised, in the tray or without focus, the hotkey popup
+// window shows title and body as well.
+func (s *Service) MessageReceived(title, body string) {
+	s.client.MessageReceived()
+	s.showMessagePopup(title, body)
+}
+
+// showMessagePopup sends the popup only while the main window is inactive.
+func (s *Service) showMessagePopup(title, body string) {
+	s.settingsMu.RLock()
+	inactive := s.hotkeyWindowInactive
+	s.settingsMu.RUnlock()
+	title, body = clipPopupText(title, 120), clipPopupText(body, 160)
+	if !inactive || title == "" {
+		return
+	}
+	s.hotkeyMu.Lock()
+	send := s.messagePopup
+	s.hotkeyMu.Unlock()
+	if send == nil {
+		return
+	}
+	if err := send(title, body); err != nil {
+		log.Printf("message popup failed: error=%v", err)
+	}
+}
+
+// clipPopupText keeps one line of at most limit characters.
+func clipPopupText(text string, limit int) string {
+	text = strings.Join(strings.Fields(text), " ")
+	if runes := []rune(text); len(runes) > limit {
+		return string(runes[:limit-1]) + "…"
+	}
+	return text
+}
 
 func (s *Service) PreviewSoundPack() error { return s.client.PreviewSoundPack() }
 

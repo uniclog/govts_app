@@ -1,7 +1,7 @@
 /* Server workspace: shared geometry for the dark and light references. */
-.server-shell { --window-titlebar-height: 32px; --workspace-brand: var(--accent-blue); }
+.server-shell { --window-titlebar-height: 32px; }
 .server-shell .window-controls { height: 24px; }
-:root:not([data-theme="custom"]) .server-shell { font-family: Arial, sans-serif; }
+:root[data-font="default"] .server-shell { font-family: Arial, sans-serif; }
 .server-main { grid-template-rows: var(--window-titlebar-height) 0 minmax(0, 1fr); }
 .server-titlebar { height: var(--window-titlebar-height); min-height: var(--window-titlebar-height); padding-block: 4px 0; border: 0; }
 .server-titlebar .app-brand { gap: 7px; font-size: .6875rem; color: var(--muted); }
@@ -71,20 +71,29 @@
 .channel-member-stack small { margin-left: 4px; font-size: .625rem; color: var(--muted); }
 .server-shell .info-toggle { width: 36px; height: 36px; flex-shrink: 0; border: 0; border-radius: 11px; background: var(--card-strong); color: var(--muted); }
 .server-shell .info-toggle:hover { color: var(--text); }
+/* Muted channel: the header bell is crossed out and the tree row carries the mark. */
+.server-shell .channel-notify-toggle.is-muted { color: var(--text); background: color-mix(in srgb, var(--text) var(--control-state), var(--card-strong)); }
+.channel-muted { display: grid; flex-shrink: 0; place-items: center; color: var(--muted); }
+.channel-muted svg { width: 12px; height: 12px; }
 .server-shell .participants-stage { position: relative; min-width: 0; min-height: 0; border-radius: 18px; overflow: hidden; }
-.server-shell .participants-stage[data-reference-backdrop="true"] { background: radial-gradient(ellipse at 6% 8%, color-mix(in srgb, var(--workspace-brand) var(--stage-tint), transparent), transparent 48%), radial-gradient(ellipse at 95% 94%, color-mix(in srgb, var(--accent) var(--stage-tint), transparent), transparent 44%), var(--stage-base); }
+:is(.participants-stage, .backdrop-preview)[data-backdrop="rings"] { background: radial-gradient(ellipse at 6% 8%, color-mix(in srgb, var(--workspace-brand) var(--stage-tint), transparent), transparent 48%), radial-gradient(ellipse at 95% 94%, color-mix(in srgb, var(--accent) var(--stage-tint), transparent), transparent 44%), var(--stage-base); }
 .workspace-stage-art { position: absolute; inset: 0; pointer-events: none; overflow: hidden; contain: strict; }
 /* Quiet sound waves: a border ring animated by transform and opacity only, so the compositor moves it without repaints. */
 .workspace-stage-art i { --wave-size: clamp(860px, 70vw, 1600px); position: absolute; top: 50%; left: 50%; width: var(--wave-size); height: var(--wave-size); margin: calc(var(--wave-size) / -2) 0 0 calc(var(--wave-size) / -2); border: 2px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 50%; opacity: 0; transform: scale(.3); animation: workspace-stage-wave 24s linear infinite; }
 .workspace-stage-art i:nth-child(2) { animation-delay: -6s; }
 .workspace-stage-art i:nth-child(3) { animation-delay: -12s; }
 .workspace-stage-art i:nth-child(4) { animation-delay: -18s; }
+.backdrop-preview .workspace-stage-art i { --wave-size: 180px; border-color: color-mix(in srgb, var(--accent) 50%, transparent); border-width: 1px; }
 @keyframes workspace-stage-wave {
   0% { opacity: 0; transform: scale(.3); }
   15% { opacity: 1; }
   100% { opacity: 0; transform: scale(1); }
 }
-:root[data-reduce-motion] .workspace-stage-art i { display: none; }
+/* Without animation the rings stay as a still frame. */
+:root[data-reduce-motion] .workspace-stage-art i { animation: none; opacity: .7; transform: scale(.38); }
+:root[data-reduce-motion] .workspace-stage-art i:nth-child(2) { transform: scale(.54); }
+:root[data-reduce-motion] .workspace-stage-art i:nth-child(3) { transform: scale(.7); }
+:root[data-reduce-motion] .workspace-stage-art i:nth-child(4) { transform: scale(.86); }
 .stage-speaking-summary, .stage-member-summary { position: absolute; z-index: 2; top: 18px; display: flex; align-items: center; gap: 6px; max-width: calc(100% - 128px); min-height: 25px; padding: 4px 10px; border-radius: 99px; color: var(--muted); background: color-mix(in srgb, var(--card) 45%, transparent); font-size: .6875rem; }
 .stage-speaking-summary { left: 18px; }
 .stage-speaking-summary span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -129,40 +129,101 @@
 .backdrop-preview[data-backdrop="plain"] { background: var(--card); }
 .participants-stage[data-backdrop="stars"],
 .backdrop-preview[data-backdrop="stars"] { background: var(--window); }
-.participants-stage[data-backdrop="image"] {
-  background-color: var(--window);
-  background-image: var(--stage-image);
-  background-position: center bottom;
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-.stage-scene { position: absolute; inset: 0; overflow: hidden; pointer-events: none; container-type: size; }
-.stage-ridge, .stage-pines, .stage-pine, .stage-cloud, .stage-ground, .stage-sun, .stage-city, .stage-building, .stage-stars, .stage-stars i { position: absolute; pointer-events: none; }
+.stage-scene { position: absolute; inset: 0; isolation: isolate; overflow: hidden; pointer-events: none; contain: strict; container-type: size; }
+.stage-ridge, .stage-pines, .stage-pine, .stage-cloud, .stage-sun, .stage-city, .stage-building, .stage-stars, .stage-stars i { position: absolute; pointer-events: none; }
 .stage-ridge { left: 0; right: 0; bottom: 0; height: 62%; background: var(--stage-ridge); clip-path: polygon(0 72%, 13% 42%, 22% 65%, 39% 13%, 49% 48%, 63% 20%, 78% 60%, 87% 38%, 100% 75%, 100% 100%, 0 100%); }
-.stage-pines { inset: 0; }
-.stage-pine { bottom: 0; background: var(--card); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.stage-pine-far { z-index: 0; background: var(--card-strong); }
-.stage-pine:not(.stage-pine-far) { z-index: 1; }
-.stage-cloud { border-radius: 999px; background: color-mix(in srgb, var(--text) 16%, var(--card)); }
+.stage-pines { inset: 0; overflow: hidden; }
+.stage-pine { bottom: 0; background: var(--card); clip-path: polygon(50% 0, 100% 100%, 0 100%); transform-origin: 50% 100%; }
+.stage-pine-far { background: var(--card-strong); }
+/* --cloud-x is in cqw, not %: translate() percentages refer to the cloud itself. */
+.stage-cloud { left: var(--cloud-x); width: var(--cloud-w); border-radius: 999px; background: color-mix(in srgb, var(--text) 16%, var(--card)); }
 .stage-cloud::before, .stage-cloud::after { content: ""; position: absolute; border-radius: 50%; background: inherit; }
-.stage-cloud-a { top: 22%; left: 8%; width: 72cqh; height: 16cqh; }
+.stage-cloud-a { --cloud-x: 8cqw; --cloud-w: 72cqh; top: 22%; height: 16cqh; }
 .stage-cloud-a::before { left: 10cqh; top: -14cqh; width: 26cqh; height: 26cqh; }
 .stage-cloud-a::after { left: 32cqh; top: -10cqh; width: 20cqh; height: 20cqh; }
-.stage-cloud-b { top: 46%; left: 42%; width: 50cqh; height: 13cqh; }
+.stage-cloud-b { --cloud-x: 42cqw; --cloud-w: 50cqh; top: 46%; height: 13cqh; }
 .stage-cloud-b::before { left: 8cqh; top: -11cqh; width: 20cqh; height: 20cqh; }
 .stage-cloud-b::after { left: 24cqh; top: -8cqh; width: 16cqh; height: 16cqh; }
-.stage-cloud-c { top: 18%; left: 68%; width: 60cqh; height: 14cqh; }
+.stage-cloud-c { --cloud-x: 68cqw; --cloud-w: 60cqh; top: 18%; height: 14cqh; }
 .stage-cloud-c::before { left: 8cqh; top: -12cqh; width: 22cqh; height: 22cqh; }
 .stage-cloud-c::after { left: 26cqh; top: -8cqh; width: 18cqh; height: 18cqh; }
-.stage-ground { left: 0; right: 0; bottom: 0; height: 36%; background: var(--card); }
-.stage-sun { left: 16%; bottom: 26%; width: 28cqh; height: 28cqh; border-radius: 50%; background: var(--warning); }
+/* The bottom edge of the stage is the horizon: the sun sets past it. */
+.stage-horizon-glow { position: absolute; left: 0; right: 0; bottom: 0; height: 65%; background: linear-gradient(to top, color-mix(in srgb, var(--warning) 22%, transparent), transparent); pointer-events: none; }
+.stage-sun { left: 16%; bottom: -10cqh; width: 30cqh; height: 30cqh; border-radius: 50%; background: var(--warning); box-shadow: 0 0 8cqh color-mix(in srgb, var(--warning) 35%, transparent); }
 .stage-city { inset: 0; }
 .stage-building { bottom: 0; background: var(--card); }
 .stage-building-far { z-index: 0; background: var(--card-strong); }
 .stage-building:not(.stage-building-far) { z-index: 1; }
 .stage-stars { inset: 0; }
-.stage-stars i { border-radius: 50%; background: var(--text); transform: translate(-50%, -50%); }
-.stage-star-bright { box-shadow: 0 0 1.6cqh color-mix(in srgb, var(--text) 70%, transparent); }
+.stage-stars i { background: var(--text); }
+.stage-star-bright { border-radius: 50%; box-shadow: 0 0 3px 1px color-mix(in srgb, var(--text) 45%, transparent); }
+/* Scene motion uses transform and opacity only, so the compositor moves it without repaints.
+   Motion-only elements rest at opacity 0: without animation each scene is the plain still picture. */
+.stage-mist, .stage-city-lights, .stage-meteor, .stage-sheen { position: absolute; opacity: 0; pointer-events: none; }
+/* Fog is a theme-coloured layer cut by a fractal-noise mask (SVG feTurbulence), so it has ragged,
+   uneven edges instead of geometric blobs. stitchTiles makes the noise tile seamlessly: the tile is
+   one scene width (50% of a 200% wide layer), so the drift loops without a seam. The noise is
+   rasterised once; the drift only moves the finished layer. A vertical gradient keeps it thinning upwards. */
+.stage-mist {
+  left: 0; width: 200%;
+  background: var(--fog);
+  mask-size: 50% 100%, 100% 100%;
+  mask-repeat: repeat-x, no-repeat;
+  mask-composite: intersect;
+  animation: stage-mist-drift 150s linear infinite, stage-mist-breathe 21s ease-in-out infinite alternate;
+}
+/* Patchy haze over the slopes, thin at both edges. */
+.stage-mist-a {
+  --fog: color-mix(in srgb, var(--text) 9%, transparent);
+  bottom: 18%; height: 26%;
+  mask-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1000' height='200' viewBox='0 0 1000 200' preserveAspectRatio='none'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.006 0.028' numOctaves='3' seed='21' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 3 0 0 0 -1.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"),
+    linear-gradient(to top, transparent, #000 35%, #000 50%, transparent);
+  animation-duration: 210s, 27s;
+  animation-delay: -60s, -9s;
+}
+/* Fog lying in the valley: densest at the bottom, thinning towards the peaks. */
+.stage-mist-b {
+  --fog: color-mix(in srgb, var(--text) 13%, transparent);
+  bottom: 0; height: 34%;
+  mask-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1000' height='200' viewBox='0 0 1000 200' preserveAspectRatio='none'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.016' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 2.4 0 0 0 -0.85'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"),
+    linear-gradient(to top, #000 10%, transparent 90%);
+}
+.stage-pine { animation: stage-pine-sway 5s ease-in-out infinite alternate; }
+.stage-pine-far { --pine-sway: 1.8deg; }
+.stage-cloud-a { animation: stage-cloud-pass 70s linear infinite; }
+.stage-cloud-b { animation: stage-cloud-pass 55s linear -30s infinite; }
+.stage-cloud-c { animation: stage-cloud-pass 85s linear -58s infinite; }
+.stage-sun { animation: stage-sun-set 72s ease-in-out infinite alternate; }
+.stage-horizon-glow { animation: stage-horizon-glow 72s ease-in-out infinite alternate; }
+.stage-city-lights { inset: 0; z-index: 1; overflow: hidden; animation: stage-lights 40s linear infinite; }
+.stage-city-lights i { position: absolute; width: max(1px, 1.5cqh); height: max(2px, 2.4cqh); background: var(--warning); }
+.stage-stars { animation: stage-twinkle 5.4s ease-in-out infinite; }
+.stage-stars:first-child { animation: none; }
+.stage-meteor { width: 16cqh; height: 1px; background: linear-gradient(90deg, transparent, var(--text)); transform-origin: 0 50%; animation: stage-meteor-fall 23s linear infinite; }
+.stage-sheen { top: 0; bottom: 0; left: 0; width: 60%; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 8%, transparent), transparent); animation: stage-sheen-pass 12s ease-in-out infinite; }
+@keyframes stage-mist-drift { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+@keyframes stage-mist-breathe { from { opacity: .75; } to { opacity: 1; } }
+@keyframes stage-pine-sway { from { transform: skewX(calc(-1 * var(--pine-sway, 3deg))); } to { transform: skewX(var(--pine-sway, 3deg)); } }
+/* From fully off the left edge to fully off the right edge, so the restart is never seen. */
+@keyframes stage-cloud-pass {
+  from { transform: translateX(calc(-1 * (var(--cloud-x) + var(--cloud-w) + 4cqh))); }
+  to { transform: translateX(calc(100cqw - var(--cloud-x) + 4cqh)); }
+}
+@keyframes stage-sun-set { 0% { transform: translateY(-46cqh); } 78%, 100% { transform: translateY(36cqh); } }
+@keyframes stage-horizon-glow { 0% { opacity: .45; } 60% { opacity: 1; } 100% { opacity: .2; } }
+/* A group is fully dark for half the cycle; eight shifted groups keep about half the windows lit. */
+@keyframes stage-lights { 0%, 100% { opacity: 0; } 2%, 48% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes stage-twinkle { 50% { opacity: .25; } }
+@keyframes stage-meteor-fall {
+  0% { opacity: 0; transform: rotate(var(--meteor-angle)) translateX(0); }
+  .5% { opacity: 1; }
+  5%, 100% { opacity: 0; transform: rotate(var(--meteor-angle)) translateX(36cqh); }
+}
+@keyframes stage-sheen-pass { from { opacity: 1; transform: translateX(-100%); } to { opacity: 1; transform: translateX(170%); } }
+/* With animations off every backdrop shows its still frame. */
+:root[data-reduce-motion] .stage-scene * { animation: none; }
 .participants-strip { position: relative; display: flex; flex-wrap: nowrap; align-items: flex-start; justify-content: center; gap: 18px; width: max-content; min-width: 100%; height: 100%; padding: 14px 18px; }
 .stage-participant { z-index: 1; display: flex; width: 80px; flex: 0 0 80px; flex-direction: column; align-items: center; gap: 7px; }
 .stage-participant-group { display: flex; flex: 0 0 auto; align-items: flex-start; gap: 14px; }
@@ -324,6 +385,41 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .chat-error button { margin-left: 8px; }
 .chat-older { display: block; margin: 0 auto 10px; }
 .chat-new { align-self: center; margin-bottom: 6px; }
+/* Pinned messages: the bar shows the latest pin, the list drops over the history. */
+.chat-pins { position: relative; z-index: 3; flex: 0 0 auto; margin: 0 12px; border-bottom: 1px solid var(--line); }
+.server-shell .chat-pins { margin: 0; }
+.chat-pin-bar { display: flex; align-items: center; gap: 2px; min-width: 0; padding: 6px 0; }
+.chat-pin-current { display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; padding: 3px 8px 3px 10px; border: 0; border-left: 2px solid var(--menu-accent); border-radius: 0 6px 6px 0; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.chat-pin-current:hover:not(:disabled) { background: var(--card-strong); }
+.chat-pin-current:disabled { cursor: default; }
+.chat-pin-current svg { flex: 0 0 auto; width: 15px; height: 15px; color: var(--menu-accent); }
+.chat-pin-summary { display: grid; min-width: 0; line-height: 1.35; }
+.chat-pin-summary strong { color: var(--menu-accent); font-size: .6875rem; font-weight: 600; }
+.chat-pin-preview { overflow: hidden; color: var(--muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.chat-pin-preview b { color: var(--text); font-weight: 500; }
+.chat-pin-icon-button { display: grid; flex: 0 0 auto; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; color: var(--muted); background: transparent; cursor: pointer; }
+.chat-pin-icon-button svg { width: 14px; height: 14px; }
+.chat-pin-icon-button:hover:not(:disabled), .chat-pin-icon-button:focus-visible, .chat-pin-toggle[aria-expanded="true"] { color: var(--text); background: var(--card-strong); }
+.chat-pin-icon-button:disabled { opacity: .45; cursor: default; }
+.chat-pin-icon-button.is-copied { color: var(--accent); }
+.chat-pin-toggle svg { transition: transform .15s ease; }
+.chat-pins.is-open .chat-pin-toggle svg { transform: rotate(180deg); }
+.chat-pin-list { position: absolute; top: calc(100% + 4px); right: 0; left: 0; display: grid; gap: 2px; max-height: min(320px, 55vh); margin: 0; padding: 4px; overflow-y: auto; list-style: none; border: 1px solid var(--line); border-radius: 10px; background: var(--card); box-shadow: var(--menu-shadow); }
+.chat-pin-item { display: flex; align-items: center; gap: 2px; padding-right: 4px; border-radius: 8px; }
+.chat-pin-item:hover, .chat-pin-item:focus-within { background: color-mix(in srgb, var(--card-strong) 70%, transparent); }
+.chat-pin-item-main { display: grid; flex: 1; gap: 1px; min-width: 0; padding: 6px 8px; border: 0; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.chat-pin-item-main:disabled { cursor: default; }
+.chat-pin-item-meta { display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: .6875rem; }
+.chat-pin-item-meta strong { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.chat-pin-item-meta time { flex: 0 0 auto; color: var(--muted); font-size: .625rem; }
+.chat-pin-item-text { display: -webkit-box; overflow: hidden; color: var(--muted); font-size: .75rem; line-height: 1.4; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.chat-message-pin { display: inline-grid; align-self: center; place-items: center; color: var(--muted); }
+.chat-message-pin svg { width: 11px; height: 11px; }
+.chat-message.is-highlighted { animation: chat-message-flash 1.8s ease-out; }
+@keyframes chat-message-flash { 0%, 35% { background: color-mix(in srgb, var(--menu-accent) 18%, transparent); } 100% { background: transparent; } }
+:root[data-reduce-motion] .chat-pin-toggle svg { transition: none; }
+/* Without the flash the revealed message keeps a steady tint for the highlight time. */
+:root[data-reduce-motion] .chat-message.is-highlighted { animation: none; background: color-mix(in srgb, var(--menu-accent) 14%, transparent); }
 .settings-page { margin: 0; padding: 24px 28px 22px; }
 @media (max-width: 1100px) {
   .channel-stage { padding-inline: 12px; }
@@ -482,14 +578,15 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 @keyframes chat-reaction-in { from { opacity: 0; transform: scale(.8); } }
 
 .chat-message-actions { display: flex; gap: 2px; }
-.chat-message .chat-message-copy-button { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; color: var(--muted); background: transparent; cursor: pointer; }
-.chat-message-copy-button svg { width: 14px; height: 14px; }
-.chat-message .chat-message-copy-button:hover, .chat-message .chat-message-copy-button:focus-visible { color: var(--text); background: var(--card-strong); }
+.chat-message :is(.chat-message-copy-button, .chat-message-pin-button) { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; color: var(--muted); background: transparent; cursor: pointer; }
+:is(.chat-message-copy-button, .chat-message-pin-button) svg { width: 14px; height: 14px; }
+.chat-message :is(.chat-message-copy-button, .chat-message-pin-button):is(:hover, :focus-visible) { color: var(--text); background: var(--card-strong); }
 .chat-message .chat-message-copy-button.is-copied { color: var(--accent); }
+.chat-message .chat-message-pin-button.is-pinned { color: var(--menu-accent); }
 .server-shell .chat-message-actions { position: absolute; top: 5px; right: 4px; opacity: 0; }
 .server-shell .chat-message:hover .chat-message-actions, .server-shell .chat-message:focus-within .chat-message-actions, .server-shell .chat-message-actions:has([aria-expanded="true"], .is-copied) { opacity: 1; }
 .server-shell .chat-message .chat-message-actions .chat-message-menu-button { position: static; opacity: 1; }
-.server-shell .chat-message:not(.is-deleted):not(.pending) .chat-message-meta { padding-right: 50px; }
+.server-shell .chat-message:not(.is-deleted):not(.pending) .chat-message-meta { padding-right: 74px; }
 
 .chat-emoji-popover { position: fixed; z-index: 10000; max-width: calc(100vw - 16px); border: 1px solid var(--line); border-radius: 14px; color: var(--text); background: var(--card); box-shadow: var(--menu-shadow); }
 .chat-emoji-popover button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; font-size: 1.125rem; line-height: 1; cursor: pointer; }

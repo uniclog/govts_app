@@ -344,6 +344,14 @@ func ConfigureHotkeyNotifications(s *Service, hidden func() bool, send func(titl
 	s.hotkeyMu.Unlock()
 }
 
+// ConfigureMessagePopups connects incoming chat messages to the same popup
+// window. send must enqueue the popup without waiting for a UI thread.
+func ConfigureMessagePopups(s *Service, send func(title, body string) error) {
+	s.hotkeyMu.Lock()
+	s.messagePopup = send
+	s.hotkeyMu.Unlock()
+}
+
 // SetPopupLook receives the #rrggbb card colours of the current interface
 // theme. Go only keeps them for the next popup; apppopup.ParseLook validates.
 func (s *Service) SetPopupLook(colors map[string]string) {

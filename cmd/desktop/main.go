@@ -30,6 +30,7 @@ func init() {
 	application.RegisterEvent[bool]("server-status-changed")
 	application.RegisterEvent[wailsui.AudioMeterDTO]("audio-meter")
 	application.RegisterEvent[bool]("tray-screen-share")
+	application.RegisterEvent[bool]("main-window-shown")
 }
 
 func main() {
@@ -170,7 +171,7 @@ func main() {
 		app.Quit()
 	})
 	installTray(app, mainWindow, client, service, &quitting)
-	trackMainWindowVisibility(mainWindow, service)
+	trackMainWindowVisibility(mainWindow, service, func() { app.Event.Emit("main-window-shown", true) })
 	fitWindowToScreen(mainWindow)
 	wailsui.ConfigureHotkeyNotifications(service,
 		func() bool { return mainWindowHidden.Load() },
@@ -182,6 +183,16 @@ func main() {
 			window.SetLook(apppopup.ParseLook(service.PopupLook()))
 			return window.Show(title, body)
 		})
+	// A message popup stays a little longer and opens the window on a click.
+	wailsui.ConfigureMessagePopups(service, func(title, body string) error {
+		window := popup.Load()
+		if window == nil {
+			return nil
+		}
+		window.SetLook(apppopup.ParseLook(service.PopupLook()))
+		return window.ShowMessage(apppopup.Message{Title: title, Body: body, Lifetime: messagePopupLifetime,
+			OnClick: func() { showMainWindow(mainWindow) }})
+	})
 
 	if err := app.Run(); err != nil {
 		shutdown()
@@ -196,6 +207,8 @@ func main() {
 // handler reads it while shutdown, which runs on the main thread, may be
 // waiting for that handler; a window call would wait for the main thread too.
 var mainWindowHidden atomic.Bool
+
+const messagePopupLifetime = 5 * time.Second
 
 // fitWindowToScreen keeps the default window size inside the work area of a
 // small screen, such as 1280x720 without the taskbar.
@@ -217,12 +230,19 @@ func fitWindowToScreen(window *application.WebviewWindow) {
 	})
 }
 
-func trackMainWindowVisibility(window *application.WebviewWindow, service *wailsui.Service) {
+// shown runs when the window comes back from the tray or the taskbar, or a
+// second launch from the Start menu brings it forward; the interface then
+// refreshes the saved server statuses (at most once a minute).
+func trackMainWindowVisibility(window *application.WebviewWindow, service *wailsui.Service, shown func()) {
 	hide := func(*application.WindowEvent) {
 		mainWindowHidden.Store(true)
 		service.SetHotkeyWindowInactive(true)
 	}
-	show := func(*application.WindowEvent) { mainWindowHidden.Store(false) }
+	show := func(*application.WindowEvent) {
+		mainWindowHidden.Store(false)
+		// The hook runs on the UI thread; the event must not wait for it.
+		go shown()
+	}
 	window.RegisterHook(events.Common.WindowHide, hide)
 	window.RegisterHook(events.Common.WindowMinimise, hide)
 	window.RegisterHook(events.Common.WindowShow, show)

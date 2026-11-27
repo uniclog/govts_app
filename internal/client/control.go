@@ -219,12 +219,28 @@ func heartbeatProbe(ctx context.Context, conn *udp.ClientPacketConn, state *Stat
 	return nil
 }
 
+// disconnectCopies and disconnectSpacing: Disconnect has no acknowledgement,
+// so a deliberate exit sends a few copies; the server ignores the extra ones.
+const (
+	disconnectCopies  = 3
+	disconnectSpacing = 15 * time.Millisecond
+)
+
 func Disconnect(conn *udp.ClientPacketConn, sessionID uint64) error {
 	packet := protocol.VoicePacket{
 		Type:      protocol.PacketDisconnect,
 		SessionID: sessionID,
 	}
-	return conn.SendPacket(packet)
+	var err error
+	for copy := 0; copy < disconnectCopies; copy++ {
+		if copy > 0 {
+			time.Sleep(disconnectSpacing)
+		}
+		if sendErr := conn.SendPacket(packet); sendErr != nil {
+			err = sendErr
+		}
+	}
+	return err
 }
 
 func JoinChannel(

@@ -9,6 +9,10 @@ const MaxChatTextBytes = 1000
 
 const MaxChatAttachments = 4
 
+// MaxChatPins bounds the pinned messages of one conversation, so the whole
+// pin list fits one protected control datagram.
+const MaxChatPins = 50
+
 func ValidateChatContent(text string, ids []int64) error {
 	if len(ids) > MaxChatAttachments {
 		return ChatRejection("слишком много вложений")
@@ -129,4 +133,8 @@ type ChatPage struct {
 	HasMore  bool
 	Messages []ChatMessage
 	Dialogs  []ChatDialog
+	// PinList marks a pin list reply. Pinned holds the conversation's pinned
+	// message IDs, the latest pin first; no other reply carries them.
+	PinList bool
+	Pinned  []int64
 }

@@ -181,11 +181,12 @@ describe("request scheduler", () => {
             if (request.operation !== "dialogs") throw new Error("request timed out");
             return page();
         });
-        tick(); await vi.advanceTimersByTimeAsync(2000);
+        // A conversation loads its pin list once, after history and changes.
+        tick(); await vi.advanceTimersByTimeAsync(3000);
         expect(c.error).toBe("");
         expect(c.messages).toHaveLength(1);
         expect(c.messages[0].attachmentIds).toEqual(["17"]);
-        expect(chat.mock.calls.map(([request]) => request.operation)).toEqual(["history", "changes", "dialogs"]);
+        expect(chat.mock.calls.map(([request]) => request.operation)).toEqual(["history", "changes", "pins", "dialogs"]);
     });
     it("captures the change watermark before history and catches deletions concurrent with opening", async () => {
         store.watch(channel);
@@ -211,7 +212,7 @@ describe("request scheduler", () => {
         chat.mockImplementation(async (request) => request.operation === "changes"
             ? page({cursor: "9", messages: [{...message(1), deleted: true, text: "", revision: "9"}, {...message(99), deleted: true, text: "", revision: "8"}]})
             : page({cursor: "100", latestId: "100"}));
-        tick(); await vi.advanceTimersByTimeAsync(2000);
+        tick(); await vi.advanceTimersByTimeAsync(3000);
         expect(c.changeCursor).toBe("9"); expect(c.cursor).toBe("100");
         expect(c.messages.map((entry) => entry.id)).toEqual(["1"]);
         expect(c.messages[0].deleted).toBe(true);
@@ -222,11 +223,11 @@ describe("request scheduler", () => {
     it("coalesces notifications and duplicate watchers into one sync pass", async () => {
         store.watch(channel); store.watch(channel);
         for (let i = 0; i < 100; i++) store.invalidate();
-        tick(); await vi.advanceTimersByTimeAsync(3000);
-        expect(chat.mock.calls.map(([r]) => r.operation)).toEqual(["changes", "history", "changes", "dialogs"]);
+        tick(); await vi.advanceTimersByTimeAsync(4000);
+        expect(chat.mock.calls.map(([r]) => r.operation)).toEqual(["changes", "history", "changes", "pins", "dialogs"]);
         for (let i = 0; i < 100; i++) store.invalidate();
         tick(); await vi.advanceTimersByTimeAsync(0);
-        expect(chat).toHaveBeenCalledTimes(4);
+        expect(chat).toHaveBeenCalledTimes(5);
     });
     it("coalesces read markers to the greatest visible ID", async () => {
         store.watch(channel);
@@ -248,5 +249,28 @@ describe("request scheduler", () => {
         const dialogs = store.refreshDialogs(); await vi.advanceTimersByTimeAsync(999);
         expect(chat).toHaveBeenCalledTimes(3);
         await vi.advanceTimersByTimeAsync(1); await dialogs; expect(chat).toHaveBeenCalledTimes(4);
+    });
+});
+
+describe("received message handler", () => {
+    it("reports only new messages of other people after the history is loaded", async () => {
+        const received = vi.fn();
+        store.setMessageReceivedHandler(received);
+        chat.mockResolvedValueOnce(page()); // Change watermark before the first history.
+        chat.mockResolvedValueOnce(page({messages: [message(1)], cursor: "1"}));
+        let sync = store.sync(channel);
+        await vi.advanceTimersByTimeAsync(2000); await sync;
+        expect(received).not.toHaveBeenCalled();
+
+        chat.mockResolvedValueOnce(page({messages: [message(2), message(3, "1"), {...message(4), deleted: true}], cursor: "4"}));
+        sync = store.sync(channel, false, true);
+        await vi.advanceTimersByTimeAsync(1000); await sync;
+        expect(received).toHaveBeenCalledTimes(1);
+        expect(received.mock.calls[0][0].map((m: {id: string}) => m.id)).toEqual(["2"]);
+
+        chat.mockResolvedValueOnce(page({messages: [message(2)], cursor: "4"}));
+        sync = store.sync(channel, false, true);
+        await vi.advanceTimersByTimeAsync(1000); await sync;
+        expect(received).toHaveBeenCalledTimes(1);
     });
 });

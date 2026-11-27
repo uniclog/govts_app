@@ -36,20 +36,18 @@ var (
 	alphaBlend     = windows.NewLazySystemDLL("msimg32.dll").NewProc("AlphaBlend")
 )
 
-type popupText struct{ title, body string }
-
 // window owns the native window and its message-loop thread.
 type window struct {
 	mu      sync.Mutex
 	closed  bool
 	pending bool
-	latest  popupText
+	latest  Message
 	look    Look
 	hwnd    w32.HWND
 	done    chan struct{}
 
 	// The following fields belong exclusively to the popup thread.
-	current  popupText
+	current  Message
 	dpi      int
 	deadline time.Time
 	source   *image.RGBA // decoded application mark, premultiplied
@@ -116,7 +114,7 @@ func (p *window) run(ready chan<- error) {
 	}
 }
 
-func (p *window) show(title, body string) error {
+func (p *window) show(message Message) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	select {
@@ -127,7 +125,7 @@ func (p *window) show(title, body string) error {
 	if p.closed {
 		return nil
 	}
-	p.latest = popupText{title, body}
+	p.latest = message
 	if !p.pending {
 		if !w32.PostMessage(p.hwnd, wmPopupUpdate, 0, 0) {
 			return errors.New("post app popup update failed")
@@ -181,6 +179,9 @@ func popupWindowProc(hwnd uintptr, msg uint32, wp, lp uintptr) uintptr {
 		return 0
 	case w32.WM_LBUTTONUP:
 		p.hide()
+		if click := p.current.OnClick; click != nil {
+			go click()
+		}
 		return 0
 	case w32.WM_MOUSEACTIVATE:
 		return 3 // MA_NOACTIVATE: clicking dismisses without stealing focus.
@@ -218,8 +219,12 @@ func (p *window) display() {
 	y := max(int(info.RcWork.Top), int(info.RcWork.Bottom)-height-margin)
 	w32.SetWindowPos(p.hwnd, w32.HWND_TOPMOST, x, y, width, height, w32.SWP_NOACTIVATE)
 	p.prepareIcon(p.px(48))
-	p.deadline = time.Now().Add(defaultLifetime)
-	if w32.SetTimer(p.hwnd, popupTimerID, uint32(defaultLifetime/time.Millisecond), 0) == 0 {
+	lifetime := p.current.Lifetime
+	if lifetime <= 0 {
+		lifetime = defaultLifetime
+	}
+	p.deadline = time.Now().Add(lifetime)
+	if w32.SetTimer(p.hwnd, popupTimerID, uint32(lifetime/time.Millisecond), 0) == 0 {
 		// Never leave an undismissed popup if the timer could not be created.
 		p.hide()
 		log.Printf("app popup timer failed")
@@ -268,9 +273,9 @@ func (p *window) paint() {
 	p.drawText(dc, "×", 13, w32.FW_NORMAL, look.Muted, closeMark, w32.DT_CENTER|w32.DT_VCENTER|w32.DT_SINGLELINE)
 
 	left, right := pad+icon+int32(p.px(12)), closeMark.Left-int32(p.px(8))
-	p.drawText(dc, p.current.title, 16, w32.FW_SEMIBOLD, look.Text,
+	p.drawText(dc, p.current.Title, 16, w32.FW_SEMIBOLD, look.Text,
 		w32.RECT{Left: left, Top: int32(p.px(16)), Right: right, Bottom: int32(p.px(40))}, w32.DT_SINGLELINE)
-	p.drawText(dc, p.current.body, 12, w32.FW_NORMAL, look.Muted,
+	p.drawText(dc, p.current.Body, 12, w32.FW_NORMAL, look.Muted,
 		w32.RECT{Left: left, Top: int32(p.px(42)), Right: right, Bottom: int32(p.px(60))}, w32.DT_SINGLELINE)
 }
 

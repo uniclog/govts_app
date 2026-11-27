@@ -124,8 +124,16 @@ func TestLiveClientsAndLostLastEventRecovery(t *testing.T) {
 	carol, _ := connect("carol")
 	wait(func() bool { return len(alice.Snapshot().Participants) == 2 })
 	carolSession, _ := hub.Get(carol.SessionID())
-	if err := hub.Touch(alice.SessionID()); err != nil {
-		t.Fatal(err)
+	// Windows clocks tick coarsely: alice must be seen strictly after carol,
+	// or expiring carol expires alice too.
+	for {
+		if err := hub.Touch(alice.SessionID()); err != nil {
+			t.Fatal(err)
+		}
+		if aliceSession, _ := hub.Get(alice.SessionID()); aliceSession.LastSeen.After(carolSession.LastSeen) {
+			break
+		}
+		time.Sleep(time.Millisecond)
 	}
 	hub.RemoveInactive(carolSession.LastSeen.Add(time.Minute), time.Minute)
 	wait(func() bool { return len(alice.Snapshot().Participants) == 1 })

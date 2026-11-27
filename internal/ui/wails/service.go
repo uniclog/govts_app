@@ -79,6 +79,7 @@ type Service struct {
 	hotkeyNotifier        *hotkeyNotifier
 	hotkeyNotices         map[string]string
 	popupLook             map[string]string
+	messagePopup          func(title, body string) error // guarded by hotkeyMu
 }
 
 func NewService(client *clientapp.App) *Service {
