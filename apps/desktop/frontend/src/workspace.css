@@ -13,7 +13,7 @@
 .app-brand strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .server-version { flex-shrink: 0; color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
 .brand-mark { display: grid; width: 27px; height: 27px; flex-shrink: 0; place-items: center; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: var(--card); }
-.brand-mark svg { width: 16px; height: 16px; }
+.brand-mark img { width: 18px; height: 16px; object-fit: contain; }
 .status-pill, .sync-pill { padding: 5px 8px; color: var(--muted); border-color: var(--line); background: var(--card); font-size: 0.625rem; }
 .status-bar .status-pill { height: 27px; }
 .locale-header { display: flex; align-items: center; height: 27px; flex: 0 0 auto; gap: 1px; padding: 2px 2px 2px 1px; border: 1px solid var(--line); border-radius: 99px; background: var(--card); }

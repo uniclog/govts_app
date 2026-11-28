@@ -4,6 +4,8 @@ import type {ClientViewDTO} from "../../api";
 import {desktopAPI} from "../../api";
 import {RecentServers} from "./RecentServers";
 import {Icon} from "../../components/Icon";
+import applicationIcon from "../../components/logo.png";
+import sonoryxSymbol from "../../components/sonoryx-symbol.svg";
 import {errorCode, errorText, rawError} from "../../locales";
 import {LocaleSwitch, useLocale} from "../../locales/Locale";
 import type {ScreenSharingState} from "../screen/ScreenShareDialog";
@@ -87,7 +89,7 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
         <div className="connection-rings" aria-hidden="true"><i/><i/><i/><i/><i/></div>
         <div className="connection-content">
         <div className="connection-intro">
-        <div className="connection-brand"><span className="connection-logo"><VoiceMark/></span><strong>SRX</strong></div>
+        <div className="connection-brand"><img className="connection-logo" src={applicationIcon} alt=""/><strong>SRX</strong></div>
         <h1>{m.connection.heroLineOne}<br/>{m.connection.heroLineTwo}</h1>
         <p className="lead">{m.connection.heroLead}</p>
         </div>
@@ -129,7 +131,7 @@ export function ConnectionPage({view, error, onError, onRefresh, onClearEvents, 
 }
 
 export function VoiceMark() {
-    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none"/><path d="M11 7a7 7 0 0 1 0 10M15 3a12 12 0 0 1 0 18"/></svg>;
+    return <img src={sonoryxSymbol} alt=""/>;
 }
 
 // LobbyBar is the header shown before joining a server: client version,

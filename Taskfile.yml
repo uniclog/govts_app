@@ -46,10 +46,7 @@ tasks:
     internal: true
     platforms: [windows]
     cmds:
-      - cmd: powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path build/windows | Out-Null"
-      - cmd: go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate icons -input apps/desktop/frontend/src/components/logo.png -windowsfilename build/windows/icon.ico -macfilename build/windows/icon.icns
-      - cmd: powershell -NoProfile -Command "Remove-Item -Force build/windows/icon.icns -ErrorAction SilentlyContinue"
-      - cmd: go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate syso -arch {{ARCH}} -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -out apps/desktop/rsrc_windows_{{ARCH}}.syso
+      - cmd: go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate syso -arch {{ARCH}} -icon build/windows/sonoryx-app-icon.ico -manifest build/windows/wails.exe.manifest -out apps/desktop/rsrc_windows_{{ARCH}}.syso
 
   build:dev:
     desc: Build the desktop backend for Wails development mode

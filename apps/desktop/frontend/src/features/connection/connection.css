@@ -15,7 +15,7 @@
 .lobby-bar .app-brand { height: var(--lobby-bar-item-height); gap: 7px; font-size: 0.75rem; color: var(--muted); }
 .lobby-bar .app-brand strong { font-weight: 500; }
 .lobby-bar .brand-mark { width: var(--lobby-bar-item-height); height: var(--lobby-bar-item-height); border: 0; background: none; color: var(--accent-blue); }
-.lobby-bar .brand-mark svg { width: 18px; height: 18px; }
+.lobby-bar .brand-mark img { width: 20px; height: 18px; }
 .lobby-bar svg { stroke-width: 1.8; }
 .lobby-bar .server-version { font-size: 0.75rem; }
 .lobby-bar .locale-header, .lobby-bar .settings-pill { height: var(--lobby-bar-item-height); background: transparent; border-color: transparent; }
@@ -53,8 +53,7 @@
 .connection-content > .connection-form { flex-shrink: 0; }
 .connection-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .connection-brand strong { font-size: 1.625rem; font-weight: 700; letter-spacing: -.8px; }
-.connection-logo { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--on-accent); background: var(--accent-blue); }
-.connection-logo svg { width: 27px; height: 27px; }
+.connection-logo { display: block; width: 40px; height: 40px; flex-shrink: 0; }
 .connection-hero h1 { margin: 0 0 14px; font-size: 2.375rem; line-height: 1.2; font-weight: 700; letter-spacing: -1.15px; }
 .connection-hero .lead { max-width: 480px; margin: 0 0 16px; color: var(--muted); font-size: 0.875rem; line-height: 22px; }
 .connection-form { display: grid; gap: 14px; width: min(480px, 100%); padding: 22px; border: 1px solid var(--line); border-radius: 20px; background: var(--card-strong); }

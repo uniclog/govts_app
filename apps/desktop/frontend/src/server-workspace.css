@@ -6,8 +6,8 @@
 .server-titlebar { height: var(--window-titlebar-height); min-height: var(--window-titlebar-height); padding-block: 4px 0; border: 0; }
 .server-titlebar .app-brand { gap: 7px; font-size: .6875rem; color: var(--muted); }
 .server-titlebar .app-brand strong { font-weight: 400; }
-.server-titlebar .brand-mark { width: 13px; height: 18px; padding: 0; border: 0; background: none; color: var(--workspace-brand); }
-.server-titlebar .brand-mark svg { width: 13px; height: 13px; }
+.server-titlebar .brand-mark { width: 19px; height: 18px; padding: 0; border: 0; background: none; color: var(--workspace-brand); }
+.server-titlebar .brand-mark img { width: 19px; height: 13px; }
 .server-shell .channels-page { grid-row: 3; height: 100%; min-height: 0; padding: 4px 8px 8px; overflow: hidden; }
 .server-shell .channels-layout,
 .server-shell .channels-layout.info-hidden { position: relative; display: grid; grid-template-columns: var(--channel-browser-width, 240px) 8px minmax(0, 1fr) 8px var(--channel-chat-width, 288px); grid-template-rows: minmax(0, 1fr); gap: 0; height: 100%; min-height: 0; }
@@ -217,8 +217,8 @@
 .server-switcher-trigger strong { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .875rem; }
 .server-switcher-trigger > svg { flex: 0 0 14px; width: 14px; height: 14px; color: var(--muted); transition: transform .15s; }
 .server-switcher-trigger[aria-expanded="true"] > svg { transform: rotate(180deg); }
-.server-switcher-brand { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 9px; color: var(--on-accent); background: var(--workspace-brand); }
-.server-switcher-brand svg { width: 21px; height: 21px; }
+.server-switcher-brand { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 9px; background: #081727; }
+.server-switcher-brand img { width: 21px; height: 21px; object-fit: contain; }
 .server-switcher-popover { display: flex; flex-direction: column; position: absolute; z-index: 30; top: calc(100% + 6px); left: 12px; width: min(340px, calc(100vw - 40px)); max-height: calc(100vh - 160px); padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: 0 16px 48px #0005; }
 .server-switcher-popover .connection-server-list { min-height: 0; max-height: min(60vh, 480px, calc(100vh - 194px)); }
 .server-shell .channel-browser .server-switcher-popover .servers-heading { min-height: 26px; padding: 0; }

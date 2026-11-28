@@ -1,7 +1,9 @@
 package desktopwindow
 
 import (
+	_ "embed"
 	"log"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -10,6 +12,12 @@ import (
 	"uniclog.io/sonoryx/apps/desktop/internal/nativeaudio"
 	clientapp "uniclog.io/sonoryx/internal/clientcore"
 )
+
+//go:embed icons/sonoryx-tray-dark.ico
+var lightTaskbarIcon []byte
+
+//go:embed icons/sonoryx-tray-light.ico
+var darkTaskbarIcon []byte
 
 func (c *Controller) installTray(app *application.App, client *clientapp.App, service windowService, icon []byte) {
 	menu := app.NewMenu()
@@ -80,7 +88,11 @@ func (c *Controller) installTray(app *application.App, client *clientapp.App, se
 	})
 
 	tray := app.SystemTray.New()
-	tray.SetIcon(icon)
+	if runtime.GOOS == "windows" {
+		tray.SetIcon(lightTaskbarIcon).SetDarkModeIcon(darkTaskbarIcon)
+	} else {
+		tray.SetIcon(icon)
+	}
 	tray.SetTooltip("Sonoryx")
 	tray.SetMenu(menu)
 	tray.OnClick(func() { c.Show() })
