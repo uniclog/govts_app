@@ -1,0 +1,705 @@
+openapi: 3.1.0
+info:
+  title: Sonoryx Web Gateway
+  version: 1.0.0
+  description: >-
+    The application and API share one HTTPS origin. POST, DELETE and WebSocket
+    requests require the exact configured Origin header. Errors have an error
+    string intended for display. WebSocket frames use events.schema.json.
+servers:
+  - url: /
+paths:
+  /api/config:
+    get:
+      operationId: getPublicConfig
+      summary: Read the configured sign-in mode
+      security: []
+      responses:
+        '200':
+          description: Public gateway settings
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [loginMode]
+                properties:
+                  loginMode: { enum: [nickname, invite] }
+  /api/session:
+    get:
+      operationId: getSession
+      summary: Read the current session and browser ICE configuration
+      security: [{ webSession: [] }]
+      responses:
+        '200':
+          $ref: '#/components/responses/Session'
+        '401':
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createSession
+      security: []
+      summary: Sign in and start a Sonoryx client session
+      description: >-
+        Send the sign-in form advertised by /api/config. In nickname mode the
+        gateway issues a persistent browser identity cookie and reuses it for future
+        logins. Sonoryx connects asynchronously. Open /api/events for connection status.
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  additionalProperties: false
+                  required: [nickname]
+                  properties:
+                    nickname: { type: string, minLength: 1, maxLength: 64, description: At most 64 UTF-8 bytes after NFKC normalization. }
+                - type: object
+                  additionalProperties: false
+                  required: [account, accessCode]
+                  properties:
+                    account: { type: string, pattern: '^[a-z0-9][a-z0-9_-]{0,39}$' }
+                    accessCode: { type: string, format: password }
+      responses:
+        '201':
+          description: Web session created
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: >-
+                Session cookie __Host-sonoryx and, in nickname mode, identity cookie
+                __Host-sonoryx-browser. Both use Path=/, HttpOnly, Secure and SameSite=Lax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '409':
+          description: The account already has a session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: The gateway is full or shutting down
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteSession
+      security: [{ webSession: [] }, {}]
+      summary: End the current session and expire its cookie
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204':
+          description: Session ended or already absent
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: Expired session cookie.
+        '403':
+          $ref: '#/components/responses/Problem'
+  /api/webrtc/offer:
+    post:
+      operationId: answerVoiceOffer
+      summary: Start or replace the audio peer for the current web session
+      description: >-
+        The WebSocket must already be attached. The browser sends a gathered
+        non-trickle offer with one sendrecv Opus audio m-line. The gateway
+        closes the previous peer and returns a gathered SDP answer.
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/SDP'
+                - properties:
+                    type: { const: offer }
+      responses:
+        '200':
+          description: Gathered WebRTC answer
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SDP'
+                  - properties:
+                      type: { const: answer }
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/media/capabilities:
+    get:
+      operationId: screenCapabilities
+      summary: Read capabilities from the pinned Sonoryx media endpoint
+      security: [{ webSession: [] }]
+      responses:
+        '200':
+          description: Audio and video capability descriptors
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/media/publish:
+    post:
+      operationId: publishScreen
+      summary: Publish a browser display-capture stream to the current channel
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [offer]
+              properties:
+                offer: { $ref: '#/components/schemas/SDP' }
+      responses:
+        '200':
+          description: Sonoryx stream ID and SDP answer
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [streamId, answer]
+                properties:
+                  streamId: { type: string }
+                  answer: { $ref: '#/components/schemas/SDP' }
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/media/subscribe:
+    post:
+      operationId: subscribeScreen
+      summary: View an advertised screen stream in the current channel
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [streamId, subscriberId, offer]
+              properties:
+                streamId: { type: string }
+                subscriberId: { type: string }
+                offer: { $ref: '#/components/schemas/SDP' }
+      responses:
+        '200':
+          description: SDP answer
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [answer]
+                properties:
+                  answer: { $ref: '#/components/schemas/SDP' }
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/media/stop:
+    post:
+      operationId: stopScreen
+      summary: Stop publishing a screen stream
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [streamId]
+              properties:
+                streamId: { type: string }
+      responses:
+        '204':
+          description: Stream stopped
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/media/unsubscribe:
+    post:
+      operationId: unsubscribeScreen
+      summary: Close the current user's viewing connection
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [streamId, subscriberId]
+              properties:
+                streamId: { type: string }
+                subscriberId: { type: string }
+      responses:
+        '204':
+          description: Subscription closed
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/events:
+    get:
+      operationId: openEvents
+      summary: Upgrade to the WebSocket control channel
+      description: >-
+        One WebSocket per session. A concurrent tab is closed with code 4409.
+        On reconnect the server sends a fresh snapshot and then state
+        replacements as changes occur. Both directions use events.schema.json.
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '101':
+          description: Switching Protocols
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/files/attachments/{id}:
+    get:
+      operationId: downloadAttachment
+      summary: Download a chat attachment allowed by the Sonoryx file server
+      security: [{ webSession: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, pattern: '^[1-9][0-9]{0,18}$' }
+      responses:
+        '200':
+          description: Attachment content
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '206':
+          description: A single byte range
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/files/attachments/{id}/info:
+    get:
+      operationId: getAttachmentInfo
+      summary: Read the allowed attachment's filename and size
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AttachmentID'
+      responses:
+        '200':
+          description: Attachment name and size in bytes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, size]
+                properties:
+                  name: { type: string }
+                  size: { type: integer, minimum: 0 }
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/files/attachments/{id}/preview:
+    get:
+      operationId: getAttachmentPreview
+      summary: Read the Sonoryx-generated JPEG thumbnail for an attachment
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AttachmentID'
+      responses:
+        '200':
+          description: JPEG thumbnail
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/audio:
+    get:
+      operationId: getAudioSettings
+      summary: Read the current voice session's audio settings
+      security: [{ webSession: [] }]
+      responses:
+        '200':
+          description: Current gain, voice gate, RNNoise and cue settings
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: updateAudioSetting
+      summary: Update one audio setting through clientcore
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { enum: [gain, noise, noiseSensitivity, vad, vadMode, vadSensitivity, soundVolume, soundPack, muteOnAway, deafenOnAway] }
+                enabled: { type: boolean }
+                number: { type: number }
+                choice: { type: string }
+      responses:
+        '204':
+          description: Audio setting applied
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/moderation:
+    post:
+      operationId: moderateParticipant
+      summary: Disconnect, ban, or move a participant with the appropriate server permission
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, participantId]
+              properties:
+                action: { enum: [kick, ban, move] }
+                participantId: { type: string }
+                channelId: { type: string, description: Destination for a move. }
+      responses:
+        '204':
+          description: Moderation operation completed
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/audio/participants/{participant}:
+    parameters:
+      - in: path
+        name: participant
+        required: true
+        schema: { type: string, pattern: '^[1-9][0-9]{0,19}$' }
+    get:
+      operationId: getParticipantVolume
+      summary: Read the local mix volume for one participant session
+      security: [{ webSession: [] }]
+      responses:
+        '200':
+          description: Volume multiplier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantVolume'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: setParticipantVolume
+      summary: Update the local mix volume for one participant session
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParticipantVolume'
+      responses:
+        '200':
+          description: Applied volume multiplier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantVolume'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/admin:
+    post:
+      operationId: administerSonoryx
+      summary: Manage Sonoryx accounts and channels or read the audit log
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [operation]
+              properties:
+                operation: { enum: [accounts, permission, join-level, ban, audit, create-channel, update-channel, delete-channel, delete-account] }
+                cursor: { type: string }
+                id: { type: string }
+                permission: { enum: [1, 2, 4, 8] }
+                enabled: { type: boolean }
+                level: { type: integer, minimum: 0, maximum: 65535 }
+                reason: { type: string }
+                channel:
+                  type: object
+                  properties:
+                    parentId: { type: string }
+                    position: { type: integer, minimum: 0 }
+                    maxUsers: { type: integer, minimum: 0 }
+                    minJoinLevel: { type: integer, minimum: 0, maximum: 65535 }
+                    bitrate: { type: integer, minimum: 6000, maximum: 472000 }
+                    application: { enum: [voip, audio] }
+                    name: { type: string }
+                    topic: { type: string }
+                    description: { type: string }
+      responses:
+        '200':
+          description: Result from the Sonoryx administration protocol
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/admin/files:
+    get:
+      operationId: listManagedFiles
+      summary: Read file policy, storage usage, and a page of attachments
+      security: [{ webSession: [] }]
+      parameters:
+        - in: query
+          name: cursor
+          schema: { type: string }
+      responses:
+        '200':
+          description: File administration data from Sonoryx
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: updateFileAdministration
+      summary: Set file policy, delete an attachment, or change one account's transfer rights
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { enum: [policy, delete, rights] }
+                id: { type: string }
+                config: { type: object }
+                upload: { type: boolean }
+                download: { type: boolean }
+      responses:
+        '204':
+          description: File administration operation applied
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/admin/files/rights/{id}:
+    get:
+      operationId: getAccountFileRights
+      summary: Read one Sonoryx account's upload and download rights
+      security: [{ webSession: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, pattern: '^[1-9][0-9]{0,18}$' }
+      responses:
+        '200':
+          description: Upload and download rights
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upload: { type: boolean }
+                  download: { type: boolean }
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/files/capabilities:
+    get:
+      operationId: getFileCapabilities
+      summary: Read upload and download limits from the Sonoryx file server
+      security: [{ webSession: [] }]
+      responses:
+        '200':
+          description: Per-user file policy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  maxFileBytes: { type: integer }
+                  chunkBytes: { type: integer }
+                  maxAttachments: { type: integer }
+                  uploadsEnabled: { type: boolean }
+                  downloadsEnabled: { type: boolean }
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/files/uploads:
+    post:
+      operationId: startFileUpload
+      summary: Start or resume an upload with an idempotent request ID
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestId, name, size, sha256]
+              oneOf:
+                - required: [channelId]
+                - required: [userId]
+              properties:
+                requestId: { type: string, pattern: '^[a-f0-9]{32}$' }
+                channelId: { type: string, pattern: '^[1-9][0-9]{0,18}$' }
+                userId: { type: string, pattern: '^[1-9][0-9]{0,18}$' }
+                name: { type: string }
+                size: { type: integer, minimum: 0 }
+                sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+      responses:
+        '200':
+          $ref: '#/components/responses/Upload'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/files/uploads/{upload}:
+    parameters:
+      - $ref: '#/components/parameters/UploadID'
+    get:
+      operationId: getFileUpload
+      summary: Read the upload offset and verification state
+      security: [{ webSession: [] }]
+      responses:
+        '200':
+          $ref: '#/components/responses/Upload'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: writeFileChunk
+      summary: Send at most 4 MiB of binary data at the current upload offset
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+        - in: header
+          name: Upload-Offset
+          required: true
+          schema: { type: integer, minimum: 0 }
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          $ref: '#/components/responses/Upload'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: cancelFileUpload
+      summary: Cancel an upload owned by the current Sonoryx account
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204':
+          description: Upload cancelled
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/files/uploads/{upload}/complete:
+    post:
+      operationId: finishFileUpload
+      summary: Start server-side verification of the complete file
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/UploadID'
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '200':
+          $ref: '#/components/responses/Upload'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  securitySchemes:
+    webSession:
+      type: apiKey
+      in: cookie
+      name: __Host-sonoryx
+  parameters:
+    AttachmentID:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, pattern: '^[1-9][0-9]{0,18}$' }
+    UploadID:
+      in: path
+      name: upload
+      required: true
+      schema: { type: string, pattern: '^[a-f0-9]{32}$' }
+    Origin:
+      in: header
+      name: Origin
+      required: true
+      description: Exact configured HTTPS origin, including any non-default port.
+      schema: { type: string }
+  responses:
+    Upload:
+      description: Current upload state from the Sonoryx file server
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id, offset, state, attachmentId]
+            properties:
+              id: { type: string }
+              offset: { type: integer, minimum: 0 }
+              state: { type: string }
+              attachmentId: { type: string, description: Decimal ID. It is zero until verification completes. }
+    Problem:
+      description: Request rejected
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Session:
+      description: Current web session
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Session'
+  schemas:
+    ParticipantVolume:
+      type: object
+      required: [volume]
+      properties:
+        volume: { type: number, minimum: 0, maximum: 9 }
+    Problem:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+    Session:
+      type: object
+      required: [expiresAt, iceServers]
+      properties:
+        expiresAt: { type: string, format: date-time }
+        iceServers:
+          type: array
+          items:
+            type: object
+            required: [urls]
+            properties:
+              urls:
+                type: array
+                items: { type: string }
+              username: { type: string }
+              credential: { type: string }
+    SDP:
+      type: object
+      additionalProperties: false
+      required: [type, sdp]
+      properties:
+        type: { enum: [offer, answer] }
+        sdp: { type: string }

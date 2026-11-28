@@ -3,6 +3,7 @@ package clientcore
 import client "uniclog.io/sonoryx/internal/clientcore/internal/live"
 
 type ClientViewState = client.ClientViewState
+type ServerRequestError = client.ServerRequestError
 type ConnectionStats = client.ConnectionStats
 type ConnectionStatus = client.ConnectionStatus
 type AudioMeterSample = client.AudioMeterSample

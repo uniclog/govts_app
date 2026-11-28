@@ -34,6 +34,9 @@ node_modules/
 /sonoryx-files.crt
 /sonoryx-files.key
 /data/files/
+/data/webgateway/
+/configs/webgateway.json
+/certs/webgateway.key
 
 # Local server state
 /sonoryx.db

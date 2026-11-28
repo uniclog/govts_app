@@ -1,0 +1,657 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sonoryx WebSocket v1",
+  "description": "UTF-8 JSON frames at wss://<origin>/api/events. The first server frame is a snapshot. State events replace the previous view. Results correlate with the originating command by id. Sonoryx identifiers and revisions are canonical decimal strings; values must also fit the backing signed or unsigned 64-bit field.",
+  "oneOf": [
+    { "$ref": "#/$defs/command" },
+    { "$ref": "#/$defs/event" }
+  ],
+  "$defs": {
+    "decimal": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$"
+    },
+    "nonzero": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,19}$"
+    },
+    "requestId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "command": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "channelId"
+          ],
+          "properties": {
+            "type": { "const": "join" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "channelId": { "$ref": "#/$defs/nonzero" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "value"
+          ],
+          "properties": {
+            "type": { "const": "mute" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "value": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "value"
+          ],
+          "properties": {
+            "type": { "const": "deafen" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "value": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id"
+          ],
+          "properties": {
+            "type": { "const": "chat.history" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "channelId": { "$ref": "#/$defs/nonzero" },
+            "cursor": { "$ref": "#/$defs/decimal" },
+            "userId": { "$ref": "#/$defs/nonzero" },
+            "forward": { "type": "boolean" }
+          },
+          "allOf": [
+            { "$ref": "#/$defs/chatTarget" }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id"
+          ],
+          "properties": {
+            "type": { "const": "chat.watermark" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "channelId": { "$ref": "#/$defs/nonzero" },
+            "userId": { "$ref": "#/$defs/nonzero" }
+          },
+          "allOf": [
+            { "$ref": "#/$defs/chatTarget" }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id"
+          ],
+          "properties": {
+            "type": { "const": "chat.changes" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "channelId": { "$ref": "#/$defs/nonzero" },
+            "cursor": { "$ref": "#/$defs/decimal" },
+            "userId": { "$ref": "#/$defs/nonzero" }
+          },
+          "allOf": [
+            { "$ref": "#/$defs/chatTarget" }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "text",
+            "clientId"
+          ],
+          "properties": {
+            "type": { "const": "chat.send" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "channelId": { "$ref": "#/$defs/nonzero" },
+            "text": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 1000,
+              "description": "At most 1000 UTF-8 bytes. An empty string requires at least one attachment."
+            },
+            "clientId": {
+              "type": "string",
+              "pattern": "^[A-Fa-f0-9]{32}$",
+              "description": "Client-generated message ID. Reuse it when retrying the same send."
+            },
+            "userId": { "$ref": "#/$defs/nonzero" },
+            "attachmentIds": {
+              "type": "array",
+              "maxItems": 4,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/nonzero" }
+            }
+          },
+          "allOf": [
+            { "$ref": "#/$defs/chatTarget" }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id"
+          ],
+          "properties": {
+            "type": { "const": "chat.dialogs" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "cursor": { "$ref": "#/$defs/decimal" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "cursor"
+          ],
+          "properties": {
+            "type": { "const": "chat.read" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "channelId": { "$ref": "#/$defs/nonzero" },
+            "userId": { "$ref": "#/$defs/nonzero" },
+            "cursor": { "$ref": "#/$defs/nonzero" }
+          },
+          "allOf": [
+            { "$ref": "#/$defs/chatTarget" }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "cursor"
+          ],
+          "properties": {
+            "type": { "const": "chat.delete" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "channelId": { "$ref": "#/$defs/nonzero" },
+            "userId": { "$ref": "#/$defs/nonzero" },
+            "cursor": { "$ref": "#/$defs/nonzero" }
+          },
+          "allOf": [
+            { "$ref": "#/$defs/chatTarget" }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "cursor",
+            "text",
+            "forward"
+          ],
+          "properties": {
+            "type": { "const": "chat.react" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "channelId": { "$ref": "#/$defs/nonzero" },
+            "userId": { "$ref": "#/$defs/nonzero" },
+            "cursor": { "$ref": "#/$defs/nonzero" },
+            "text": {
+              "enum": [
+                "👍",
+                "❤️",
+                "😮",
+                "😂",
+                "😢",
+                "🔥",
+                "👏",
+                "🎉"
+              ]
+            },
+            "forward": { "type": "boolean" }
+          },
+          "allOf": [
+            { "$ref": "#/$defs/chatTarget" }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "cursor",
+            "forward"
+          ],
+          "properties": {
+            "type": { "const": "chat.pin" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "channelId": { "$ref": "#/$defs/nonzero" },
+            "userId": { "$ref": "#/$defs/nonzero" },
+            "cursor": { "$ref": "#/$defs/nonzero" },
+            "forward": { "type": "boolean" }
+          },
+          "allOf": [
+            { "$ref": "#/$defs/chatTarget" }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id"
+          ],
+          "properties": {
+            "type": { "const": "chat.pins" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "channelId": { "$ref": "#/$defs/nonzero" },
+            "userId": { "$ref": "#/$defs/nonzero" },
+            "cursor": { "$ref": "#/$defs/decimal" },
+            "forward": { "type": "boolean" }
+          },
+          "allOf": [
+            { "$ref": "#/$defs/chatTarget" }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "value"
+          ],
+          "properties": {
+            "type": { "const": "away" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "value": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "participantId"
+          ],
+          "properties": {
+            "type": { "const": "wake" },
+            "id": { "$ref": "#/$defs/requestId" },
+            "participantId": { "$ref": "#/$defs/nonzero" }
+          }
+        }
+      ]
+    },
+    "event": {
+      "oneOf": [
+        { "$ref": "#/$defs/snapshot" },
+        { "$ref": "#/$defs/success" },
+        { "$ref": "#/$defs/failure" },
+        { "$ref": "#/$defs/eventBatch" }
+      ]
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "status",
+        "serverName",
+        "revision",
+        "chatRevision",
+        "sessionId",
+        "userId",
+        "channelId",
+        "muted",
+        "deafened",
+        "channels",
+        "participants",
+        "screenStreams",
+        "canAdmin",
+        "isOwner",
+        "canKick",
+        "canBan",
+        "canDrag"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "snapshot",
+            "state"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "connecting",
+            "connected",
+            "reconnecting",
+            "disconnected"
+          ]
+        },
+        "error": { "type": "string" },
+        "serverName": { "type": "string" },
+        "revision": { "$ref": "#/$defs/decimal" },
+        "chatRevision": { "$ref": "#/$defs/decimal" },
+        "sessionId": { "$ref": "#/$defs/decimal" },
+        "channelId": { "$ref": "#/$defs/decimal" },
+        "muted": { "type": "boolean" },
+        "deafened": { "type": "boolean" },
+        "channels": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/channel" }
+        },
+        "participants": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/participant" }
+        },
+        "userId": { "$ref": "#/$defs/decimal" },
+        "screenStreams": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/screenStream" }
+        },
+        "canAdmin": { "type": "boolean" },
+        "isOwner": { "type": "boolean" },
+        "canKick": { "type": "boolean" },
+        "canBan": { "type": "boolean" },
+        "canDrag": { "type": "boolean" }
+      }
+    },
+    "success": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "id",
+        "ok"
+      ],
+      "properties": {
+        "type": { "const": "result" },
+        "id": { "$ref": "#/$defs/requestId" },
+        "ok": { "const": true },
+        "page": { "$ref": "#/$defs/chatPage" }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "id",
+        "ok",
+        "error"
+      ],
+      "properties": {
+        "type": { "const": "result" },
+        "id": { "$ref": "#/$defs/requestId" },
+        "ok": { "const": false },
+        "error": { "type": "string" }
+      }
+    },
+    "channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "parentId",
+        "name",
+        "topic",
+        "position",
+        "description",
+        "maxUsers",
+        "minJoinLevel",
+        "bitrate",
+        "application",
+        "canJoin"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonzero" },
+        "parentId": { "$ref": "#/$defs/decimal" },
+        "name": { "type": "string" },
+        "topic": { "type": "string" },
+        "position": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "description": { "type": "string" },
+        "maxUsers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "minJoinLevel": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "bitrate": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "application": {
+          "enum": [
+            "voip",
+            "audio"
+          ]
+        },
+        "canJoin": { "type": "boolean" }
+      }
+    },
+    "participant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "userId",
+        "channelId",
+        "name",
+        "muted",
+        "deafened",
+        "speaking",
+        "away"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonzero" },
+        "channelId": { "$ref": "#/$defs/decimal" },
+        "name": { "type": "string" },
+        "muted": { "type": "boolean" },
+        "deafened": { "type": "boolean" },
+        "speaking": { "type": "boolean" },
+        "userId": { "$ref": "#/$defs/decimal" },
+        "away": { "type": "boolean" }
+      }
+    },
+    "chatPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cursor",
+        "hasMore",
+        "messages"
+      ],
+      "properties": {
+        "channelId": { "$ref": "#/$defs/nonzero" },
+        "cursor": {
+          "$ref": "#/$defs/decimal",
+          "description": "Message ID for history and send, change sequence for watermark and changes, user ID for dialogs, or an offset into pinned messages."
+        },
+        "hasMore": { "type": "boolean" },
+        "messages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/chatMessage" }
+        },
+        "userId": { "$ref": "#/$defs/nonzero" },
+        "dialogs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/dialog" }
+        },
+        "pinnedIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonzero" }
+        }
+      }
+    },
+    "chatMessage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "senderId",
+        "senderName",
+        "text",
+        "sentAtMs",
+        "deleted",
+        "revision"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonzero" },
+        "senderId": { "$ref": "#/$defs/nonzero" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "sentAtMs": {
+          "type": "integer",
+          "description": "Unix timestamp in milliseconds"
+        },
+        "deleted": { "type": "boolean" },
+        "revision": { "$ref": "#/$defs/decimal" },
+        "reactions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reaction" }
+        },
+        "attachmentIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonzero" }
+        }
+      }
+    },
+    "chatTarget": {
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "channelId"
+          ]
+        },
+        {
+          "required": [
+            "userId"
+          ]
+        }
+      ]
+    },
+    "dialog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "userId",
+        "name",
+        "unread"
+      ],
+      "properties": {
+        "userId": { "$ref": "#/$defs/nonzero" },
+        "name": { "type": "string" },
+        "unread": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      }
+    },
+    "reaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "emoji",
+        "count",
+        "mine"
+      ],
+      "properties": {
+        "emoji": { "type": "string" },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "mine": { "type": "boolean" }
+      }
+    },
+    "eventBatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "events"
+      ],
+      "properties": {
+        "type": { "const": "events" },
+        "events": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "items": { "$ref": "#/$defs/clientEvent" }
+        }
+      }
+    },
+    "clientEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "time",
+        "kind",
+        "message"
+      ],
+      "properties": {
+        "sequence": { "$ref": "#/$defs/nonzero" },
+        "time": {
+          "type": "string",
+          "description": "RFC 3339 timestamp"
+        },
+        "kind": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    },
+    "screenStream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "ownerId",
+        "channelId"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonzero" },
+        "ownerId": { "$ref": "#/$defs/nonzero" },
+        "channelId": { "$ref": "#/$defs/nonzero" }
+      }
+    }
+  }
+}
