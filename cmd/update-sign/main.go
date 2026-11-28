@@ -19,7 +19,7 @@ func main() {
 	generate := flag.String("generate-key", "", "write a NEW private seed to this file (outside the repository)")
 	public := flag.String("public-key", "", "public key file")
 	binary := flag.String("binary", "", "desktop executable to sign")
-	version := flag.String("version", appversion.ClientVersion, "desktop version (defaults to version/release.json)")
+	version := flag.String("version", appversion.ClientVersion, "desktop version (defaults to version/version.json)")
 	out := flag.String("out", "", "signed manifest destination")
 	packed := flag.String("packed", "", "optional zstd-compressed executable destination, signed in the manifest")
 	legacyOut := flag.String("legacy-out", "", "optional manifest for clients released before the Sonoryx rename")

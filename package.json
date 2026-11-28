@@ -7,7 +7,17 @@
 
     "build:desktop": "go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 build",
 
-    "build:web": "npm --prefix apps/web run build"
+    "build:server": "powershell.exe -NoProfile -File scripts/build-server.ps1",
+    "build:gateway": "powershell.exe -NoProfile -File scripts/build-gateway.ps1",
+    "build:web": "npm --prefix apps/web ci --ignore-scripts && npm --prefix apps/web run build",
+    "build:webgateway": "powershell.exe -NoProfile -File scripts/build-webgateway.ps1",
+    "build-all": "npm run build:server && npm run build:webgateway",
+
+    "deploy:server": "powershell.exe -NoProfile -File scripts/deploy-server.ps1",
+    "deploy:gateway": "powershell.exe -NoProfile -File scripts/deploy-webgateway.ps1 -Component Gateway",
+    "deploy:web": "powershell.exe -NoProfile -File scripts/deploy-webgateway.ps1 -Component Web",
+    "deploy:webgateway": "powershell.exe -NoProfile -File scripts/deploy-webgateway.ps1",
+    "deploy-all": "powershell.exe -NoProfile -File scripts/deploy-all.ps1"
 
   }
 }

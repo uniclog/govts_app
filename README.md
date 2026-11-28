@@ -20,6 +20,21 @@ Sonoryx — приложение с голосовыми каналами, пе�
 поддерживает вход по нику, каналы, канальный чат и двусторонний голос.
 [Сборка и настройка веб-шлюза](apps/webgateway/README.md).
 
+## Сборка и обновление
+
+Версии приложений и минимальная версия сервера заданы в [version/version.json](version/version.json).
+
+| Компонент | Сборка | Обновление |
+| --- | --- | --- |
+| Сервер | `npm run build:server` | `npm run deploy:server` |
+| Веб-шлюз | `npm run build:gateway` | `npm run deploy:gateway` |
+| Веб-клиент | `npm run build:web` | `npm run deploy:web` |
+| Веб-шлюз и веб-клиент вместе | `npm run build:webgateway` | `npm run deploy:webgateway` |
+| Сервер, шлюз и веб-клиент | `npm run build-all` | `npm run deploy-all` |
+| Десктоп | `npm run build:desktop` | Подписанный GitHub Release по тегу `v<apps.desktop>` |
+
+`deploy-all` обновляет сначала сервер, затем веб-релиз на том же Linux-хосте. Первый запуск веба требует полного веб-релиза и [настройки HTTPS и systemd](apps/webgateway/README.md#сборка-и-запуск). При связанных изменениях API и интерфейса разверните шлюз и клиент вместе.
+
 ## Скриншоты
 
 Голосовой канал, список участников и журнал событий:

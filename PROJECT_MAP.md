@@ -34,15 +34,16 @@
 - `apps/server/main.go` разбирает флаги, выбирает пути и передаёт `RunConfig`
   в `apps/server/internal/server/runtime.go`. Пакет управляет UDP, SQLite, консолью,
   файловым HTTPS и медиа. `deploy.go` в этом пакете согласует активацию развёртывания.
-  Версия сервера берётся из `version/release.json` через `internal/appversion/`.
+  Версия сервера берётся из `apps.server` в `version/version.json` через `internal/appversion/`.
 - `apps/desktop/main.go` запускает Wails-приложение. Файлы
   `assets_development.go` и `assets_production.go` выбирают способ
   доставки frontend; production-сборка встраивает собранные ресурсы.
   Окно и трей принадлежат `apps/desktop/internal/desktopwindow/`.
-  Версия клиента также хранится в `version/release.json`.
+  Версия клиента задана в `apps.desktop` в `version/version.json`.
 - `apps/webgateway/main.go` запускает HTTPS-шлюз. Режим входа выбирается в
   конфигурации. Опция `-add-account` создаёт доступ для режима приглашений. `npm run build:web`
   собирает `apps/web/dist`, который шлюз отдаёт с того же источника, что и API.
+  `-version` печатает `apps.webgateway`, а Vite записывает `apps.web` в HTML.
   [Сборка и настройка](apps/webgateway/README.md).
 - `cmd/update-sign/` подписывает desktop EXE и манифест релиза, а с `-packed`
   сжимает EXE в zstd (`SRX64.exe.zst`) и добавляет его размер и SHA-256 в
@@ -53,10 +54,11 @@
   `apps/desktop/update-public-key.txt` встроен через `update_key.go`.
 - `cmd/release-version/` проверяет соответствие тега версии клиента и
   создаёт `build/config.generated.yml` из шаблона `build/config.yml`, подставляя
-  `clientVersion` из `version/release.json`. Исходный YAML не изменяется,
+  `apps.desktop` из `version/version.json`. Исходный YAML не изменяется,
   сгенерированный файл исключён из Git. Локальные сборки не увеличивают версии.
-- `version/release.json` содержит `clientVersion`, `serverVersion` и
-  `minServerVersion`; `version/release.go` встраивает файл в бинарники.
+- `version/version.json` содержит версии `apps.desktop`, `apps.server`,
+  `apps.webgateway`, `apps.web` и единый `minServerVersion`.
+  `version/release.go` встраивает файл в бинарники.
   Параметры редактируются перед релизом и коммитятся до создания тега.
 - `Taskfile.yml` связывает генерацию Wails bindings, сборку frontend,
   режим разработки и сборку desktop. Корневой `package.json` содержит
@@ -264,19 +266,24 @@ WebRTC требуется корректный `-media-advertised-ip`.
   `go test ./...`, `go vet ./...`, `npm test --prefix apps/desktop/frontend`
   и `npm run build --prefix apps/desktop/frontend`.
 - `.github/workflows/release.yml` срабатывает на тег `vX.Y.Z`, сверяет
-  его с `clientVersion` в `version/release.json` и собирает Windows desktop и Linux
+  его с `apps.desktop` в `version/version.json` и собирает Windows desktop и Linux
   server в отдельных заданиях. Подпись desktop через secret `UPDATE_SIGNING_KEY`
   выполняется после обеих сборок. Отдельное задание загружает
   бинарники, `SRX64.exe.zst`, `SRX64.exe.signature`, копию `GTS64.exe` с
   `signature` для старых клиентов и `SHA256SUMS` в draft и затем публикует релиз.
   Уже опубликованный релиз под тем же тегом не заменяется.
 - `internal/appversion/` разбирает и сравнивает версии, проверяет параметры
-  релиза из встроенного `version/release.json`. Минимальная версия сервера
+  релиза из встроенного `version/version.json`. Минимальная версия сервера
   используется при подключении клиента и включается в подписанный манифест.
   Порог поддержки голосовых пакетов задаётся отдельно от требований релиза.
 - `scripts/build-server.ps1`, `deploy-server.ps1` и
   `redeploy-server.sh` — локальные сценарии сборки/развёртывания сервера;
   они не являются частью GitHub Release workflow.
+- `scripts/build-gateway.ps1` собирает Linux-шлюз, а `build-webgateway.ps1`
+  собирает шлюз и статику в единый архив. `deploy-webgateway.ps1` и
+  `redeploy-webgateway.sh` переключают полный веб-релиз либо заменяют один
+  компонент, дополняя его текущим бинарником или статикой на хосте.
+  `deploy-all.ps1` последовательно обновляет Sonoryx и `sonoryx-webgateway.service`.
 
 При поиске конкретного изменения сначала выбирайте тракт — голос/состояние,
 экран или UI — и меняйте контракт на его границе вместе с соответствующими

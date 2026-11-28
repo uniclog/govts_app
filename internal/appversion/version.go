@@ -11,8 +11,9 @@ import (
 var release = mustReadRelease()
 
 var (
-	ClientVersion        = release.ClientVersion
-	ServerVersion        = release.ServerVersion
+	ClientVersion        = release.Apps.Desktop
+	ServerVersion        = release.Apps.Server
+	WebGatewayVersion    = release.Apps.WebGateway
 	MinimumServerVersion = release.MinServerVersion
 )
 
@@ -29,23 +30,25 @@ var VoiceBundlesMinimum = mustParse(VoiceBundlesMinimumVersion)
 func mustReadRelease() releaseversion.Release {
 	config, err := releaseversion.Read()
 	if err != nil {
-		panic(fmt.Errorf("version/release.json: %w", err))
+		panic(fmt.Errorf("version/version.json: %w", err))
 	}
 	for _, field := range []struct{ name, value string }{
-		{"clientVersion", config.ClientVersion},
-		{"serverVersion", config.ServerVersion},
+		{"apps.desktop", config.Apps.Desktop},
+		{"apps.server", config.Apps.Server},
+		{"apps.webgateway", config.Apps.WebGateway},
+		{"apps.web", config.Apps.Web},
 		{"minServerVersion", config.MinServerVersion},
 	} {
 		if _, err := Parse(field.value); err != nil {
-			panic(fmt.Errorf("version/release.json %s: %w", field.name, err))
+			panic(fmt.Errorf("version/version.json %s: %w", field.name, err))
 		}
 	}
 	minimum := mustParse(config.MinServerVersion)
-	if minimum > mustParse(config.ServerVersion) {
-		panic("version/release.json: minServerVersion exceeds serverVersion")
+	if minimum > mustParse(config.Apps.Server) {
+		panic("version/version.json: minServerVersion exceeds apps.server")
 	}
 	if minimum < mustParse(VoiceBundlesMinimumVersion) {
-		panic("version/release.json: minServerVersion must support voice bundles")
+		panic("version/version.json: minServerVersion must support voice bundles")
 	}
 	return config
 }

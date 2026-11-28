@@ -16,10 +16,39 @@ flowchart LR
 
 ## Сборка и запуск
 
-Требуются Go версии из `go.mod`, C-компилятор для RNNoise и Node.js 22.12 или новее из поддерживаемых Vite версий. Команды выполняются из корня репозитория. На Linux соберите отдельный исполняемый файл и статику.
+Версии `webgateway` и `web` задаются отдельно в [version/version.json](../../version/version.json). Шлюз печатает свою версию по `-version`, а сборка Vite помещает версию клиента в метатег `sonoryx-web-version` внутри `index.html`.
+
+Для сборки Linux amd64 с Windows нужны Go из `go.mod`, Node.js, Zig и `tar` в `PATH`. Команды выполняются из корня репозитория.
+
+```powershell
+npm run build:webgateway
+npm run deploy:webgateway
+```
+
+Сборка создаёт `bin/sonoryx-webgateway-linux-amd64.tar.gz` со шлюзом и статикой. Деплой по умолчанию использует тот же SSH-хост, что и `deploy-server.ps1`, и перезапускает сервис `sonoryx-webgateway.service`. Бинарник и статика переключаются вместе. Если сервис не подтвердит готовность, скрипт возвращает предыдущий релиз. Конфигурация, сертификаты и `stateDir` находятся за пределами каталога релиза.
+
+Для отдельных обновлений `npm run build:gateway` собирает `bin/sonoryx-webgateway`, а `npm run build:web` собирает `apps/web/dist`. После первого полного веб-деплоя `npm run deploy:gateway` использует загруженный бинарник с текущей статикой, а `npm run deploy:web` — текущий бинарник с загруженной статикой. Оба варианта перезапускают веб-шлюз. Команды `npm run build-all` и `npm run deploy-all` охватывают сервер, шлюз и веб-клиент. `deploy-all` проверяет наличие обоих артефактов и разворачивает сервер и веб-релиз последовательно. Каждый сервис откатывается своим сценарием.
+
+Перед первым деплоем создайте на хосте `/opt/sonoryx/webgateway` с правом записи для `admin`, разместите там `webgateway.json` и сертификаты. Возьмите за основу `configs/webgateway.example.json` и укажите:
+
+- `server: "127.0.0.1:9000"` и `serverKey` действующего сервера Sonoryx.
+- `webRoot: "current/web"` и постоянный `stateDir`, например `data`.
+- `listen` и `origin` для вашего HTTPS-адреса. Для прямого доступа можно использовать `0.0.0.0:8443` и `https://ваш-домен:8443`. При HTTPS-прокси укажите публичный `origin` и сохраните исходный заголовок `Host`.
+- `tlsCertificate` и `tlsKey` для HTTPS, `mediaFingerprint` для демонстрации экрана. При заданном `serverPasswordEnv` укажите значение пароля в защищённом `webgateway.env` для systemd.
+
+Установите [пример systemd-сервиса](../../scripts/sonoryx-webgateway.service) на хосте. При использовании другого каталога или пользователя согласуйте пути и `User` в unit-файле с параметрами деплоя. SSH-пользователю нужны права `sudo` для управления этим сервисом.
 
 ```sh
-npm --prefix apps/web ci
+sudo install -m 0644 sonoryx-webgateway.service /etc/systemd/system/sonoryx-webgateway.service
+sudo systemctl daemon-reload
+sudo systemctl enable sonoryx-webgateway.service
+```
+
+Откройте HTTPS-порт и UDP-диапазон `icePortMin`–`icePortMax` для WebRTC, либо настройте соответствующий маршрут через прокси и TURN. Диагностика доступна через `journalctl -u sonoryx-webgateway.service`.
+
+Для ручной сборки непосредственно на Linux нужны Go, C-компилятор и Node.js. Сборка статики отдельно от шлюза доступна командой `npm run build:web` и использует `apps/web/dist`.
+
+```sh
 npm run build:web
 mkdir -p bin
 CGO_ENABLED=1 go build -trimpath -ldflags="-w -s" -o bin/sonoryx-webgateway ./apps/webgateway

@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +19,7 @@ import (
 	"uniclog.io/sonoryx/apps/webgateway/internal/config"
 	"uniclog.io/sonoryx/apps/webgateway/internal/session"
 	"uniclog.io/sonoryx/apps/webgateway/internal/webapi"
+	"uniclog.io/sonoryx/internal/appversion"
 	"uniclog.io/sonoryx/internal/identity"
 )
 
@@ -24,7 +27,12 @@ func main() {
 	path := flag.String("config", "configs/webgateway.json", "path to HTTPS gateway configuration")
 	account := flag.String("add-account", "", "provision this account ID and print its access code once")
 	name := flag.String("name", "", "display name for a new account")
+	versionOnly := flag.Bool("version", false, "print the web gateway version")
 	flag.Parse()
+	if *versionOnly {
+		fmt.Println(appversion.WebGatewayVersion)
+		return
+	}
 	cfg, err := config.Load(*path)
 	if err != nil {
 		log.Fatal(err)
@@ -43,8 +51,18 @@ func main() {
 }
 
 func serve(cfg config.Config) error {
+	// A deploy may switch the current release symlink while this process is running.
+	webRoot, err := filepath.EvalSymlinks(cfg.WebRoot)
+	if err != nil {
+		return fmt.Errorf("resolve webRoot: %w", err)
+	}
+	cfg.WebRoot = webRoot
 	if info, err := os.Stat(filepath.Join(cfg.WebRoot, "index.html")); err != nil || !info.Mode().IsRegular() {
 		return errors.New("webRoot must contain the built apps/web index.html")
+	}
+	certificate, err := tls.LoadX509KeyPair(cfg.TLSCertificate, cfg.TLSKey)
+	if err != nil {
+		return fmt.Errorf("load gateway HTTPS certificate: %w", err)
 	}
 	var accounts map[string]session.Account
 	if cfg.LoginMode == "invite" {
@@ -73,6 +91,7 @@ func serve(cfg config.Config) error {
 	server := &http.Server{
 		Addr:              cfg.Listen,
 		Handler:           webapi.New(cfg, manager),
+		TLSConfig:         &tls.Config{Certificates: []tls.Certificate{certificate}},
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      15 * time.Second,
@@ -83,10 +102,18 @@ func serve(cfg config.Config) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	defer manager.Close()
+	listener, err := net.Listen("tcp", server.Addr)
+	if err != nil {
+		return err
+	}
+	defer listener.Close()
+	if err := notifyReady(); err != nil {
+		return fmt.Errorf("notify service manager: %w", err)
+	}
 	go report(ctx, manager)
 	result := make(chan error, 1)
-	go func() { result <- server.ListenAndServeTLS(cfg.TLSCertificate, cfg.TLSKey) }()
-	log.Printf("web gateway starting at %s with login mode %s", cfg.Origin, cfg.LoginMode)
+	go func() { result <- server.ServeTLS(listener, "", "") }()
+	log.Printf("web gateway %s listening at %s with login mode %s", appversion.WebGatewayVersion, cfg.Origin, cfg.LoginMode)
 	select {
 	case err := <-result:
 		return err
@@ -96,6 +123,20 @@ func serve(cfg config.Config) error {
 		defer cancel()
 		return server.Shutdown(shutdown)
 	}
+}
+
+func notifyReady() error {
+	socket := os.Getenv("NOTIFY_SOCKET")
+	if socket == "" {
+		return nil
+	}
+	conn, err := net.DialUnix("unixgram", nil, &net.UnixAddr{Name: socket, Net: "unixgram"})
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	_, err = conn.Write([]byte("READY=1"))
+	return err
 }
 
 // Keep low-level HTTP errors from logging request data.
