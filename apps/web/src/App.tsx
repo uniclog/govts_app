@@ -11,7 +11,7 @@ import { ChannelList } from "./features/channels/ChannelList";
 import { Avatar, ChannelStage } from "./features/channels/ChannelStage";
 import { ChatWorkspace } from "./features/chat/ChatWorkspace";
 import { useScreenShare } from "./features/screen/useScreenShare";
-import { ScreenTile } from "./features/screen/ScreenTile";
+import { ScreenTile, ScreenViewer } from "./features/screen/ScreenTile";
 import { AudioSettings } from "./features/settings/AudioSettings";
 import { AdminPanel } from "./features/admin/AdminPanel";
 
@@ -42,19 +42,20 @@ function Workspace({ session, expired, signedOut }: { session: WebSession; expir
   const streams = (view?.screenStreams ?? []).filter((stream) => stream.channelId === room?.id);
   const members = view?.participants.filter(({ channelId }) => channelId === room?.id) ?? [];
   const local = view?.participants.find(({ id }) => id === view.sessionId);
-  const screenTiles = streams.map((stream) => {
-    const own = stream.ownerId === view?.sessionId;
-    const watching = stream.id === screen.viewerID;
-    return <ScreenTile key={stream.id} owner={members.find(({ id }) => id === stream.ownerId)?.name ?? "Участник"}
-      own={own} advertised canWatch={screen.enabled} watching={watching}
-      preview={own ? (screen.local?.id === stream.id ? screen.local.preview : undefined) : watching ? screen.remote : undefined}
-      onWatch={() => void screen.watch(stream.id)} onClose={screen.closeView} />;
-  });
-  if (screen.local && !streams.some(({ id }) => id === screen.local?.id)) {
-    screenTiles.push(<ScreenTile key={screen.local.id} owner={local?.name ?? "Вы"} own advertised={false}
-      canWatch={false} watching={false} preview={screen.local.preview} />);
+  const channelStreams = streams.map(({ id, ownerId }) => ({
+    id, own: ownerId === view?.sessionId, owner: members.find((person) => person.id === ownerId)?.name ?? "Участник",
+  }));
+  const watchableStreams = channelStreams.filter(({ own }) => !own);
+  const watchedStream = watchableStreams.find(({ id }) => id === screen.viewerID);
+  const ownPreview = screen.local;
+  const screenTiles = channelStreams.map(({ id, own, owner }) => <ScreenTile key={id} owner={owner}
+    own={own} advertised canWatch={screen.enabled} preview={own && ownPreview?.id === id ? ownPreview.preview : undefined}
+    onWatch={() => void screen.watch(id)} />);
+  if (ownPreview && !channelStreams.some(({ id }) => id === ownPreview.id)) {
+    screenTiles.push(<ScreenTile key={ownPreview.id} owner={local?.name ?? "Вы"} own advertised={false}
+      canWatch={false} preview={ownPreview.preview} />);
   }
-  const viewerEnded = screen.viewerID !== "" && !streams.some(({ id }) => id === screen.viewerID);
+  const viewerEnded = screen.viewerID !== "" && !watchedStream;
   const closeScreenView = screen.closeView;
   useEffect(() => {
     if (viewerEnded) closeScreenView();
@@ -144,6 +145,8 @@ function Workspace({ session, expired, signedOut }: { session: WebSession; expir
         <div className="workspace-divider" {...workspaceResize.separatorProps("browser")} />
         <section className="room" aria-label="Голосовой канал">
           {connected && room ? <ChannelStage channel={room} members={members} screens={screenTiles} sessionId={view.sessionId} userId={view.userId}
+            viewer={watchedStream && <ScreenViewer current={watchedStream} streams={watchableStreams} preview={screen.remote}
+              onWatch={(id) => void screen.watch(id)} onClose={screen.closeView} />}
             moderation={view} channels={view.channels}
             onMessage={(person) => setMessagePeer({ ...person })}
             onWake={(participantId) => void change({ type: "wake", participantId })}
