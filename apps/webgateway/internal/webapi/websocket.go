@@ -36,11 +36,10 @@ func (h *handler) events(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusConflict, err.Error())
 		return
 	}
-	defer detach()
-
 	// Origin already passed the exact full-origin policy, including scheme and port.
 	ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 	if err != nil {
+		detach(false)
 		return
 	}
 	ws.SetReadLimit(8192)
@@ -54,6 +53,7 @@ func (h *handler) events(w http.ResponseWriter, r *http.Request) {
 	commands := make(chan command, 8)
 	readDone := make(chan struct{})
 	executeDone := make(chan struct{})
+	var pageClosed bool // Written by the reader and read after readDone closes.
 	go func() {
 		defer close(readDone)
 		defer cancel()
@@ -61,6 +61,7 @@ func (h *handler) events(w http.ResponseWriter, r *http.Request) {
 		for {
 			kind, data, err := ws.Read(ctx)
 			if err != nil {
+				pageClosed = websocket.CloseStatus(err) == websocket.StatusGoingAway
 				return
 			}
 			if kind != websocket.MessageText || !limiter.Allow() {
@@ -105,7 +106,13 @@ func (h *handler) events(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	defer func() { cancel(); ws.CloseNow(); <-readDone; <-executeDone }()
+	defer func() {
+		cancel()
+		ws.CloseNow()
+		<-readDone
+		<-executeDone
+		detach(pageClosed)
+	}()
 	write := func(data []byte) error {
 		writeCtx, stop := context.WithTimeout(ctx, 4*time.Second)
 		defer stop()

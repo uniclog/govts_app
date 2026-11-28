@@ -253,6 +253,8 @@ paths:
       summary: Upgrade to the WebSocket control channel
       description: >-
         One WebSocket per session. A concurrent tab is closed with code 4409.
+        After a browser close frame with code 1001, the gateway allows up to
+        3 seconds to reattach. Other disconnects use the configured grace period.
         On reconnect the server sends a fresh snapshot and then state
         replacements as changes occur. Both directions use events.schema.json.
       security: [{ webSession: [] }]

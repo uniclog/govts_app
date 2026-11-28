@@ -18,6 +18,8 @@ var (
 	ErrNoSocket = errors.New("Подключите WebSocket перед запуском голоса")
 )
 
+const pageCloseGrace = 3 * time.Second
+
 type Session struct {
 	Core           *clientcore.App
 	bridge         *webrtcaudio.Bridge
@@ -57,7 +59,7 @@ func (s *Session) scheduleIdle(deadline time.Time) {
 	})
 }
 
-func (s *Session) Attach() (func(), error) {
+func (s *Session) Attach() (func(pageClosed bool), error) {
 	s.manager.mu.Lock()
 	defer s.manager.mu.Unlock()
 	if s.ctx.Err() != nil {
@@ -69,12 +71,16 @@ func (s *Session) Attach() (func(), error) {
 	s.socket = true
 	s.idleGeneration++
 	s.idle.Stop()
-	return func() {
+	return func(pageClosed bool) {
 		s.manager.mu.Lock()
 		defer s.manager.mu.Unlock()
 		s.socket = false
 		if s.ctx.Err() == nil {
-			s.scheduleIdle(time.Now().Add(s.manager.cfg.ReconnectGrace))
+			grace := s.manager.cfg.ReconnectGrace
+			if pageClosed {
+				grace = min(grace, pageCloseGrace)
+			}
+			s.scheduleIdle(time.Now().Add(grace))
 		}
 	}, nil
 }
