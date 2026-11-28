@@ -1,0 +1,102 @@
+:root {
+  /* Базовая графитовая палитра. Остальные встроенные темы переопределяют те же роли. */
+  --window: #0d0f12; /* фон страницы */
+  --card: #15181e; /* карточки, панели, диалоги и формы */
+  --card-strong: #1e222a; /* вложенная поверхность: hover, выбор, бейдж, аватар */
+  --line: #292e38; /* границы и разделители */
+  --text: #f1f2f3; /* основной текст */
+  --muted: #9399a5; /* вторичный текст и спокойный статус */
+  --accent: #4bc49a; /* основное действие, связь, речь */
+  --accent-blue: #ff7942; /* фокус и сведения: демонстрация, ссылки */
+  --danger: #ff5672; /* ошибка, отключение звука, разрушительное действие */
+  --warning: #f2c35d; /* переподключение и ожидание */
+  --on-accent: #10261f; /* текст на заливке accent */
+  --shadow: #000; /* тень и затемнение, не цвет интерфейса */
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --window: #d1d7dd;
+  --card: #f2f4f7;
+  --card-strong: #e1e6ec;
+  --line: #d4dae2;
+  --text: #1f2630;
+  --muted: #586373;
+  --accent: #21785e;
+  --accent-blue: #3d62a0;
+  --danger: #b8394b;
+  --warning: #875f0f;
+  --on-accent: #ffffff;
+  --control-lift: 8%;
+  --control-state: 16%;
+  /* The window is too close to the card here for the default mix to recess a field. */
+  --field-bg: var(--window);
+  --stage-base: color-mix(in srgb, var(--window) 55%, var(--card));
+  --stage-tint: 7%;
+}
+
+:root[data-theme="navy"] {
+  color-scheme: dark;
+  --window: #0b1426;
+  --card: #121e36;
+  --card-strong: #1b2a48;
+  --line: #2a3d62;
+  --text: #e8eefb;
+  --muted: #94a3c0;
+  --accent: #4cc9f0;
+  --accent-blue: #5b9bff;
+  --danger: #ff6b81;
+  --warning: #f5d06f;
+  --on-accent: #06202b;
+}
+
+:root[data-theme="beige"] {
+  color-scheme: light;
+  --window: #d8cfc1;
+  --card: #f5f0e8;
+  --card-strong: #e7dfd2;
+  --line: #d8cdbd;
+  --text: #2d261e;
+  --muted: #6a5e4f;
+  --accent: #2f7a55;
+  --accent-blue: #a1572c;
+  --danger: #b4383f;
+  --warning: #87590b;
+  --on-accent: #ffffff;
+  /* Same light-surface tuning as the light theme. */
+  --control-lift: 8%;
+  --control-state: 16%;
+  --field-bg: var(--window);
+  --stage-base: color-mix(in srgb, var(--window) 55%, var(--card));
+  --stage-tint: 7%;
+}
+
+:root[data-theme="brown"] {
+  color-scheme: dark;
+  --window: #15100c;
+  --card: #1e1712;
+  --card-strong: #2a211a;
+  --line: #3a2e25;
+  --text: #f3eae0;
+  --muted: #ae9d8c;
+  --accent: #8fc48a;
+  --accent-blue: #e4a35f;
+  --danger: #f07f73;
+  --warning: #f2d06b;
+  --on-accent: #1f1409;
+}
+
+:root[data-theme="purple"] {
+  color-scheme: dark;
+  --window: #110e19;
+  --card: #191523;
+  --card-strong: #241e32;
+  --line: #342c46;
+  --text: #f0ecf8;
+  --muted: #a69db9;
+  --accent: #5fd4a8;
+  --accent-blue: #a98bff;
+  --danger: #ff6f8d;
+  --warning: #f3cc6b;
+  --on-accent: #170f2b;
+}

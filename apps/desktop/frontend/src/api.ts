@@ -1,0 +1,179 @@
+import {Call, Events} from "@wailsio/runtime";
+import {Service} from "../bindings/uniclog.io/sonoryx/apps/desktop/internal/wails";
+
+export type FileTask = {id: string; context: string; direction: string; kind: number; targetId: string; name: string; size: number; offset: number; attachmentId: string; state: string; error: string};
+export type FileAttachment = {id: string; name: string; size: number; sha256: string; deleted: boolean};
+export type FileCapabilities = {maxFileBytes: number; chunkBytes: number; maxAttachments: number; uploadsEnabled: boolean; downloadsEnabled: boolean};
+export type FilePolicy = {MaxFileBytes: number; UserQuotaBytes: number; ServerQuotaBytes: number; UserBytesPerSecond: number; ServerBytesPerSecond: number; MaxTransfers: number; UploadTTL: number; Retention: number; MinFreeBytes: number; UploadsEnabled: boolean; DownloadsEnabled: boolean; Revision?: number};
+export type FileAdminView = {config: FilePolicy; files: FileAttachment[]; usage: Record<string, number>; metrics: Record<string, number>; freeBytes: number};
+
+export type {
+    AudioDeviceDTO,
+    AudioDevicesDTO,
+    AudioMeterDTO,
+    ChannelDTO,
+    ClientEventDTO,
+    ConnectionStatsDTO,
+    ConnectRequest,
+    ParticipantDTO,
+    ScreenStreamDTO,
+    MediaTrustDTO,
+    ChatRequestDTO,
+    ChatPageDTO,
+    ChatMessageDTO,
+    ChatDialogDTO,
+} from "../bindings/uniclog.io/sonoryx/apps/desktop/internal/wails";
+
+import type {AudioMeterDTO, ConnectRequest, ChatRequestDTO} from "../bindings/uniclog.io/sonoryx/apps/desktop/internal/wails";
+
+export type ServerIdentityChange = {endpoint: string; previousFingerprint: string; newFingerprint: string};
+export type MediaServerIdentity = {fingerprint: string; trusted: boolean; known: boolean; server: string; sessionId: string; context: string; previousFingerprint: string};
+export type ClientViewDTO = import("../bindings/uniclog.io/sonoryx/apps/desktop/internal/wails").ClientViewDTO & {
+    serverIdentityChange?: ServerIdentityChange | null;
+};
+
+export type AdminPermission = "kick" | "ban" | "drag" | "admin";
+export type AdminAccount = {id: string; name: string; fingerprint: string; joinLevel: number; kick: boolean; ban: boolean; drag: boolean;
+    admin: boolean; owner: boolean; banned: boolean; online: boolean; banReason: string};
+export type AdminAccountsPage = {accounts: AdminAccount[] | null; next: string};
+export type AdminAuditEntry = {id: string; happenedAtMs: number; actor: string; action: string; targetUserId: string; detail: string};
+export type AdminAuditPage = {entries: AdminAuditEntry[] | null; next: string};
+export type AdminChannelInput = {parentId: string; name: string; topic: string; description: string; position: number; maxUsers: number;
+    minJoinLevel: number; bitrate: number; application: "voip" | "audio"};
+
+const adminCall = <T>(method: string, ...args: unknown[]): Promise<T> =>
+    Call.ByName(`uniclog.io/sonoryx/apps/desktop/internal/wails.Service.${method}`, ...args) as Promise<T>;
+
+let diagnosticsInFlight = 0;
+export type RecentServer = {address: string; alias?: string; version?: string; favorite: boolean; lastVisited: number; current: boolean;
+    onlineCount: number | null; status: "unknown" | "available" | "unavailable"; updatedAt: number; lastAttemptAt: number};
+export function logDiagnostic(operation: string, message: unknown): void {
+    if (diagnosticsInFlight >= 16) return;
+    diagnosticsInFlight++;
+    const text = message instanceof Error ? `${message.name}: ${message.message}` : String(message);
+    void Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.LogDiagnostic", operation.slice(0, 128), text.slice(0, 2048))
+        .catch(() => undefined)
+        .finally(() => { diagnosticsInFlight--; });
+}
+
+export type HotkeyAction = "mute" | "deafen" | "away";
+// Complete shortcut: optional Ctrl/Alt/Shift/Win modifiers and A-Z, 0-9 or F1-F12.
+export type Hotkey = {action: HotkeyAction; key: string; status: "active" | "off" | "failed"};
+
+export const desktopAPI = {
+    hotkeys: (): Promise<Hotkey[]> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.Hotkeys"),
+    beginHotkeyCapture: (): Promise<number> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.BeginHotkeyCapture"),
+    endHotkeyCapture: (capture: number): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.EndHotkeyCapture", capture),
+    renewHotkeyCapture: (capture: number): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.RenewHotkeyCapture", capture),
+    setCapturedHotkey: (capture: number, action: HotkeyAction, key: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetCapturedHotkey", capture, action, key),
+    hotkeysEnabled: (): Promise<boolean> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.HotkeysEnabled"),
+    setHotkeysEnabled: (value: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetHotkeysEnabled", value),
+    hotkeyNotifications: (): Promise<boolean> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.HotkeyNotifications"),
+    setHotkeyNotifications: (value: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetHotkeyNotifications", value),
+    setHotkeyNotices: (texts: Record<string, string>): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetHotkeyNotices", texts),
+    setPopupLook: (colors: Record<string, string>): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetPopupLook", colors),
+    recentServers: (): Promise<RecentServer[]> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.RecentServers"),
+    refreshServerStatuses: (): Promise<void> => Service.RefreshServerStatuses(),
+    onServerStatusChanged: (listener: () => void) => Events.On("server-status-changed", listener),
+    // The main window came back from the tray, the taskbar or a Start menu launch.
+    onMainWindowShown: (listener: () => void) => Events.On("main-window-shown", () => listener()),
+    setServerAlias: (address: string, alias: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetServerAlias", address, alias),
+    deleteRecentServer: (address: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.DeleteRecentServer", address),
+    setServerFavorite: (address: string, favorite: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetServerFavorite", address, favorite),
+    reconnectServer: (address: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.ReconnectServer", address),
+    chat: (request: ChatRequestDTO) => Service.Chat(request),
+    fileQueue: (context: string): Promise<FileTask[]> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileQueue", context),
+    fileOriginalImage: (context: string, id: string): Promise<string> & {cancel: () => void | Promise<void>} => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileOriginalImage", context, id),
+    fileAccountRights: (context: string, accountID: string): Promise<{upload: boolean; download: boolean}> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileAccountRights", context, accountID),
+    fileAdmin: (context: string, method: string, cursor = "", input: Record<string, unknown> = {}): Promise<FileAdminView> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileAdmin", context, method, cursor, input),
+    fileCapabilities: (context: string): Promise<FileCapabilities> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileCapabilities", context),
+    filePick: (context: string, kind: string, id: string): Promise<FileTask[]> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FilePick", context, kind, id),
+    fileControl: (context: string, id: string, action: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileControl", context, id, action),
+    fileAttached: (context: string, ids: string[]): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileAttached", context, ids),
+    fileMetadata: (context: string, ids: string[]): Promise<FileAttachment[]> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileMetadata", context, ids),
+    filePreview: (context: string, id: string): Promise<string> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FilePreview", context, id),
+    fileSave: (context: string, id: string): Promise<FileTask> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileSave", context, id),
+    fileStageCreate: (context: string): Promise<string> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileStageCreate", context),
+    fileStageWrite: (id: string, offset: number, data: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileStageWrite", id, offset, data),
+    fileStageFinish: (context: string, kind: string, target: string, id: string, name: string): Promise<FileTask> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileStageFinish", context, kind, target, id, name),
+    fileStageCancel: (id: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.FileStageCancel", id),
+    snapshot: () => Service.Snapshot(),
+    connectionStats: () => Service.ConnectionStats(),
+    eventsAfter: (sequence: string) => Service.EventsAfter(sequence),
+    savedDisplayName: () => Service.SavedDisplayName(),
+    connect: (request: ConnectRequest) => Service.Connect(request),
+    trustServerIdentity: (endpoint: string, fingerprint: string): Promise<void> =>
+        Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.TrustServerIdentity", endpoint, fingerprint),
+    disconnect: () => Service.Disconnect(),
+    joinChannel: (channelID: string) => Service.JoinChannel(channelID),
+    kick: (sessionID: string) => Service.Kick(sessionID),
+    ban: (sessionID: string) => Service.Ban(sessionID),
+    drag: (sessionID: string, channelID: string) => Service.Drag(sessionID, channelID),
+    adminServerPassword: () => adminCall<boolean>("AdminServerPassword"),
+    adminSetServerPassword: (password: string) => adminCall<void>("AdminSetServerPassword", password),
+    adminAccounts: (cursor: string) => adminCall<AdminAccountsPage>("AdminAccounts", cursor),
+    adminSetPermission: (accountID: string, permission: AdminPermission, enabled: boolean) => adminCall<AdminAccount>("AdminSetPermission", accountID, permission, enabled),
+    adminSetJoinLevel: (accountID: string, level: number) => adminCall<AdminAccount>("AdminSetJoinLevel", accountID, level),
+    adminSetBan: (accountID: string, banned: boolean, reason: string) => adminCall<AdminAccount>("AdminSetBan", accountID, banned, reason),
+    adminSetChannelJoinLevel: (channelID: string, level: number) => adminCall<void>("AdminSetChannelJoinLevel", channelID, level),
+    adminAudit: (cursor: string) => adminCall<AdminAuditPage>("AdminAudit", cursor),
+    adminCreateChannel: (input: AdminChannelInput) => adminCall<string>("AdminCreateChannel", input),
+    adminUpdateChannel: (channelID: string, input: AdminChannelInput) => adminCall<void>("AdminUpdateChannel", channelID, input),
+    adminDeleteChannel: (channelID: string) => adminCall<void>("AdminDeleteChannel", channelID),
+    adminDeleteAccount: (accountID: string) => adminCall<void>("AdminDeleteAccount", accountID),
+    setMuted: (value: boolean) => Service.SetMuted(value),
+    setAway: (away: boolean) => Service.SetAway(away),
+    wake: (sessionID: string) => Service.Wake(sessionID),
+    // Plays the message cue; title and body fill the popup shown while the window is out of focus.
+    messageReceived: (title: string, body: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.MessageReceived", title, body),
+    previewSoundPack: () => Service.PreviewSoundPack(),
+    stopSoundPreview: () => Service.StopSoundPreview(),
+    setSoundPack: (id: string) => Service.SetSoundPack(id),
+    setSoundVolume: (value: number) => Service.SetSoundVolume(value),
+    setMuteOnAway: (value: boolean) => Service.SetMuteOnAway(value),
+    setDeafenOnAway: (value: boolean) => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetDeafenOnAway", value),
+    setSoundCue: (id: string, enabled: boolean) => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetSoundCue", id, enabled),
+    setDeafened: (value: boolean) => Service.SetDeafened(value),
+    setRNNoiseEnabled: (value: boolean) => Service.SetRNNoiseEnabled(value),
+    setRNNoiseSensitivity: (value: number) => Service.SetRNNoiseSensitivity(value),
+    setMicrophoneGain: (value: number) => Service.SetMicrophoneGain(value),
+    setVADEnabled: (value: boolean) => Service.SetVADEnabled(value),
+    setVADMode: (value: string) => Service.SetVADMode(value),
+    setVADSensitivity: (value: number) => Service.SetVADSensitivity(value),
+    audioDevices: () => Service.AudioDevices(),
+    setCaptureDevice: (id: string) => Service.SetCaptureDevice(id),
+    setPlaybackDevice: (id: string) => Service.SetPlaybackDevice(id),
+    setMicrophonePreview: (enabled: boolean) => Service.SetMicrophonePreview(enabled),
+    setMicrophoneMonitor: (enabled: boolean) => Service.SetMicrophoneMonitor(enabled),
+    participantVolume: (sessionID: string) => Service.ParticipantVolume(sessionID),
+    setParticipantVolume: (sessionID: string, value: number) => Service.SetParticipantVolume(sessionID, value),
+    theme: () => Service.Theme(),
+    setTheme: (value: string) => Service.SetTheme(value),
+    locale: (): Promise<string> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.Locale"),
+    setLocale: (value: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetLocale", value),
+    closeToTray: (): Promise<boolean> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.CloseToTray"),
+    setCloseToTray: (value: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetCloseToTray", value),
+    rememberParticipantVolumes: (): Promise<boolean> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.RememberParticipantVolumes"),
+    setRememberParticipantVolumes: (value: boolean): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.SetRememberParticipantVolumes", value),
+    mediaServerIdentity: (): Promise<MediaServerIdentity> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.MediaServerIdentity"),
+    confirmMediaServerIdentity: (identity: MediaServerIdentity): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.ConfirmMediaServerIdentity", identity),
+    screenCapabilities: () => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.ScreenCapabilities") as Promise<{legacy?: boolean; codecs?: {mimeType: string; sdpFmtpLine: string; payloadType: number}[]; audio?: {mimeType: string; sdpFmtpLine: string; payloadType: number}[]}>,
+    screenAudioSupported: (): Promise<boolean> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.ScreenAudioSupported"),
+    screenAudioApps: (): Promise<{pid: number; name: string; title: string}[] | null> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.ScreenAudioApps"),
+    startScreenAudio: (pid: number): Promise<string> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.StartScreenAudio", pid),
+    // 48 kHz stereo s16le PCM as base64; empty while the source is silent.
+    readScreenAudio: (id: string): Promise<string | null> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.ReadScreenAudio", id),
+    stopScreenAudio: (id: string): Promise<void> => Call.ByName("uniclog.io/sonoryx/apps/desktop/internal/wails.Service.StopScreenAudio", id),
+    trustMediaServer: (fingerprint: string) => Service.TrustMediaServer(fingerprint),
+    publishScreen: (offer: {type: string; sdp: string}) => Service.PublishScreen(offer),
+    subscribeScreen: (streamID: string, subscriberID: string, offer: {type: string; sdp: string}) =>
+        Service.SubscribeScreen(streamID, subscriberID, offer),
+    stopScreen: (streamID: string) => Service.StopScreen(streamID),
+    unsubscribeScreen: (streamID: string, subscriberID: string) => Service.UnsubscribeScreen(streamID, subscriberID),
+    openScreenWindow: (streamID: string, ownerName: string) => Service.OpenScreenWindow(streamID, ownerName),
+    onStateChanged: (listener: () => void) => Events.On("client-state-changed", listener),
+    onTrayScreenShare: (listener: () => void) => Events.On("tray-screen-share", () => listener()),
+    onEventLogChanged: (listener: () => void) => Events.On("client-event-log-changed", listener),
+    onAudioMeter: (listener: (sample: AudioMeterDTO) => void) =>
+        Events.On("audio-meter", (event) => listener(event.data as AudioMeterDTO)),
+};

@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	tag := flag.String("tag", "", "optional release tag to validate against clientVersion")
+	tag := flag.String("tag", "", "optional release tag to validate against the desktop version")
 	wailsConfig := flag.String("wails-config", "", "optional Wails YAML template to render")
 	out := flag.String("out", "build/config.generated.yml", "rendered Wails config destination")
 	flag.Parse()
@@ -25,7 +25,7 @@ func main() {
 
 func run(tag, wailsConfig, out string) error {
 	if tag != "" && tag != "v"+appversion.ClientVersion {
-		return fmt.Errorf("release tag %q does not match version/release.json clientVersion (%s)", tag, appversion.ClientVersion)
+		return fmt.Errorf("release tag %q does not match apps.desktop in version/version.json (%s)", tag, appversion.ClientVersion)
 	}
 	if wailsConfig == "" {
 		return nil

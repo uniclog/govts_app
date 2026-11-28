@@ -6,13 +6,19 @@ import (
 	"encoding/json"
 )
 
-//go:embed release.json
+//go:embed version.json
 var releaseJSON []byte
 
 type Release struct {
-	ClientVersion    string `json:"clientVersion"`
-	ServerVersion    string `json:"serverVersion"`
-	MinServerVersion string `json:"minServerVersion"`
+	Apps             AppVersions `json:"apps"`
+	MinServerVersion string      `json:"minServerVersion"`
+}
+
+type AppVersions struct {
+	Desktop    string `json:"desktop"`
+	Server     string `json:"server"`
+	WebGateway string `json:"webgateway"`
+	Web        string `json:"web"`
 }
 
 func Read() (Release, error) {

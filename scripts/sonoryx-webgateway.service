@@ -1,0 +1,19 @@
+[Unit]
+Description=Sonoryx Web Gateway
+After=network.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=admin
+WorkingDirectory=/opt/sonoryx/webgateway
+EnvironmentFile=-/opt/sonoryx/webgateway/webgateway.env
+ExecStart=/opt/sonoryx/webgateway/current/sonoryx-webgateway -config /opt/sonoryx/webgateway/webgateway.json
+Restart=on-failure
+RestartSec=2s
+TimeoutStartSec=20s
+TimeoutStopSec=20s
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

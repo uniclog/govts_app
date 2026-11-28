@@ -15,9 +15,9 @@ var (
 )
 
 const (
-	PacketHello uint8 = iota + 1 // pre-authentication handshake; servers reply "client upgrade required"
-	PacketVoice
-	PacketHelloAck // reserved: acknowledged the removed plain handshake
+	PacketHello    uint8 = iota + 1 // pre-authentication handshake; servers reply "client upgrade required"
+	PacketVoice                     // reserved: legacy single-frame voice
+	PacketHelloAck                  // reserved: acknowledged the removed plain handshake
 	PacketHeartbeat
 	PacketDisconnect
 	PacketJoinChannel
@@ -45,8 +45,7 @@ const (
 	PacketChatRequest
 	PacketChatAck
 	PacketChatChanged
-	// PacketVoiceBundle carries the current and the previous voice frames of
-	// one sender; server → client only, for clients that support it.
+	// PacketVoiceBundle is reserved for the removed version 1 format.
 	PacketVoiceBundle
 	PacketServerStatusRequest
 	PacketServerStatusAck
@@ -79,15 +78,6 @@ type VoicePacket struct {
 	Sequence  uint32
 	RequestID uint32
 	Payload   []byte
-}
-
-func NewVoicePacket(sessionID uint64, sequence uint32, payload []byte) VoicePacket {
-	return VoicePacket{
-		Type:      PacketVoice,
-		SessionID: sessionID,
-		Sequence:  sequence,
-		Payload:   payload,
-	}
 }
 
 // index

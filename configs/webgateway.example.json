@@ -1,0 +1,19 @@
+{
+  "loginMode": "nickname",
+  "listen": "127.0.0.1:8443",
+  "origin": "https://localhost:8443",
+  "tlsCertificate": "certs/webgateway.crt",
+  "tlsKey": "certs/webgateway.key",
+  "webRoot": "apps/web/dist",
+  "stateDir": "data/webgateway",
+  "server": "127.0.0.1:9000",
+  "serverKey": "REPLACE_WITH_BASE64_ED25519_PUBLIC_KEY",
+  "mediaFingerprint": "",
+  "serverPasswordEnv": "",
+  "sessionTTLSeconds": 3600,
+  "reconnectGraceSeconds": 30,
+  "maxSessions": 20,
+  "iceServers": [],
+  "icePortMin": 21000,
+  "icePortMax": 21100
+}

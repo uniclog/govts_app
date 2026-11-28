@@ -17,7 +17,7 @@ dev_mode:
       - .git
       - .idea
       - node_modules
-      - cmd/desktop/frontend
+      - apps/desktop/frontend
       - bin
     file:
       - "*_test.go"

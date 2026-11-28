@@ -34,10 +34,13 @@ node_modules/
 /sonoryx-files.crt
 /sonoryx-files.key
 /data/files/
+/data/webgateway/
+/configs/webgateway.json
+/certs/webgateway.key
 
 # Local server state
 /sonoryx.db
 /sonoryx.db-wal
 /sonoryx.db-shm
 /sonoryx-voice.seed
-/cmd/desktop/frontend/bindings/
+/apps/desktop/frontend/bindings/

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+$')]
-    [string]$Target = 'admin@193.187.92.89',
+    [string]$Target,
 
     [ValidatePattern('^/[A-Za-z0-9._/-]+$')]
     [string]$RemoteDir = '/opt/sonoryx',
@@ -13,7 +13,7 @@ param(
     [string]$DatabasePath = '',
 
     [ValidatePattern('^[0-9A-Fa-f:.]+$')]
-    [string]$PublicIp = '193.187.92.89',
+    [string]$PublicIp,
 
     [ValidateRange(1, 65535)]
     [int]$VoicePort = 9000,
@@ -52,6 +52,17 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot 'deploy-target.ps1')
+
+if (-not $Target) { $Target = $defaultDeployTarget }
+if (-not $PublicIp) {
+    $deployHost = ($Target -split '@', 2)[1]
+    $address = $null
+    $PublicIp = $defaultServerIp
+    if ([Net.IPAddress]::TryParse($deployHost, [ref]$address) -and $address.ToString() -ceq $deployHost) {
+        $PublicIp = $deployHost
+    }
+}
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $outputDir = Join-Path $repoRoot 'bin'
