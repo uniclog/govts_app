@@ -1,5 +1,27 @@
 # Сборка, деплой и ручной запуск Sonoryx
 
+## Локальный запуск на Windows
+
+Запускайте команды из корня репозитория. Для стенда нужны Go, Node.js, C-компилятор для шлюза и Edge или Chrome. Для первой генерации HTTPS-сертификата используется OpenSSL, в том числе из Git for Windows.
+
+```powershell
+# Сборка веб-клиента, локальный конфиг и сертификат
+powershell.exe -NoProfile -File .\scripts\web-local.ps1 -Mode Prepare
+
+# Терминал 1 — сервер
+powershell.exe -NoProfile -File .\scripts\web-local.ps1 -Mode Server
+
+# Терминал 2 — шлюз, после запуска сервера
+powershell.exe -NoProfile -File .\scripts\web-local.ps1 -Mode Gateway
+
+# Терминал 3 — отдельный профиль браузера
+powershell.exe -NoProfile -File .\scripts\web-local.ps1 -Mode Browser
+```
+
+Веб-клиент открывается на [https://127.0.0.1:8443](https://127.0.0.1:8443). Режим `Browser` использует ключ локального сертификата в отдельном профиле браузера. Импорт сертификата в Windows не нужен. Для десктопа запустите `npm run dev:desktop` в отдельном терминале и подключитесь к `127.0.0.1:19000`.
+
+Весь `bin/` исключён из Git. `bin/web-local/web`, журналы и готовые Linux-сборки можно удалить и создать заново. Если нужны данные стенда, сохраните папку `bin/web-local/`. В ней находятся SQLite, файлы, ключи, профили шлюза и профиль браузера. Для чистого стенда остановите локальные процессы, удалите `bin/web-local/` и снова запустите `Prepare`. Исходники запуска лежат в `scripts/web-local.ps1` и `scripts/web-local-key.cjs`.
+
 ## С Windows через сценарии
 
 Запускайте команды из корня репозитория. Для сборки нужны Go, а для веб-релиза ещё Node.js, Zig и `tar`. Деплой использует SSH.
