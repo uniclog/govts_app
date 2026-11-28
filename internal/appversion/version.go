@@ -16,6 +16,10 @@ var (
 	MinimumServerVersion = release.MinServerVersion
 )
 
+// MinimumHandshakeVersion is the lowest compatibility level accepted by the server.
+// It shares the release setting used by clients when requesting a handshake.
+var MinimumHandshakeVersion = mustParse(MinimumServerVersion)
+
 // VoiceBundlesMinimumVersion is the first handshake level supporting voice bundles.
 // This protocol capability threshold must not track the current release minimum.
 const VoiceBundlesMinimumVersion = "0.2.13"

@@ -57,10 +57,6 @@ const (
 	authenticationServerErrorForClient = "authentication failed: server error"
 )
 
-// AuthInit.Sequence carries the requested protocol/server compatibility level,
-// not the desktop executable's independently incremented release version.
-const minimumSecureClientVersion appversion.Number = 5 << 16 // 0.5.0: matches minServerVersion in version/release.json
-
 // Authenticator handles the signed, ephemeral-key handshake before any
 // ordinary session packet reaches the existing voice packet handlers.
 type Authenticator struct {
@@ -130,8 +126,8 @@ func (a *Authenticator) Handle(conn *udp.ServerPacketConn, hub *Hub, cache *Requ
 }
 
 func (a *Authenticator) handleInit(conn *udp.ServerPacketConn, hub *Hub, packet protocol.VoicePacket, addr *net.UDPAddr) error {
-	if appversion.Number(packet.Sequence) < minimumSecureClientVersion {
-		return fmt.Errorf("client upgrade required: minimum version %s", minimumSecureClientVersion)
+	if minimum := appversion.MinimumHandshakeVersion; appversion.Number(packet.Sequence) < minimum {
+		return fmt.Errorf("client upgrade required: minimum version %s", minimum)
 	}
 	if uint32(hub.ServerVersion()) < packet.Sequence {
 		return conn.WritePacket(0, addr, protocol.VoicePacket{Type: protocol.PacketServerVersionTooOld, RequestID: packet.RequestID, Sequence: uint32(hub.ServerVersion())})
