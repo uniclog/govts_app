@@ -153,8 +153,10 @@ function Workspace({ session, expired, signedOut }: { session: WebSession; expir
                 .catch((reason) => setIssue(messageFor(reason)));
             }} />
             : <div className="stage-placeholder"><Icon name="voice" /><p>{connected ? "Выберите канал." : status}</p></div>}
-          {(issue || view?.error || voice.deviceNote || voice.error || screen.error) && <p className="notice room-notice" role="status">{issue || view?.error || voice.deviceNote || voice.error || screen.error}</p>}
+          {(issue || view?.error) && <p className="notice room-notice" role="status">{issue || view?.error}</p>}
+          {screen.error && <p className="notice room-notice" role="status">{screen.error}</p>}
           <div className="audio-dock">
+            {(voice.deviceNote || voice.error) && <p className="notice" role="status">{voice.deviceNote || voice.error}</p>}
             {online && voice.status !== "connected" && (
               <small role="status">{voice.status === "offline" ? "Голос недоступен" : "Подключение голоса…"}</small>
             )}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { APIError, messageFor, post, request } from "../../api/http";
-import { gatheredOffer } from "../../api/webrtc";
+import { localOffer } from "../../api/webrtc";
 
 type MediaCaps = { legacy?: boolean; audio?: unknown[]; codecs?: { mimeType: string }[] };
 type MediaAnswer = { answer: RTCSessionDescriptionInit };
@@ -11,6 +11,17 @@ type Viewer = ActivePeer & { streamId: string; subscriberId: string };
 
 function end(path: "stop" | "unsubscribe", data: { streamId: string; subscriberId?: string }) {
   return post<void>("/api/media/" + path, data, AbortSignal.timeout(6000)).catch(() => undefined);
+}
+
+async function signalMedia<T>(path: "publish" | "subscribe", data: unknown): Promise<T> {
+  try {
+    return await post<T>("/api/media/" + path, data, AbortSignal.timeout(22000));
+  } catch (reason) {
+    if (reason instanceof DOMException && reason.name === "TimeoutError") {
+      throw new Error("Шлюз не ответил на запрос демонстрации экрана");
+    }
+    throw reason;
+  }
 }
 
 function closePeer(handle: ActivePeer) {
@@ -120,9 +131,8 @@ export function useScreenShare(scope: string, iceServers: RTCIceServer[]) {
       const sender = pc.addTransceiver(video, { direction: "sendonly", streams: [capture] });
       preferVideo(sender, capabilities, "send");
       for (const track of capture.getAudioTracks()) pc.addTransceiver(track, { direction: "sendonly", streams: [capture] });
-      const offer = await gatheredOffer(pc, controller.signal);
-      const answer = await post<PublishAnswer>("/api/media/publish", { offer },
-        AbortSignal.timeout(22000));
+      const offer = await localOffer(pc, controller.signal, "complete");
+      const answer = await signalMedia<PublishAnswer>("publish", { offer });
       if (controller.signal.aborted) {
         void end("stop", { streamId: answer.streamId });
         return;
@@ -174,20 +184,29 @@ export function useScreenShare(scope: string, iceServers: RTCIceServer[]) {
       };
       preferVideo(pc.addTransceiver("video", { direction: "recvonly" }), capabilities, "receive");
       if (capabilities.audio?.length) pc.addTransceiver("audio", { direction: "recvonly" });
-      const offer = await gatheredOffer(pc, controller.signal);
-      const answer = await post<MediaAnswer>("/api/media/subscribe", { streamId, subscriberId, offer },
-        AbortSignal.timeout(22000));
+      // Sonoryx ICE-lite learns the viewer's address from the browser's checks.
+      // Send the offer while the browser is still gathering its candidates.
+      const offer = await localOffer(pc, controller.signal, "background");
+      const answer = await signalMedia<MediaAnswer>("subscribe", { streamId, subscriberId, offer });
       if (controller.signal.aborted) {
         void end("unsubscribe", { streamId, subscriberId });
         return;
       }
       await pc.setRemoteDescription(answer.answer);
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === "failed" && viewer.current === active) {
-          setError("Соединение с трансляцией потеряно");
-          closeView();
-        }
+      if (controller.signal.aborted) return;
+      const failView = (message: string) => {
+        if (viewer.current !== active) return;
+        setError(message);
+        closeView();
       };
+      const timer = window.setTimeout(() => failView("Не удалось установить медиасоединение с трансляцией"), 20000);
+      controller.signal.addEventListener("abort", () => window.clearTimeout(timer), { once: true });
+      const onConnectionChange = () => {
+        if (pc.connectionState === "connected") window.clearTimeout(timer);
+        else if (pc.connectionState === "failed") failView("Соединение с трансляцией потеряно");
+      };
+      pc.onconnectionstatechange = onConnectionChange;
+      onConnectionChange();
     } catch (reason) {
       if (viewer.current === active) {
         setError(messageFor(reason));

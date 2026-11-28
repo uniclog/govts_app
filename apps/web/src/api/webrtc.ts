@@ -16,10 +16,13 @@ export function waitForICE(peer: RTCPeerConnection, signal: AbortSignal) {
   });
 }
 
-export async function gatheredOffer(peer: RTCPeerConnection, signal: AbortSignal) {
-  await peer.setLocalDescription(await peer.createOffer());
-  await waitForICE(peer, AbortSignal.any([signal, AbortSignal.timeout(8000)]));
+export async function localOffer(peer: RTCPeerConnection, signal: AbortSignal, gathering: "complete" | "background") {
   signal.throwIfAborted();
-  if (!peer.localDescription) throw new Error("Не удалось сформировать предложение WebRTC");
+  await peer.setLocalDescription(await peer.createOffer());
+  if (gathering === "complete") {
+    await waitForICE(peer, AbortSignal.any([signal, AbortSignal.timeout(8000)]));
+  }
+  signal.throwIfAborted();
+  if (!peer.localDescription?.sdp) throw new Error("Не удалось сформировать предложение WebRTC");
   return peer.localDescription.toJSON();
 }

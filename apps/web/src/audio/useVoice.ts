@@ -58,6 +58,7 @@ export function useVoice(online: boolean, connection: number, iceServers: RTCIce
   useEffect(() => {
     if (!online) {
       setStatus("waiting");
+      setError("");
       return;
     }
     setStatus("connecting");
@@ -67,6 +68,7 @@ export function useVoice(online: boolean, connection: number, iceServers: RTCIce
     let timeout = 0;
     let peer: RTCPeerConnection | undefined;
     let retryTimer = 0;
+    let timeoutMessage = "Браузер не успел подготовить голосовое соединение";
 
     const negotiate = async () => {
       peer = new RTCPeerConnection({ iceServers });
@@ -100,6 +102,7 @@ export function useVoice(online: boolean, connection: number, iceServers: RTCIce
       const offer = await current.createOffer();
       await current.setLocalDescription(offer);
       await waitForICE(current, AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]));
+      timeoutMessage = "Шлюз не ответил на запрос подключения голоса";
       const answer = await answerOffer(current.localDescription!.toJSON(),
         AbortSignal.any([controller.signal, AbortSignal.timeout(11000)]));
       if (controller.signal.aborted) return;
@@ -117,7 +120,7 @@ export function useVoice(online: boolean, connection: number, iceServers: RTCIce
       peer?.close();
       negotiatedTrack.current = undefined;
       setStatus("offline");
-      setError(messageFor(reason));
+      setError(reason instanceof DOMException && reason.name === "TimeoutError" ? timeoutMessage : messageFor(reason));
       retryTimer = window.setTimeout(() => setRetry((value) => value + 1), 5000);
     });
 
