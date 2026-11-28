@@ -60,7 +60,7 @@ footer{text-align:center;color:var(--muted);font-size:.82rem;padding:0 16px 40px
 <header class="hero"><div class="hero-in">
 <div class="eyebrow">Sonoryx · технический справочник</div>
 <h1>Протокол <span>Sonoryx</span></h1>
-<p>Как устроены голос, control и чат поверх защищённого UDP и демонстрация экрана поверх WebRTC. Клиент <code>0.10.1</code>, сервер <code>0.5.0</code>, минимальная версия сервера <code>0.5.0</code> (<code>version/release.json</code>). Файлообмен — отдельный HTTPS listener. Источники: <code>internal/protocol</code>, <code>internal/auth</code>, <code>apps/server/internal/voice</code>, <code>internal/clientcore/internal/live</code>, <code>apps/server/internal/media</code>, <code>protocol-encryption.md</code>.</p>
+<p>Голос, control и чат используют защищённый UDP. Демонстрация экрана и браузерное голосовое соединение используют отдельные WebRTC-тракты. Десктоп <code>0.12.0</code>, сервер <code>0.6.0</code>, минимальная версия сервера <code>0.5.0</code> (<code>version/release.json</code>). Файлообмен обслуживается отдельным HTTPS listener. Источники: <code>internal/protocol</code>, <code>internal/auth</code>, <code>apps/server/internal/voice</code>, <code>internal/clientcore/internal/live</code>, <code>apps/server/internal/media</code>, <code>apps/webgateway</code>.</p>
 <div class="kpis">
 <div class="kpi"><b>17 B</b><span>заголовок пакета</span></div>
 <div class="kpi"><b>1200 B</b><span>макс. payload</span></div>
@@ -71,14 +71,16 @@ footer{text-align:center;color:var(--muted);font-size:.82rem;padding:0 16px 40px
 </div></div></header>
 <div class="layout">
 <nav id="toc">
-<a class="on" href="#layers">1. Слои</a><a href="#packet">2. Пакет</a><a href="#types">3. Типы</a><a href="#hs">4. Handshake</a><a href="#rec">5. Защищённая запись</a><a href="#srv">6. Сервер</a><a href="#voice">7. Голос</a><a href="#loss">8. Потери</a><a href="#state">9. Состояние</a><a href="#life">10. Жизнь сессии</a><a href="#chat">11. Чат</a><a href="#files">Файлообмен</a><a href="#media">12. Экран</a><a href="#limits">13. Лимиты</a><a href="#gaps">14. Ограничения</a>
+<a class="on" href="#layers">1. Слои</a><a href="#packet">2. Пакет</a><a href="#types">3. Типы</a><a href="#hs">4. Handshake</a><a href="#rec">5. Защищённая запись</a><a href="#srv">6. Сервер</a><a href="#voice">7. Голос</a><a href="#loss">8. Потери</a><a href="#state">9. Состояние</a><a href="#life">10. Жизнь сессии</a><a href="#chat">11. Чат</a><a href="#files">Файлообмен</a><a href="#media">12. Экран</a><a href="#web">Веб-доступ</a><a href="#limits">13. Лимиты</a><a href="#gaps">14. Ограничения</a>
 </nav>
 <main>
 
 <section id="layers"><h2><span class="n">01</span>Слои</h2>
 <p>Голос, control и чат идут по одному UDP-сокету (по умолчанию <code>:9000</code>). Демонстрация экрана — отдельный тракт: HTTPS-сигнализация (<code>:9002</code>) и WebRTC (UDP <code>20000–20100</code>).</p>
-<pre>React UI ── Wails service (apps/desktop/internal/wails) ── clientapp (lifecycle, reconnect)
-   └─ client (state, jitter, mixer, requests)
+<pre>Desktop React UI ── Wails service (apps/desktop/internal/wails) ─┐
+Browser React UI ── HTTPS / WebSocket / WebRTC ── webgateway ───┤
+   clientcore (lifecycle, reconnect) ◀───────────────────────────┘
+   └─ internal/live (state, jitter, mixer, requests)
        └─ transport/udp.ClientPacketConn ── DatagramCodec (protocol.SecureDatagramCodec)
            ══ UDP ══
        transport/udp.ServerPacketConn ── SecureDatagramCodec
@@ -268,7 +270,7 @@ pre-roll 60 мс, hangover 300 мс) → Opus encode, кадр 20 мс
 
 </section>
 <section id="loss"><h2><span class="n">08</span>Адаптивная компенсация потерь голоса</h2>
-<p>Рабочий голосовой тракт использует только VoiceBundleV2. Server = <b>0.5.0</b>, minServer = <b>0.5.0</b>, минимальный уровень AuthInit на сервере = <b>0.5.0</b>, desktop = <b>0.10.1</b> (<code>version/release.json</code>, <code>apps/server/internal/voice/auth.go</code>). Голосовые ID 2/31 зарезервированы и отбрасываются; несовместимые версии отклоняются при аутентификации. Один новый формат используется и без повторов. Поддержка старых серверов в этот протокол не входит.</p>
+<p>Голосовой тракт Sonoryx UDP использует VoiceBundleV2. Версия сервера <b>0.6.0</b>, минимальная версия сервера и уровень AuthInit <b>0.5.0</b>, десктоп <b>0.12.0</b> (<code>version/release.json</code>, <code>apps/server/internal/voice/auth.go</code>). Голосовые ID 2/31 зарезервированы и отбрасываются. Несовместимые версии отклоняются при аутентификации.</p>
 <h3>Wire format и независимые направления</h3>
 <p><code>internal/protocol/packet.go</code>, <code>voice_bundle_v2.go</code>, <code>voice_state.go</code>, <code>voice_telemetry.go</code>. Типы: 40 VoiceBundleV2, 41 VoiceSummary, 42 VoiceReport, 43 VoiceState, 44 VoiceStateAck, 45 VoiceStateRequest. Новые значения добавлены без перенумерации прежних. Все многобайтовые поля big-endian.</p>
 <pre>VoiceBundleV2 payload:
@@ -454,6 +456,16 @@ WebRTC DTLS-SRTP, VP8 / H.264 / VP9 / AV1 + необязательный зву�
 </ul>
 
 </section>
+<section id="web"><h2>Веб-доступ через отдельный шлюз</h2>
+<p><code>apps/webgateway/main.go</code> запускает HTTPS-шлюз и отдаёт собранный <code>apps/web/dist</code> с того же источника, что и API. <code>GET /api/config</code> сообщает режим входа. В режиме <code>nickname</code> участник вводит ник, а шлюз хранит отдельный постоянный Ed25519-ключ для браузера под случайным идентификатором. Cookie <code>__Host-sonoryx-browser</code> действует до года и сохраняется после завершения веб-сессии. Шлюз выдаёт до пяти новых идентичностей сразу и пополняет лимит на одну каждые шесть минут. В режиме <code>invite</code> оператор создаёт аккаунт и ключ заранее, шлюз проверяет код доступа по SHA-256. В обоих режимах шлюз открывает сессию <code>clientcore</code> по адресу и заранее установленному публичному ключу Sonoryx, формирует подпись UDP-рукопожатия и получает права, каналы и историю от сервера Sonoryx. Источники: <code>apps/webgateway/internal/session/manager.go</code>, <code>apps/webgateway/internal/webapi/http.go</code>.</p>
+<p><code>POST /api/session</code> выдаёт cookie <code>__Host-sonoryx</code> с флагами <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Lax</code>. Изменяющие HTTP-запросы и <code>GET /api/events</code> проверяют точный <code>Origin</code>. WebSocket открывается одним снимком, затем передаёт обновлённые снимки и ответы по ID команды. 64-битные ID и ревизии передаются десятичными строками. Одна сессия поддерживает одну активную вкладку, один WebRTC peer и одно подключение Sonoryx. TTL по умолчанию 3600 с, ожидание возврата вкладки 30 с после обнаружения разрыва, лимит по умолчанию 20 сессий на процесс. Контракты и исходники: <code>contracts/web/http.yaml</code>, <code>contracts/web/events.schema.json</code>, <code>apps/webgateway/internal/webapi/</code>, <code>apps/webgateway/internal/session/</code>.</p>
+<p>Веб-чат использует два независимых курсора. <code>chat.history</code> с <code>forward: true</code> получает новые сообщения после последнего ID, а <code>chat.changes</code> по ревизии дочитывает удаления, реакции и закрепления. Подсказки <code>chatRevision</code> объединяются с интервалом 2 секунды. При отсутствии подсказки сверка выполняется каждые 5 секунд. Личные чаты используют <code>userId</code> получателя, канальные — <code>channelId</code> текущего канала. Сервер Sonoryx проверяет права на чтение и действия с сообщениями. Источники: <code>apps/web/src/features/chat/ChatPanel.tsx</code>, <code>apps/webgateway/internal/webapi/messages.go</code>, <code>apps/server/internal/persist/{chat,chat_delete}.go</code>.</p>
+<p>Браузер скачивает вложения по <code>GET /api/files/attachments/{id}</code> через текущую веб-сессию. Шлюз потоково передаёт содержимое из файлового HTTPS Sonoryx, сохраняя имя скачиваемого файла, ETag и одиночный байтовый диапазон. Для загрузки браузер вычисляет SHA-256 потоком и отправляет фрагменты до 4 МиБ. До восьми фрагментов могут обрабатываться одновременно на шлюзе. Пауза прерывает текущий запрос, а продолжение читает сохранённое на сервере смещение. После проверки целого файла браузер передаёт ID вложения в <code>chat.send</code>. Размер, квоты и права проверяет файловый сервер. Источники: <code>apps/webgateway/internal/webapi/files.go</code>, <code>apps/web/src/features/chat/useUploads.ts</code>.</p>
+<p>Журнал передаётся пакетами <code>events</code> после начального снимка WebSocket и хранит до 200 событий текущей сессии. Действия <code>away</code> и <code>wake</code> передаются штатными командами ядра. Сочетания <code>Ctrl+Alt+M</code>, <code>Ctrl+Alt+D</code> и <code>Ctrl+Alt+E</code> работают, когда веб-страница получает клавиатурный ввод. Источники: <code>apps/webgateway/internal/webapi/websocket.go</code>, <code>apps/web/src/App.tsx</code>.</p>
+<p>При настроенном <code>mediaFingerprint</code> шлюз передаёт запросы демонстрации через <code>clientcore.MediaSignaling</code>, с учётными данными голосовой сессии и проверкой TLS-отпечатка. Видеопоток WebRTC идёт между браузером и медиасервером Sonoryx. Браузер открывает собственный диалог выбора экрана или окна по действию пользователя. Звуковая дорожка зависит от выбранного источника и возможностей браузера. Снимок WebSocket содержит ID потока, владельца и канала. Веб-клиент показывает плитки трансляций текущего канала на сцене. Владелец видит беззвучный предпросмотр уже захваченной видеодорожки после согласования WebRTC. При получении потока в снимке плитка обновляется по тому же ID. Зритель начинает просмотр по кнопке на плитке. Источники: <code>apps/webgateway/internal/webapi/media.go</code>, <code>apps/web/src/features/screen/{useScreenShare.ts,ScreenTile.tsx}</code>, <code>apps/web/src/App.tsx</code>, <code>internal/clientcore/media.go</code>.</p>
+<p>Веб-настройки микрофона, RNNoise, VAD, сигналов и громкости участников меняют только текущий экземпляр <code>clientcore</code>. Выбор устройства ввода/вывода сохраняется в профиле браузера и зависит от выданных разрешений. Веб-админка управляет аккаунтами и каналами и читает аудит через <code>clientcore.Administer</code>. Файловая админка использует <code>FileTransfers</code> для политик, вложений и прав. Шлюз проверяет права текущей сессии, а Sonoryx проверяет право на каждую операцию. Оператор передаёт пароль шлюзу при запуске. Источники: <code>apps/webgateway/internal/webapi/{admin,audio}.go</code>, <code>apps/web/src/features/{admin,settings}/</code>.</p>
+<p>Браузер отправляет собранный SDP offer с одной двусторонней аудиолинией Opus на <code>POST /api/webrtc/offer</code>. Pion возвращает SDP answer с кандидатами. ICE поддерживает STUN/TURN и заданный диапазон UDP-портов. Шлюз собирает PCM 48 кГц, моно, кадр 20 мс из входящего RTP/Opus и перекодирует смешанный выход ядра в Opus RTP. Каждая очередь хранит до 3 кадров и пропускает звук старше 60 мс. Mute очищает захват, deafen очищает воспроизведение, переход канала очищает обе очереди. Браузер может слушать и пользоваться чатом без доступа к микрофону. Новая сигнализация заменяет WebRTC peer, сохраняя сессию ядра. Источники: <code>apps/webgateway/internal/webrtcaudio/</code>, <code>apps/web/src/audio/useVoice.ts</code>, <code>configs/webgateway.example.json</code>.</p>
+</section>
 <section id="limits"><h2><span class="n">13</span>Лимиты и константы</h2>
 <table>
 <tr><th>Параметр</th><th>Значение</th><th>Где</th></tr>
@@ -494,7 +506,7 @@ WebRTC DTLS-SRTP, VP8 / H.264 / VP9 / AV1 + необязательный зву�
 <li>Нет защиты первого TOFU-контакта от активного MITM и автоматической ротации ключа сервера с подтверждением старым ключом. Ручная смена voice-pin требует подтверждения пользователем и сверки нового отпечатка с администратором.</li>
 <li>Работают deadline-jitter 40..80 мс и адаптивные копии VoiceBundleV2; Opus FEC/DTX не включены — см. раздел 08.</li>
 <li>Собственная криптосхема (не TLS/Noise), внешнего аудита и fuzz-тестов wire format нет.</li>
-<li>Открытая регистрация: любой новый ключ создаёт аккаунт.</li>
+<li>UDP-сервер регистрирует новые ключи с учётом пароля и лимитов. Режим входа веб-шлюза задаётся оператором.</li>
 </ul>
 </section>
 </main>

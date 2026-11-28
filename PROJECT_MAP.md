@@ -17,11 +17,15 @@
 | Экран | `apps/server/internal/media/`, `internal/mediasignal/`, `internal/clientcore/internal/screensignal/` | HTTPS signaling, WebRTC/SFU, учет потоков и подписок |
 | Файлы | `apps/desktop/internal/filequeue/`, `internal/clientcore/internal/fileclient/`, `apps/server/internal/filetransfer/` | Локальная очередь и staging, файловый HTTPS, серверное хранилище вложений |
 | Desktop UI | `apps/desktop/`, `apps/desktop/internal/wails/`, `apps/desktop/internal/desktopwindow/`, `apps/desktop/frontend/` | Wails 3, сервис для React/TypeScript, настройки и окна |
+| Веб-шлюз | `apps/webgateway/`, `apps/webgateway/internal/` | HTTPS, веб-сессии, WebSocket и адаптер WebRTC/Opus ↔ PCM поверх фасада `clientcore` |
+| Веб-клиент | `apps/web/`, `contracts/web/` | React-интерфейс для каналов, канального чата и звука, OpenAPI и схема WebSocket |
+| Палитры | `shared-ui/theme-palettes.css` | Общие цветовые темы десктопного и веб-клиента |
 | Обновления клиента | `apps/desktop/internal/clientupdate/`, `internal/updatemanifest/`, `cmd/update-sign/` | Подписанные GitHub Releases, загрузка, перезапуск и восстановление EXE |
 | Общий контракт | `internal/domain/`, `internal/protocol/`, `internal/transport/udp/` | Модели состояния, бинарный UDP-протокол, граница сокета и кодека |
 
 Фасад `internal/clientcore` доступен приложениям внутри репозитория. Пакеты
-`apps/server/internal/` и `apps/desktop/internal/` принадлежат своим приложениям.
+`apps/server/internal/`, `apps/desktop/internal/` и `apps/webgateway/internal/`
+принадлежат своим приложениям.
 `live`, `fileclient` и `screensignal` находятся в `internal/clientcore/internal/`
 и доступны только внутри клиентского ядра.
 
@@ -36,6 +40,10 @@
   доставки frontend; production-сборка встраивает собранные ресурсы.
   Окно и трей принадлежат `apps/desktop/internal/desktopwindow/`.
   Версия клиента также хранится в `version/release.json`.
+- `apps/webgateway/main.go` запускает HTTPS-шлюз. Режим входа выбирается в
+  конфигурации. Опция `-add-account` создаёт доступ для режима приглашений. `npm run build:web`
+  собирает `apps/web/dist`, который шлюз отдаёт с того же источника, что и API.
+  [Сборка и настройка](apps/webgateway/README.md).
 - `cmd/update-sign/` подписывает desktop EXE и манифест релиза, а с `-packed`
   сжимает EXE в zstd (`SRX64.exe.zst`) и добавляет его размер и SHA-256 в
   манифест `SRX64.exe.signature`. С `-legacy-out` дополнительно пишет манифест

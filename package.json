@@ -5,7 +5,9 @@
 
     "dev:desktop": "go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 task dev",
 
-    "build:desktop": "go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 build"
+    "build:desktop": "go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 build",
+
+    "build:web": "npm --prefix apps/web run build"
 
   }
 }
