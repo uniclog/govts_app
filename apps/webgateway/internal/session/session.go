@@ -29,6 +29,11 @@ type Session struct {
 	expires        time.Time
 	account, token string
 
+	audioMu     sync.Mutex
+	audioPath   string
+	volumeScope string
+	volumes     map[string]map[int64]map[int64]float32
+
 	// The manager lock protects tab ownership and the idle timer.
 	socket         bool
 	idle           *time.Timer
@@ -121,6 +126,9 @@ func (s *Session) run() {
 		s.peer = nil
 	}
 	s.peerMu.Unlock()
+	// Let an in-flight settings write finish before another session opens the profile.
+	s.audioMu.Lock()
+	s.audioMu.Unlock()
 	_ = s.Core.Close(context.Background())
 	s.manager.mu.Lock()
 	delete(s.manager.byAccount, s.account)

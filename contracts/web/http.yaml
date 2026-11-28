@@ -335,7 +335,7 @@ paths:
           $ref: '#/components/responses/Problem'
     post:
       operationId: updateAudioSetting
-      summary: Update one audio setting through clientcore
+      summary: Update one audio setting and save it to the authenticated web profile
       security: [{ webSession: [] }]
       parameters:
         - $ref: '#/components/parameters/Origin'
@@ -353,7 +353,7 @@ paths:
                 choice: { type: string }
       responses:
         '204':
-          description: Audio setting applied
+          description: Audio setting applied and saved
         default:
           $ref: '#/components/responses/Problem'
   /api/moderation:
@@ -400,7 +400,7 @@ paths:
           $ref: '#/components/responses/Problem'
     post:
       operationId: setParticipantVolume
-      summary: Update the local mix volume for one participant session
+      summary: Update the local mix volume and remember it for the participant account
       security: [{ webSession: [] }]
       parameters:
         - $ref: '#/components/parameters/Origin'
@@ -412,7 +412,7 @@ paths:
               $ref: '#/components/schemas/ParticipantVolume'
       responses:
         '200':
-          description: Applied volume multiplier
+          description: Applied and saved volume multiplier
           content:
             application/json:
               schema:

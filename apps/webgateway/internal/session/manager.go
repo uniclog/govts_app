@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -132,19 +133,23 @@ func (m *Manager) open(a Account, fresh bool) (*Session, string, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), expires)
 	bridge := webrtcaudio.NewBridge()
 	core := clientcore.New(clientcore.Options{Audio: bridge, IdentityPath: a.identityPath, PinsPath: m.pinsPath})
+	s := &Session{
+		Core: core, bridge: bridge, manager: m, ctx: ctx, cancel: cancel,
+		expires: expires, account: a.ID, token: NewToken(),
+		audioPath: a.identityPath + ".settings.json", volumeScope: hex.EncodeToString(m.cfg.Pin),
+	}
+	s.loadAudioProfile()
 	_ = core.SetMuted(true)
 	if err := core.Connect(clientcore.ConnectOptions{Server: m.cfg.Endpoint, Name: a.Name, Password: m.cfg.Password}); err != nil {
 		cancel()
 		_ = core.Close(context.Background())
 		return nil, "", err
 	}
-	token := NewToken()
-	s := &Session{Core: core, bridge: bridge, manager: m, ctx: ctx, cancel: cancel, expires: expires, account: a.ID, token: token}
-	m.byAccount[a.ID], m.byToken[token] = s, s
+	m.byAccount[a.ID], m.byToken[s.token] = s, s
 	m.lastLogin[a.ID] = now
 	s.scheduleIdle(now.Add(m.cfg.ReconnectGrace))
 	m.workers.Go(s.run)
-	return s, token, nil
+	return s, s.token, nil
 }
 
 func (m *Manager) Lookup(token string) *Session {
