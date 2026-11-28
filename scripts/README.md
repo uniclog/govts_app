@@ -14,6 +14,14 @@
 
 Перед первым веб-деплоем [настройте HTTPS и установите systemd-сервис](../apps/webgateway/README.md#сборка-и-запуск). Первый веб-релиз разворачивайте целиком. Деплой по отдельности использует второй компонент из текущего веб-релиза и перезапускает шлюз. `deploy-all` сначала обновляет Sonoryx, затем веб-релиз.
 
+Постоянный IPv4 и SSH-пользователь задаются один раз в [deploy-target.ps1](deploy-target.ps1). Для разового деплоя на другой адрес:
+
+```powershell
+npm run deploy-all -- -ServerIp 203.0.113.10
+```
+
+Этот адрес используется для SSH обоих компонентов и как публичный IP для WebRTC Sonoryx. Отдельный `deploy-server.ps1` принимает `-PublicIp`, если адрес для WebRTC отличается от адреса SSH.
+
 Команды `powershell.exe -File .\scripts\build-server.ps1` и `powershell.exe -File .\scripts\deploy-server.ps1` тоже доступны. Десктоп собирается через `npm run build:desktop` и получает подписанные обновления из GitHub Releases. Версии приложений заданы в [version.json](../version/version.json).
 
 ## Ручной запуск на Linux после копирования файлов

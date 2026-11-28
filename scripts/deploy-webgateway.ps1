@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+$')]
-    [string]$Target = 'admin@193.187.92.89',
+    [string]$Target,
 
     [ValidatePattern('^/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$')]
     [string]$RemoteDir = '/opt/sonoryx/webgateway',
@@ -15,6 +15,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot 'deploy-target.ps1')
+
+if (-not $Target) { $Target = $defaultDeployTarget }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $out = Join-Path $repoRoot 'bin'
