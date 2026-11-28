@@ -1,5 +1,8 @@
 import {desktopAPI} from "./api";
 import {errorCode} from "./locales";
+import {fontFamilies, fontStack, type FontFamily} from "../../../../shared-ui/font-options";
+
+export {fontFamilies, fontStack, type FontFamily} from "../../../../shared-ui/font-options";
 
 // Применение внешнего вида. Цвета задают только встроенные темы, они совпадают с theme.css.
 // Шрифт, его размер и подложка сцены выбираются независимо от темы.
@@ -9,20 +12,6 @@ export type BuiltinTheme = (typeof builtinThemes)[number];
 
 export const stageBackdrops = ["rings", "mountains", "pines", "clouds", "horizon", "city", "stars", "plain"] as const;
 export type StageBackdrop = (typeof stageBackdrops)[number];
-
-// "default" — Arial в основных окнах и Noto Sans в остальных, см. :root[data-font="default"].
-export const fontFamilies = [
-    "default",
-    "Noto Sans",
-    "Golos Text",
-    "Manrope",
-    "Nunito",
-    "Rubik",
-    "Montserrat",
-    "Noto Serif",
-    "Literata",
-] as const;
-export type FontFamily = (typeof fontFamilies)[number];
 
 export const fontSizes = [14, 15, 16, 17, 18] as const;
 export type FontSize = (typeof fontSizes)[number];
@@ -159,10 +148,6 @@ function nearestFontSize(value: number): FontSize {
 function normalizeStageBackdrop(value: unknown): StageBackdrop {
     const name = value === "dunes" ? "pines" : value === "waves" ? "clouds" : value === "aurora" ? "city" : value;
     return stageBackdrops.find((backdrop) => backdrop === name) ?? "rings";
-}
-
-export function fontStack(family: FontFamily): string {
-    return family === "default" ? "Arial, sans-serif" : `"${family}", "Noto Sans", sans-serif`;
 }
 
 export function normalizeAppearance(value: unknown, fallbackTheme = "dark"): Appearance {

@@ -4,7 +4,7 @@ import App from "./App";
 import {applyAppearance, loadAppearance} from "./appearance";
 import {applyReduceMotion, loadReduceMotion} from "./features/settings/motion";
 import {LocaleProvider} from "./locales/Locale";
-import "./fonts.css";
+import "../../../../shared-ui/fonts.css";
 import "./theme.css";
 import "./styles.css";
 import "./workspace.css";

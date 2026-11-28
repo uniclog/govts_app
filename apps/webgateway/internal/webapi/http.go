@@ -77,7 +77,7 @@ func New(cfg config.Config, sessions *session.Manager) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
-		w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self' blob:; connect-src 'self' wss://"+strings.TrimPrefix(cfg.Origin, "https://")+"; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; media-src 'self' blob:; connect-src 'self' wss://"+strings.TrimPrefix(cfg.Origin, "https://")+"; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 		displayCapture := "()"
 		if cfg.MediaFingerprint != "" {
 			displayCapture = "(self)"

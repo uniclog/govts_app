@@ -1,11 +1,7 @@
 import {useLayoutEffect, useRef, useState} from "react";
 import type {CSSProperties, KeyboardEvent, PointerEvent} from "react";
 import {useLocale} from "../locales/Locale";
-
-type Side = "browser" | "chat";
-const defaults = {browser: 240, chat: 288};
-const dividerWidth = 8;
-const minimumCenterWidth = 280;
+import {defaultWorkspaceWidths as defaults, workspaceWidths, type WorkspaceSide as Side} from "../../../../../shared-ui/workspace-widths";
 
 export function useWorkspaceResize(showInfo: boolean) {
     const {m} = useLocale();
@@ -24,19 +20,7 @@ export function useWorkspaceResize(showInfo: boolean) {
         return () => observer.disconnect();
     }, []);
 
-    const layoutWidth = Math.max(0, availableWidth - 2 * dividerWidth);
-    const browserMin = Math.min(192, layoutWidth / 3);
-    const chatMin = Math.min(240, layoutWidth / 3);
-    const centerMin = Math.min(minimumCenterWidth, Math.max(0, layoutWidth - browserMin - chatMin));
-    const browserLimit = Math.max(browserMin, layoutWidth - chatMin - centerMin);
-    const browserWidth = Math.max(browserMin, Math.min(preferredWidths.browser, browserLimit));
-    const chatMax = Math.max(chatMin, layoutWidth - browserWidth - centerMin);
-    const chatWidth = Math.max(chatMin, Math.min(preferredWidths.chat, chatMax));
-    const browserMax = Math.max(browserMin, layoutWidth - chatWidth - centerMin);
-
-    const widths = {browser: browserWidth, chat: chatWidth};
-    const minimums = {browser: browserMin, chat: chatMin};
-    const maximums = {browser: browserMax, chat: chatMax};
+    const {widths, minimums, maximums} = workspaceWidths(availableWidth, preferredWidths);
     const resize = (side: Side, value: number) => {
         const next = Math.max(minimums[side], Math.min(value, maximums[side]));
         setPreferredWidths((current) => ({...current, [side]: next}));
@@ -81,7 +65,7 @@ export function useWorkspaceResize(showInfo: boolean) {
     });
 
     return {layoutRef, resizing, separatorProps, style: {
-        "--channel-browser-width": `${browserWidth}px`,
-        "--channel-chat-width": `${chatWidth}px`,
+        "--channel-browser-width": `${widths.browser}px`,
+        "--channel-chat-width": `${widths.chat}px`,
     } as CSSProperties};
 }

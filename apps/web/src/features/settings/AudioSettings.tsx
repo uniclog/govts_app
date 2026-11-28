@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { messageFor, post, request } from "../../api/http";
 import { Icon } from "../../components/Icon";
-import { applyAppearance, fontSizes, readAppearance, themes } from "./appearance";
+import { applyAppearance, fontFamilies, fontSizes, fontStack, readAppearance, themes } from "./appearance";
 import { notificationsEnabled, setNotifications } from "../chat/notifications";
+import { Toggle } from "../../components/Toggle";
 
 interface AudioConfig {
   gain: number;
@@ -69,8 +70,7 @@ export function AudioSettings({ close, capture, playback, onCapture, onPlayback 
   }
 
   const toggle = (name: "noise" | "vad" | "muteOnAway" | "deafenOnAway", label: string) =>
-    <label className="settings-toggle"><input type="checkbox" checked={!!settings?.[name]} disabled={pending}
-      onChange={(event) => void apply({ name, enabled:event.target.checked })} />{label}</label>;
+    <Toggle checked={!!settings?.[name]} disabled={pending} onChange={(enabled) => void apply({ name, enabled })}>{label}</Toggle>;
   const slider = (name: "gain" | "noiseSensitivity" | "vadSensitivity" | "soundVolume", label: string, max = 1, disabled = false) =>
     <label>{label}<AudioRange value={settings?.[name] ?? 0} max={max} disabled={pending || disabled}
       apply={(number) => void apply({ name, number })} /></label>;
@@ -114,6 +114,19 @@ export function AudioSettings({ close, capture, playback, onCapture, onPlayback 
             applyAppearance(value);
             setAppearance(value);
           }}>{themes.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+          <div className="font-settings" role="group" aria-labelledby="font-settings-heading">
+            <strong id="font-settings-heading">Шрифт</strong>
+            <div className="font-options">
+              {fontFamilies.map((fontFamily) => <button key={fontFamily} type="button" aria-pressed={appearance.fontFamily === fontFamily}
+                style={{ fontFamily: fontStack(fontFamily) }} onClick={() => {
+                  const value = { ...appearance, fontFamily };
+                  applyAppearance(value);
+                  setAppearance(value);
+                }}>
+                <strong>{fontFamily === "default" ? "Стандартный" : fontFamily}</strong><span>Пример текста Aa</span>
+              </button>)}
+            </div>
+          </div>
           <label>Размер текста<select value={appearance.fontSize} onChange={(event) => {
             const value = { ...appearance, fontSize:Number(event.target.value) };
             applyAppearance(value);
@@ -123,14 +136,12 @@ export function AudioSettings({ close, capture, playback, onCapture, onPlayback 
         {section === "behavior" && settings && <>
           {toggle("muteOnAway", "Отключать микрофон, когда я отошёл")}
           {toggle("deafenOnAway", "Отключать звук, когда я отошёл")}
-          <label className="settings-toggle"><input type="checkbox" checked={notify} disabled={typeof Notification === "undefined"}
-            onChange={(event) => {
-              const checked = event.target.checked;
-              void setNotifications(checked).then((value) => {
-                setNotify(value);
-                if (checked && !value) setError("Браузер не разрешил уведомления");
-              }).catch((reason) => setError(messageFor(reason)));
-            }} />Уведомления о сообщениях, пока вкладка открыта в фоне</label>
+          <Toggle checked={notify} disabled={typeof Notification === "undefined"} onChange={(checked) => {
+            void setNotifications(checked).then((value) => {
+              setNotify(value);
+              if (checked && !value) setError("Браузер не разрешил уведомления");
+            }).catch((reason) => setError(messageFor(reason)));
+          }}>Уведомления о сообщениях, пока вкладка открыта в фоне</Toggle>
           <p className="empty">В активной вкладке Ctrl+Alt+M управляет микрофоном, Ctrl+Alt+D — звуком, Ctrl+Alt+E — статусом.</p>
         </>}
       </div>

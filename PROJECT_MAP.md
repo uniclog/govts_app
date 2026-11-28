@@ -19,7 +19,7 @@
 | Desktop UI | `apps/desktop/`, `apps/desktop/internal/wails/`, `apps/desktop/internal/desktopwindow/`, `apps/desktop/frontend/` | Wails 3, сервис для React/TypeScript, настройки и окна |
 | Веб-шлюз | `apps/webgateway/`, `apps/webgateway/internal/` | HTTPS, веб-сессии, WebSocket и адаптер WebRTC/Opus ↔ PCM поверх фасада `clientcore` |
 | Веб-клиент | `apps/web/`, `contracts/web/` | React-интерфейс для каналов, канального чата и звука, OpenAPI и схема WebSocket |
-| Палитры | `shared-ui/theme-palettes.css` | Общие цветовые темы десктопного и веб-клиента |
+| Общий интерфейс | `shared-ui/` | Палитры, шрифты и расчёт ширины панелей для десктопного и веб-клиента |
 | Обновления клиента | `apps/desktop/internal/clientupdate/`, `internal/updatemanifest/`, `cmd/update-sign/` | Подписанные GitHub Releases, загрузка, перезапуск и восстановление EXE |
 | Общий контракт | `internal/domain/`, `internal/protocol/`, `internal/transport/udp/` | Модели состояния, бинарный UDP-протокол, граница сокета и кодека |
 

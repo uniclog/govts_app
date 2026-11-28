@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { messageFor, post, request } from "../../api/http";
+import { Toggle } from "../../components/Toggle";
 
 interface FilePolicy {
   MaxFileBytes: number; UserQuotaBytes: number; ServerQuotaBytes: number; MinFreeBytes: number;
@@ -67,8 +68,8 @@ export function FileAdmin() {
       <div className="admin-numbers">{fileFields.map(([key, unit, label, min]) =>
         <label key={key}>{label}<input type="number" required step={key === "MaxTransfers" ? 1 : "any"} min={min}
           value={policy[key] / unit} onChange={(event) => setPolicy({ ...policy, [key]: Math.round((event.target.valueAsNumber || 0) * unit) })} /></label>)}</div>
-      <label className="settings-toggle"><input type="checkbox" checked={policy.UploadsEnabled} onChange={(event) => setPolicy({ ...policy, UploadsEnabled:event.target.checked })} />Разрешить загрузку</label>
-      <label className="settings-toggle"><input type="checkbox" checked={policy.DownloadsEnabled} onChange={(event) => setPolicy({ ...policy, DownloadsEnabled:event.target.checked })} />Разрешить скачивание</label>
+      <Toggle checked={policy.UploadsEnabled} onChange={(checked) => setPolicy({ ...policy, UploadsEnabled: checked })}>Разрешить загрузку</Toggle>
+      <Toggle checked={policy.DownloadsEnabled} onChange={(checked) => setPolicy({ ...policy, DownloadsEnabled: checked })}>Разрешить скачивание</Toggle>
       <button type="submit" className="primary" disabled={busy}>Сохранить политику</button>
     </form>}
     {view?.files?.map((file) => <div className="admin-entry" key={file.id}>
@@ -106,10 +107,8 @@ export function AccountFileRights({ id, disabled }: { id: string; disabled: bool
   return <>
     {error && <p className="notice" role="status">{error}</p>}
     {rights ? <div className="admin-permissions">
-      <label className="settings-toggle"><input type="checkbox" checked={rights.upload} disabled={disabled || busy}
-        onChange={(event) => void change("upload", event.target.checked)} />Загрузка файлов</label>
-      <label className="settings-toggle"><input type="checkbox" checked={rights.download} disabled={disabled || busy}
-        onChange={(event) => void change("download", event.target.checked)} />Скачивание файлов</label>
+      <Toggle checked={rights.upload} disabled={disabled || busy} onChange={(checked) => void change("upload", checked)}>Загрузка файлов</Toggle>
+      <Toggle checked={rights.download} disabled={disabled || busy} onChange={(checked) => void change("download", checked)}>Скачивание файлов</Toggle>
     </div> : <button type="button" disabled={disabled || busy} onClick={() => void read()}>Права на файлы</button>}
   </>;
 }

@@ -3,6 +3,7 @@ import { APIError, currentSession, logout, messageFor, post, publicConfig } from
 import { useGateway } from "./api/useGateway";
 import type { LoginMode, Participant, WebSession } from "./api/types";
 import { Icon } from "./components/Icon";
+import { useWorkspaceResize } from "./components/useWorkspaceResize";
 import symbol from "./assets/sonoryx-symbol.svg?no-inline";
 import { useVoice } from "./audio/useVoice";
 import { Login } from "./features/auth/Login";
@@ -24,6 +25,7 @@ function saveDevice(kind: "capture" | "playback", value: string) {
 
 function Workspace({ session, expired, signedOut }: { session: WebSession; expired: () => void; signedOut: () => void }) {
   const { view, events, socketState, connection, send } = useGateway(session, expired);
+  const workspaceResize = useWorkspaceResize();
   const [busy, setBusy] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [issue, setIssue] = useState("");
@@ -120,8 +122,8 @@ function Workspace({ session, expired, signedOut }: { session: WebSession; expir
       <header className="titlebar">
         <img src={symbol} alt="" /><h1>SRX — {room?.name || view?.serverName || "Sonoryx"}</h1>
       </header>
-      <div className="layout">
-        <aside className="channel-browser">
+      <div ref={workspaceResize.layoutRef} style={workspaceResize.style} className={workspaceResize.resizing ? "layout is-resizing" : "layout"}>
+        <aside className="channel-browser" id="channel-browser-pane">
           <div className="server-entry"><span className="channel-heading-icon"><Icon name="server" /></span>
             <div><strong>{view?.serverName || "Sonoryx"}</strong><small>{window.location.host}</small></div>
           </div>
@@ -139,6 +141,7 @@ function Workspace({ session, expired, signedOut }: { session: WebSession; expir
               title="Управление сервером" onClick={() => setAdminOpen(true)}><Icon name="shield" /></button>}
           </footer>
         </aside>
+        <div className="workspace-divider" {...workspaceResize.separatorProps("browser")} />
         <section className="room" aria-label="Голосовой канал">
           {connected && room ? <ChannelStage channel={room} members={members} screens={screenTiles} sessionId={view.sessionId} userId={view.userId}
             moderation={view} channels={view.channels}
@@ -172,7 +175,8 @@ function Workspace({ session, expired, signedOut }: { session: WebSession; expir
             </div>
           </div>
         </section>
-        <section className="chat-pane" aria-label="Чат канала">
+        <div className="workspace-divider" {...workspaceResize.separatorProps("chat")} />
+        <section className="chat-pane" id="chat-pane" aria-label="Чат канала">
           {connected && room
             ? <ChatWorkspace key={connection + ":" + view.sessionId} channelId={room.id} userId={view.userId}
               revision={view.chatRevision} send={send} requested={messagePeer} events={events} />
