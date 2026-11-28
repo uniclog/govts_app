@@ -60,7 +60,7 @@ footer{text-align:center;color:var(--muted);font-size:.82rem;padding:0 16px 40px
 <header class="hero"><div class="hero-in">
 <div class="eyebrow">Sonoryx · технический справочник</div>
 <h1>Протокол <span>Sonoryx</span></h1>
-<p>Голос, control и чат используют защищённый UDP. Демонстрация экрана и браузерное голосовое соединение используют отдельные WebRTC-тракты. Десктоп <code>0.12.0</code>, сервер <code>0.6.0</code>, шлюз <code>0.1.0</code>, веб-клиент <code>0.1.0</code>, минимальная версия сервера <code>0.5.0</code> (<code>version/version.json</code>). Файлообмен обслуживается отдельным HTTPS listener. Источники: <code>internal/protocol</code>, <code>internal/auth</code>, <code>apps/server/internal/voice</code>, <code>internal/clientcore/internal/live</code>, <code>apps/server/internal/media</code>, <code>apps/webgateway</code>.</p>
+<p>Голос, control и чат используют защищённый UDP. Демонстрация экрана и браузерное голосовое соединение используют отдельные WebRTC-тракты. Десктоп <code>0.14.0</code>, сервер <code>0.7.0</code>, шлюз <code>0.1.0</code>, веб-клиент <code>0.1.0</code>, минимальная версия сервера <code>0.5.0</code> (<code>version/version.json</code>). Файлообмен обслуживается отдельным HTTPS listener. Источники: <code>internal/protocol</code>, <code>internal/auth</code>, <code>apps/server/internal/voice</code>, <code>internal/clientcore/internal/live</code>, <code>apps/server/internal/media</code>, <code>apps/webgateway</code>.</p>
 <div class="kpis">
 <div class="kpi"><b>17 B</b><span>заголовок пакета</span></div>
 <div class="kpi"><b>1200 B</b><span>макс. payload</span></div>
@@ -270,7 +270,7 @@ pre-roll 60 мс, hangover 300 мс) → Opus encode, кадр 20 мс
 
 </section>
 <section id="loss"><h2><span class="n">08</span>Адаптивная компенсация потерь голоса</h2>
-<p>Голосовой тракт Sonoryx UDP использует VoiceBundleV2. Версия сервера <b>0.6.0</b>, минимальная версия сервера и уровень AuthInit <b>0.5.0</b>, десктоп <b>0.12.0</b> (<code>version/version.json</code>, <code>apps/server/internal/voice/auth.go</code>). Голосовые ID 2/31 зарезервированы и отбрасываются. Несовместимые версии отклоняются при аутентификации.</p>
+<p>Голосовой тракт Sonoryx UDP использует VoiceBundleV2. Версия сервера <b>0.7.0</b>, минимальная версия сервера и уровень AuthInit <b>0.5.0</b>, десктоп <b>0.14.0</b> (<code>version/version.json</code>, <code>apps/server/internal/voice/auth.go</code>). Голосовые ID 2/31 зарезервированы и отбрасываются. Несовместимые версии отклоняются при аутентификации.</p>
 <h3>Wire format и независимые направления</h3>
 <p><code>internal/protocol/packet.go</code>, <code>voice_bundle_v2.go</code>, <code>voice_state.go</code>, <code>voice_telemetry.go</code>. Типы: 40 VoiceBundleV2, 41 VoiceSummary, 42 VoiceReport, 43 VoiceState, 44 VoiceStateAck, 45 VoiceStateRequest. Новые значения добавлены без перенумерации прежних. Все многобайтовые поля big-endian.</p>
 <pre>VoiceBundleV2 payload:
