@@ -62,7 +62,7 @@ func (e *OpusEncoder) Encode(samples []int16) ([]byte, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	pcm := int16ToBytes(samples)
+	pcm := PCMBytes(samples)
 
 	packet := make([]byte, maxOpusPacketSize)
 

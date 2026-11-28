@@ -12,7 +12,7 @@ import (
 const AdminSchemaVersion = 1
 
 // Bits of the privileges byte in PacketAuthAck and PacketAccountPrivileges.
-// The first four match the stored permissions of internal/persist; Owner is
+// The first four match the stored permissions of apps/server/internal/persist; Owner is
 // set for the server owner only.
 const (
 	PrivilegeKick uint8 = 1 << iota

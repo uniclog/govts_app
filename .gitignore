@@ -40,4 +40,4 @@ node_modules/
 /sonoryx.db-wal
 /sonoryx.db-shm
 /sonoryx-voice.seed
-/cmd/desktop/frontend/bindings/
+/apps/desktop/frontend/bindings/

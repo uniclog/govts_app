@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-desktop:
     runs-on: windows-latest
 
     steps:
@@ -41,29 +41,52 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: cmd/desktop/frontend/package-lock.json
+          cache-dependency-path: apps/desktop/frontend/package-lock.json
 
       - name: Generate desktop bindings
-        run: go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 generate bindings -d cmd/desktop/frontend/bindings -clean=true -ts -i ./cmd/desktop
+        run: go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 generate bindings -d apps/desktop/frontend/bindings -clean=true -ts -i ./apps/desktop
 
       - name: Build desktop frontend
         run: |
           # No dependency needs an install script (only the macOS-only fsevents has one).
-          npm ci --ignore-scripts --prefix cmd/desktop/frontend
+          npm ci --ignore-scripts --prefix apps/desktop/frontend
           if ($LASTEXITCODE -ne 0) { throw 'npm ci failed' }
-          npm run build --prefix cmd/desktop/frontend
+          npm run build --prefix apps/desktop/frontend
           if ($LASTEXITCODE -ne 0) { throw 'frontend build failed' }
 
       - name: Build Windows desktop client
         run: |
           New-Item -ItemType Directory -Force dist, build/windows | Out-Null
-          go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 generate icons -input cmd/desktop/frontend/src/components/logo.png -windowsfilename build/windows/icon.ico -macfilename build/windows/icon.icns
+          go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 generate icons -input apps/desktop/frontend/src/components/logo.png -windowsfilename build/windows/icon.ico -macfilename build/windows/icon.icns
           if ($LASTEXITCODE -ne 0) { throw 'icon generation failed' }
           Remove-Item -Force build/windows/icon.icns -ErrorAction SilentlyContinue
-          go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -out cmd/desktop/rsrc_windows_amd64.syso
+          go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -out apps/desktop/rsrc_windows_amd64.syso
           if ($LASTEXITCODE -ne 0) { throw 'windows resource generation failed' }
-          go build -tags production -trimpath -ldflags="-w -s -H windowsgui" -o dist/SRX64.exe ./cmd/desktop
+          go build -tags production -trimpath -ldflags="-w -s -H windowsgui" -o dist/SRX64.exe ./apps/desktop
           if ($LASTEXITCODE -ne 0) { throw 'desktop build failed' }
+
+      - name: Upload unsigned desktop
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-desktop
+          path: dist/SRX64.exe
+          if-no-files-found: error
+          retention-days: 1
+
+  build-server:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
 
       - name: Build Linux server
         env:
@@ -71,21 +94,19 @@ jobs:
           GOARCH: amd64
           CGO_ENABLED: '0'
         run: |
-          go build -trimpath -ldflags="-w -s" -o dist/sonoryx-server-linux-amd64 ./cmd/server
-          if ($LASTEXITCODE -ne 0) { throw 'server build failed' }
+          mkdir -p dist
+          go build -trimpath -ldflags="-w -s" -o dist/sonoryx-server-linux-amd64 ./apps/server
 
-      - name: Upload unsigned build
+      - name: Upload Linux server
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: unsigned
-          path: |
-            dist/SRX64.exe
-            dist/sonoryx-server-linux-amd64
+          name: unsigned-server
+          path: dist/sonoryx-server-linux-amd64
           if-no-files-found: error
           retention-days: 1
 
   sign:
-    needs: build
+    needs: [build-desktop, build-server]
     runs-on: windows-latest
     # The release environment holds UPDATE_SIGNING_KEY; its protection rules
     # (required reviewers, tag filter) gate every use of the key.
@@ -105,17 +126,23 @@ jobs:
           # jobs wrote.
           cache: false
 
-      - name: Download unsigned build
+      - name: Download unsigned desktop
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: unsigned
+          name: unsigned-desktop
+          path: dist
+
+      - name: Download Linux server
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-server
           path: dist
 
       - name: Sign desktop update
         env:
           UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: |
-          go run ./cmd/update-sign -binary dist/SRX64.exe -public-key cmd/desktop/update-public-key.txt -out dist/SRX64.exe.signature -packed dist/SRX64.exe.zst -legacy-out dist/signature
+          go run ./cmd/update-sign -binary dist/SRX64.exe -public-key apps/desktop/update-public-key.txt -out dist/SRX64.exe.signature -packed dist/SRX64.exe.zst -legacy-out dist/signature
           if ($LASTEXITCODE -ne 0) { throw 'update signing failed' }
           # Clients released before the Sonoryx rename update from GTS64.exe + signature.
           Copy-Item dist/SRX64.exe dist/GTS64.exe

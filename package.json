@@ -1,7 +1,7 @@
 {
   "scripts": {
 
-    "dev:server": "go run ./cmd/server",
+    "dev:server": "go run ./apps/server",
 
     "dev:desktop": "go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 task dev",
 

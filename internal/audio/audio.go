@@ -110,7 +110,7 @@ type Recorder interface {
 	Close() error
 }
 
-func int16ToBytes(samples []int16) []byte {
+func PCMBytes(samples []int16) []byte {
 	data := make([]byte, len(samples)*2)
 
 	for i, sample := range samples {

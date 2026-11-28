@@ -5,7 +5,7 @@ vars:
   # Keep the executable name stable. Wails may override APP_NAME with a
   # display name containing the application version.
   BINARY_NAME: Sonoryx
-  FRONTEND_DIR: cmd/desktop/frontend
+  FRONTEND_DIR: apps/desktop/frontend
   WAILS_VERSION: v3.1.0
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
 
@@ -18,7 +18,7 @@ tasks:
   bindings:
     desc: Generate type-safe Wails bindings for the desktop service
     cmds:
-      - go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate bindings -d {{.FRONTEND_DIR}}/bindings -clean=true -ts -i ./cmd/desktop
+      - go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate bindings -d {{.FRONTEND_DIR}}/bindings -clean=true -ts -i ./apps/desktop
 
   frontend:install:
     dir: '{{.FRONTEND_DIR}}'
@@ -47,9 +47,9 @@ tasks:
     platforms: [windows]
     cmds:
       - cmd: powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path build/windows | Out-Null"
-      - cmd: go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate icons -input cmd/desktop/frontend/src/components/logo.png -windowsfilename build/windows/icon.ico -macfilename build/windows/icon.icns
+      - cmd: go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate icons -input apps/desktop/frontend/src/components/logo.png -windowsfilename build/windows/icon.ico -macfilename build/windows/icon.icns
       - cmd: powershell -NoProfile -Command "Remove-Item -Force build/windows/icon.icns -ErrorAction SilentlyContinue"
-      - cmd: go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate syso -arch {{ARCH}} -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -out cmd/desktop/rsrc_windows_{{ARCH}}.syso
+      - cmd: go run github.com/wailsapp/wails/v3/cmd/wails3@{{.WAILS_VERSION}} generate syso -arch {{ARCH}} -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -out apps/desktop/rsrc_windows_{{ARCH}}.syso
 
   build:dev:
     desc: Build the desktop backend for Wails development mode
@@ -59,9 +59,9 @@ tasks:
       # Keep the Vite-backed development executable separate from the
       # standalone application. It only contains the fallback page and must
       # not be mistaken for a distributable build.
-      - cmd: go build -buildvcs=false -gcflags=all="-l" -o bin/{{.BINARY_NAME}}-dev.exe ./cmd/desktop
+      - cmd: go build -buildvcs=false -gcflags=all="-l" -o bin/{{.BINARY_NAME}}-dev.exe ./apps/desktop
         platforms: [windows]
-      - cmd: go build -buildvcs=false -gcflags=all="-l" -o bin/{{.BINARY_NAME}}-dev ./cmd/desktop
+      - cmd: go build -buildvcs=false -gcflags=all="-l" -o bin/{{.BINARY_NAME}}-dev ./apps/desktop
         platforms: [linux, darwin]
 
   build:
@@ -69,9 +69,9 @@ tasks:
     deps: [frontend:build, version:prepare]
     cmds:
       - task: windows:resources
-      - cmd: go build {{if ne .DEV "true"}}-tags production -trimpath -ldflags="-w -s -H windowsgui"{{else}}-buildvcs=false -gcflags=all="-l"{{end}} -o bin/{{.BINARY_NAME}}.exe ./cmd/desktop
+      - cmd: go build {{if ne .DEV "true"}}-tags production -trimpath -ldflags="-w -s -H windowsgui"{{else}}-buildvcs=false -gcflags=all="-l"{{end}} -o bin/{{.BINARY_NAME}}.exe ./apps/desktop
         platforms: [windows]
-      - cmd: go build {{if ne .DEV "true"}}-tags production -trimpath -ldflags="-w -s"{{else}}-buildvcs=false -gcflags=all="-l"{{end}} -o bin/{{.BINARY_NAME}} ./cmd/desktop
+      - cmd: go build {{if ne .DEV "true"}}-tags production -trimpath -ldflags="-w -s"{{else}}-buildvcs=false -gcflags=all="-l"{{end}} -o bin/{{.BINARY_NAME}} ./apps/desktop
         platforms: [linux, darwin]
 
   run:

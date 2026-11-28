@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 )
 
@@ -11,7 +12,15 @@ const (
 	VoiceBundleV2HeaderSize = 14
 	MaxVoiceFrameSize       = MaxPayloadSize - VoiceBundleV2HeaderSize - voiceBundleFrameSize
 	MaxVoiceBundleSpan      = 64
+	voiceBundleFrameSize    = 6
 )
+
+var ErrInvalidVoiceBundle = errors.New("invalid voice bundle")
+
+type VoiceBundleFrame struct {
+	Sequence uint32
+	Payload  []byte
+}
 
 // VoiceBundleV2 separates transport attempts from the source's audio timeline.
 // DatagramSequence may wrap through zero; epochs may not be zero or reused.
@@ -67,7 +76,7 @@ func EncodeVoiceBundleV2(bundle VoiceBundleV2) ([]byte, error) {
 }
 
 // DecodeVoiceBundleV2 validates the complete payload before returning any frame.
-// Frame payloads borrow the input buffer, just like DecodeVoiceBundle.
+// Frame payloads borrow the input buffer.
 func DecodeVoiceBundleV2(payload []byte) (VoiceBundleV2, error) {
 	if len(payload) < VoiceBundleV2HeaderSize || len(payload) > MaxPayloadSize || payload[0] != VoiceBundleV2Version {
 		return VoiceBundleV2{}, fmt.Errorf("%w: invalid v2 header", ErrInvalidVoiceBundle)

@@ -19,7 +19,7 @@ try {
         $env:GOOS = 'linux'
         $env:GOARCH = 'amd64'
         $env:CGO_ENABLED = '0'
-        & go build -trimpath -o $binary ./cmd/server
+        & go build -trimpath -o $binary ./apps/server
         if ($LASTEXITCODE -ne 0) {
             throw "go build failed with exit code $LASTEXITCODE"
         }

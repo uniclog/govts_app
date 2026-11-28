@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Raise net.core.rmem_max so the media server can reserve its 4 MiB UDP receive
-# buffer (internal/media/manager.go mediaReadBuffer). A larger existing limit is
+# buffer (apps/server/internal/media/manager.go mediaReadBuffer). A larger existing limit is
 # kept. rmem_default is never changed. Run as root before (re)starting the
 # server: existing sockets keep the buffer size they were created with.
 #
